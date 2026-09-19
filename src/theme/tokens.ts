@@ -8,14 +8,14 @@ export const webTokens = {
   colors: {
     light: {
       primary: {
-        main: "#00796b",
-        dark: "#00574f",
-        light: "#48a999",
+        main: "#166534",
+        dark: "#14532d",
+        light: "#22c55e",
         contrastText: "#ffffff",
       },
       secondary: {
-        main: "#e28a2b",
-        contrastText: "#1f2933",
+        main: "#4b5563",
+        contrastText: "#ffffff",
       },
       background: {
         default: "#f5f8f7",
@@ -24,27 +24,27 @@ export const webTokens = {
       },
       status: {
         error: {
-          main: "#d32f2f",
-          dark: "#c62828",
-          light: "#ef5350",
+          main: "#b91c1c",
+          dark: "#991b1b",
+          light: "#ef4444",
           contrastText: "#ffffff",
         },
         warning: {
-          main: "#ed6c02",
-          dark: "#e65100",
-          light: "#ff9800",
-          contrastText: "#1f2933",
+          main: "#b45309",
+          dark: "#92400e",
+          light: "#d97706",
+          contrastText: "#ffffff",
         },
         info: {
-          main: "#0288d1",
-          dark: "#01579b",
-          light: "#03a9f4",
+          main: "#0369a1",
+          dark: "#075985",
+          light: "#0284c7",
           contrastText: "#ffffff",
         },
         success: {
-          main: "#2e7d32",
-          dark: "#1b5e20",
-          light: "#4caf50",
+          main: "#15803d",
+          dark: "#166534",
+          light: "#22c55e",
           contrastText: "#ffffff",
         },
       },

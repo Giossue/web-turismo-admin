@@ -30,7 +30,6 @@ import {
   DialogTitle,
   Divider,
   Drawer,
-  Fab,
   FormControl,
   IconButton,
   InputLabel,
@@ -54,7 +53,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useColorScheme } from "@mui/material/styles";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { FlatSurface } from "@/components/ui/flat-surface";
 import { ContentState } from "@/components/ui/content-state";
@@ -464,7 +463,21 @@ export function AdminShell() {
       >
         <Stack spacing={webTokens.spacing.section}>
           {section !== "editor" ? (
-            <PageHeader title={meta.title} description={meta.description} />
+            <PageHeader
+              title={meta.title}
+              description={meta.description}
+              actions={
+                section === "centers" ? (
+                  <Button
+                    variant="contained"
+                    startIcon={<AddRounded />}
+                    onClick={() => openEditor()}
+                  >
+                    Nueva ficha
+                  </Button>
+                ) : undefined
+              }
+            />
           ) : null}
           {notice ? (
             <Alert severity="success" onClose={() => setNotice(null)}>
@@ -518,7 +531,6 @@ export function AdminShell() {
                 setPage(0);
               }}
               onPageChange={setPage}
-              onNew={() => openEditor()}
               onOpen={openEditor}
             />
           ) : null}
@@ -691,7 +703,6 @@ function CentersSection({
   onSearch,
   onStatusChange,
   onPageChange,
-  onNew,
   onOpen,
 }: {
   centers: AdminCenter[];
@@ -704,28 +715,8 @@ function CentersSection({
   onSearch: (event: React.FormEvent<HTMLFormElement>) => void;
   onStatusChange: (value: string) => void;
   onPageChange: (page: number) => void;
-  onNew: () => void;
   onOpen: (code: string) => void;
 }) {
-  const [showFloatingAction, setShowFloatingAction] = useState(true);
-  const previousScrollY = useRef(0);
-
-  useEffect(() => {
-    previousScrollY.current = window.scrollY;
-
-    function handleScroll() {
-      const currentScrollY = window.scrollY;
-      const atTop = currentScrollY <= 16;
-      const movingUp = currentScrollY < previousScrollY.current;
-
-      setShowFloatingAction(atTop || movingUp);
-      previousScrollY.current = currentScrollY;
-    }
-
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
   return (
     <Stack spacing={webTokens.spacing.control}>
       <Box component="form" onSubmit={onSearch}>
@@ -761,29 +752,6 @@ function CentersSection({
         <CenterTable centers={centers} loading={loading} onOpen={onOpen} />
         <PaginationFooter total={total} page={page} onPageChange={onPageChange} />
       </FlatSurface>
-      <Fab
-        variant="extended"
-        color="primary"
-        onClick={onNew}
-        aria-label="Crear nueva ficha turística"
-        sx={{
-          position: "fixed",
-          right: { xs: 2, sm: 3 },
-          bottom: { xs: 3, sm: 4 },
-          zIndex: (theme) => theme.zIndex.fab,
-          boxShadow: "none",
-          opacity: showFloatingAction ? 1 : 0,
-          transform: showFloatingAction ? "translateY(0)" : "translateY(120%)",
-          visibility: showFloatingAction ? "visible" : "hidden",
-          transition: "opacity 160ms ease, transform 160ms ease, visibility 160ms ease",
-          "@media (prefers-reduced-motion: reduce)": {
-            transition: "none",
-          },
-        }}
-      >
-        <AddRounded sx={{ mr: 1 }} />
-        Nueva ficha
-      </Fab>
     </Stack>
   );
 }
