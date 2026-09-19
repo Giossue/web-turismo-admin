@@ -26,9 +26,9 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <body className={roboto.variable}>
-        <InitColorSchemeScript defaultMode="light" attribute="data" />
+        <InitColorSchemeScript defaultMode="dark" attribute="data" />
         <AppRouterCacheProvider options={{ enableCssLayer: true }}>
-          <ThemeProvider theme={theme} defaultMode="light">
+          <ThemeProvider theme={theme} defaultMode="dark">
             <CssBaseline />
             {children}
           </ThemeProvider>

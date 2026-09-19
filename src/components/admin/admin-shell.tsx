@@ -1,11 +1,14 @@
 "use client";
 
 import AssessmentRounded from "@mui/icons-material/AssessmentRounded";
+import AccountCircleRounded from "@mui/icons-material/AccountCircleRounded";
 import AddRounded from "@mui/icons-material/AddRounded";
 import CheckCircleRounded from "@mui/icons-material/CheckCircleRounded";
+import CategoryRounded from "@mui/icons-material/CategoryRounded";
 import ChevronLeftRounded from "@mui/icons-material/ChevronLeftRounded";
 import ChevronRightRounded from "@mui/icons-material/ChevronRightRounded";
 import DarkModeRounded from "@mui/icons-material/DarkModeRounded";
+import EditRounded from "@mui/icons-material/EditRounded";
 import FactCheckRounded from "@mui/icons-material/FactCheckRounded";
 import LightModeRounded from "@mui/icons-material/LightModeRounded";
 import LogoutRounded from "@mui/icons-material/LogoutRounded";
@@ -27,6 +30,7 @@ import {
   DialogTitle,
   Divider,
   Drawer,
+  Fab,
   FormControl,
   IconButton,
   InputLabel,
@@ -45,16 +49,18 @@ import {
   TableHead,
   TableRow,
   TextField,
+  Tooltip,
   Toolbar,
   Typography,
 } from "@mui/material";
 import { useColorScheme } from "@mui/material/styles";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { FlatSurface } from "@/components/ui/flat-surface";
 import { ContentState } from "@/components/ui/content-state";
 import { MetricCard } from "@/components/ui/metric-card";
 import { PageHeader } from "@/components/ui/page-header";
+import { SearchField } from "@/components/ui/search-field";
 import { SectionHeader } from "@/components/ui/section-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { CenterEditor } from "@/components/admin/center-editor";
@@ -315,7 +321,7 @@ export function AdminShell() {
     { key: "summary", label: "Resumen", icon: <AssessmentRounded /> },
     { key: "review", label: "Revisión de fichas", icon: <FactCheckRounded /> },
     { key: "centers", label: "Centros turísticos", icon: <PlaceRounded /> },
-    { key: "catalogs", label: "Catálogos", icon: <SettingsRounded /> },
+    { key: "catalogs", label: "Catálogos", icon: <CategoryRounded /> },
     { key: "settings", label: "Configuración", icon: <SettingsRounded /> },
   ];
   const meta = sectionMeta[section];
@@ -373,30 +379,36 @@ export function AdminShell() {
         position="fixed"
         color="inherit"
         sx={{
-          bgcolor: "background.paper",
+          bgcolor: "background.default",
           width: { xs: "100%", md: `calc(100% - ${drawerWidth}px)` },
           ml: { md: `${drawerWidth}px` },
           borderRadius: webTokens.shape.navigation,
+          borderBottom: 0,
         }}
       >
         <Toolbar sx={{ gap: webTokens.spacing.inline }}>
-          <IconButton
-            edge="start"
-            onClick={() => setOpen(true)}
-            aria-label="Abrir menú"
-            sx={{ display: { xs: "inline-flex", md: "none" } }}
-          >
-            <MenuRounded />
-          </IconButton>
+          <Tooltip title="Abrir menú">
+            <IconButton
+              edge="start"
+              onClick={() => setOpen(true)}
+              aria-label="Abrir menú"
+              sx={{ display: { xs: "inline-flex", md: "none" } }}
+            >
+              <MenuRounded />
+            </IconButton>
+          </Tooltip>
           <Box sx={{ flexGrow: 1 }} />
-          <IconButton
-            onClick={refreshCurrent}
-            disabled={loadingSummary || loadingCenters}
-            aria-label="Actualizar datos"
-            title="Actualizar datos"
-          >
-            <RefreshRounded />
-          </IconButton>
+          <Tooltip title="Actualizar datos">
+            <span>
+              <IconButton
+                onClick={refreshCurrent}
+                disabled={loadingSummary || loadingCenters}
+                aria-label="Actualizar datos"
+              >
+                <RefreshRounded />
+              </IconButton>
+            </span>
+          </Tooltip>
           <ColorModeButton />
         </Toolbar>
       </AppBar>
@@ -414,6 +426,8 @@ export function AdminShell() {
               boxSizing: "border-box",
               overflowX: "hidden",
               borderRadius: 0,
+              bgcolor: "background.default",
+              borderRight: 0,
             },
           }}
         >
@@ -429,6 +443,8 @@ export function AdminShell() {
               boxSizing: "border-box",
               overflowX: "hidden",
               borderRadius: 0,
+              bgcolor: "background.default",
+              borderRight: 0,
             },
           }}
         >
@@ -470,12 +486,7 @@ export function AdminShell() {
           ) : null}
 
           {section === "summary" ? (
-            <SummarySection
-              summary={summary}
-              loading={loadingSummary}
-              onReview={() => navigate("review")}
-              onCenters={() => navigate("centers")}
-            />
+            <SummarySection summary={summary} loading={loadingSummary} />
           ) : null}
           {section === "review" ? (
             <ReviewSection
@@ -590,13 +601,9 @@ export function AdminShell() {
 function SummarySection({
   summary,
   loading,
-  onReview,
-  onCenters,
 }: {
   summary: AdminSummary | null;
   loading: boolean;
-  onReview: () => void;
-  onCenters: () => void;
 }) {
   return (
     <Stack spacing={webTokens.spacing.section}>
@@ -628,42 +635,6 @@ function SummarySection({
           color="text.secondary"
         />
       </Box>
-      <FlatSurface padding="default">
-        <Stack spacing={webTokens.spacing.control}>
-          <SectionHeader
-            title="Estado del inventario"
-            description="Los datos se consultan desde la API institucional y se actualizan bajo demanda."
-          />
-          <Stack
-            direction={{ xs: "column", sm: "row" }}
-            spacing={webTokens.spacing.inline}
-            flexWrap="wrap"
-            useFlexGap
-          >
-            {(summary?.byStatus ?? []).map((status) => (
-              <StatusBadge
-                key={status.code}
-                code={status.code}
-                label={`${status.name}: ${status.total}`}
-              />
-            ))}
-            {!summary?.byStatus.length ? (
-              <Typography color="text.secondary">No hay estados disponibles.</Typography>
-            ) : null}
-          </Stack>
-          <Stack
-            direction={{ xs: "column", sm: "row" }}
-            spacing={webTokens.spacing.inline}
-          >
-            <Button variant="contained" onClick={onReview}>
-              Abrir cola de revisión
-            </Button>
-            <Button variant="outlined" onClick={onCenters}>
-              Consultar centros
-            </Button>
-          </Stack>
-        </Stack>
-      </FlatSurface>
     </Stack>
   );
 }
@@ -689,12 +660,6 @@ function ReviewSection({
 }) {
   return (
     <FlatSurface sx={{ overflow: "hidden" }}>
-      <SectionHeader
-        title="Cola de revisión"
-        description="Solo se muestran fichas con estado En revisión."
-        loading={loading}
-        inset
-      />
       {!canReview ? (
         <Alert
           severity="info"
@@ -742,60 +707,83 @@ function CentersSection({
   onNew: () => void;
   onOpen: (code: string) => void;
 }) {
+  const [showFloatingAction, setShowFloatingAction] = useState(true);
+  const previousScrollY = useRef(0);
+
+  useEffect(() => {
+    previousScrollY.current = window.scrollY;
+
+    function handleScroll() {
+      const currentScrollY = window.scrollY;
+      const atTop = currentScrollY <= 16;
+      const movingUp = currentScrollY < previousScrollY.current;
+
+      setShowFloatingAction(atTop || movingUp);
+      previousScrollY.current = currentScrollY;
+    }
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   return (
     <Stack spacing={webTokens.spacing.control}>
       <Box component="form" onSubmit={onSearch}>
-        <FlatSurface padding="compact">
-          <Stack
-            direction={{ xs: "column", sm: "row" }}
-            spacing={webTokens.spacing.control}
-          >
-            <TextField
-              label="Buscar por nombre o código"
-              value={query}
-              onChange={(event) => onQueryChange(event.target.value)}
-              fullWidth
-              inputProps={{ maxLength: 180 }}
-              helperText="Deja vacío para ver todo; la búsqueda usa al menos 2 caracteres."
-            />
-            <FormControl sx={{ minWidth: { sm: 220 } }}>
-              <InputLabel id="center-status-label">Estado</InputLabel>
-              <Select
-                labelId="center-status-label"
-                label="Estado"
-                value={status}
-                onChange={(event) => onStatusChange(event.target.value)}
-              >
-                <MenuItem value="ALL">Todos</MenuItem>
-                <MenuItem value="BORRADOR">Borrador</MenuItem>
-                <MenuItem value="EN_REVISION">En revisión</MenuItem>
-                <MenuItem value="APROBADO">Aprobado</MenuItem>
-                <MenuItem value="PUBLICADO">Publicado</MenuItem>
-                <MenuItem value="RECHAZADO">Rechazado</MenuItem>
-                <MenuItem value="INACTIVO">Inactivo</MenuItem>
-              </Select>
-            </FormControl>
-            <Button type="submit" variant="contained">
-              Buscar
-            </Button>
-          </Stack>
-        </FlatSurface>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={webTokens.spacing.control}
+        >
+          <SearchField
+            label="Buscar por nombre o código"
+            value={query}
+            onChange={(event) => onQueryChange(event.target.value)}
+          />
+          <FormControl sx={{ minWidth: { sm: 220 } }}>
+            <InputLabel id="center-status-label">Estado</InputLabel>
+            <Select
+              labelId="center-status-label"
+              label="Estado"
+              value={status}
+              onChange={(event) => onStatusChange(event.target.value)}
+            >
+              <MenuItem value="ALL">Todos</MenuItem>
+              <MenuItem value="BORRADOR">Borrador</MenuItem>
+              <MenuItem value="EN_REVISION">En revisión</MenuItem>
+              <MenuItem value="APROBADO">Aprobado</MenuItem>
+              <MenuItem value="PUBLICADO">Publicado</MenuItem>
+              <MenuItem value="RECHAZADO">Rechazado</MenuItem>
+              <MenuItem value="INACTIVO">Inactivo</MenuItem>
+            </Select>
+          </FormControl>
+        </Stack>
       </Box>
       <FlatSurface sx={{ overflow: "hidden" }}>
-        <SectionHeader
-          title="Inventario de centros"
-          description="Consulta estados activos e inactivos sin exponer identificadores internos."
-          loading={loading}
-          inset
-        />
-        <Box sx={{ px: webTokens.spacing.surface, pb: webTokens.spacing.surfaceCompact }}>
-          <Button variant="contained" startIcon={<AddRounded />} onClick={onNew}>
-            Nueva ficha
-          </Button>
-        </Box>
         <CenterTable centers={centers} loading={loading} onOpen={onOpen} />
         <PaginationFooter total={total} page={page} onPageChange={onPageChange} />
       </FlatSurface>
+      <Fab
+        variant="extended"
+        color="primary"
+        onClick={onNew}
+        aria-label="Crear nueva ficha turística"
+        sx={{
+          position: "fixed",
+          right: { xs: 2, sm: 3 },
+          bottom: { xs: 3, sm: 4 },
+          zIndex: (theme) => theme.zIndex.fab,
+          boxShadow: "none",
+          opacity: showFloatingAction ? 1 : 0,
+          transform: showFloatingAction ? "translateY(0)" : "translateY(120%)",
+          visibility: showFloatingAction ? "visible" : "hidden",
+          transition: "opacity 160ms ease, transform 160ms ease, visibility 160ms ease",
+          "@media (prefers-reduced-motion: reduce)": {
+            transition: "none",
+          },
+        }}
+      >
+        <AddRounded sx={{ mr: 1 }} />
+        Nueva ficha
+      </Fab>
     </Stack>
   );
 }
@@ -812,6 +800,7 @@ function SettingsSection({
       <FlatSurface padding="default">
         <Stack spacing={webTokens.spacing.control}>
           <SectionHeader
+            icon={<AccountCircleRounded />}
             title="Cuenta institucional"
             description="La sesión usa una cookie de renovación protegida y un token de acceso en memoria."
           />
@@ -850,6 +839,7 @@ function SettingsSection({
       <FlatSurface padding="default">
         <Stack spacing={webTokens.spacing.inline}>
           <SectionHeader
+            icon={<SettingsRounded />}
             title="Preferencias"
             description="Elige el tema con el botón de la barra superior. MUI conserva esta preferencia localmente sin guardar credenciales."
           />
@@ -879,8 +869,6 @@ function CenterTable({
 }) {
   if (loading && centers.length === 0)
     return <ContentState status="loading" label="Cargando fichas" />;
-  if (!loading && centers.length === 0)
-    return <ContentState status="empty" message="No hay fichas para mostrar." />;
   return (
     <TableContainer>
       <Table aria-label="Centros turísticos">
@@ -895,64 +883,83 @@ function CenterTable({
           </TableRow>
         </TableHead>
         <TableBody>
-          {centers.map((center) => (
-            <TableRow key={center.code} hover>
-              <TableCell>
-                <Typography fontWeight={700}>{center.name}</Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {center.code}
+          {centers.length === 0 ? (
+            <TableRow>
+              <TableCell
+                colSpan={reviewable || onOpen ? 6 : 5}
+                align="center"
+                sx={{ py: webTokens.spacing.section }}
+              >
+                <Typography color="text.secondary">
+                  No hay fichas para mostrar.
                 </Typography>
               </TableCell>
-              <TableCell>
-                <StatusBadge code={center.status.code} label={center.status.name} />
-              </TableCell>
-              <TableCell>{center.active ? "Activa" : "Inactiva"}</TableCell>
-              <TableCell>{center.requestedBy ?? "—"}</TableCell>
-              <TableCell>{formatDate(center.updatedAt)}</TableCell>
-              {reviewable && onReview ? (
-                <TableCell align="right">
-                  <Stack
-                    direction={{ xs: "column", sm: "row" }}
-                    spacing={webTokens.spacing.inline}
-                    justifyContent="flex-end"
-                  >
-                    {onOpen ? (
+            </TableRow>
+          ) : (
+            centers.map((center) => (
+              <TableRow key={center.code} hover>
+                <TableCell>
+                  <Typography fontWeight={700}>{center.name}</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {center.code}
+                  </Typography>
+                </TableCell>
+                <TableCell>
+                  <StatusBadge code={center.status.code} label={center.status.name} />
+                </TableCell>
+                <TableCell>{center.active ? "Activa" : "Inactiva"}</TableCell>
+                <TableCell>{center.requestedBy ?? "—"}</TableCell>
+                <TableCell>{formatDate(center.updatedAt)}</TableCell>
+                {reviewable && onReview ? (
+                  <TableCell align="right">
+                    <Stack
+                      direction={{ xs: "column", sm: "row" }}
+                      spacing={webTokens.spacing.inline}
+                      justifyContent="flex-end"
+                    >
+                      {onOpen ? (
+                        <Button
+                          size="small"
+                          variant="text"
+                          onClick={() => onOpen(center.code)}
+                        >
+                          Ver ficha
+                        </Button>
+                      ) : null}
                       <Button
                         size="small"
+                        variant="contained"
+                        disabled={workingCode !== null}
+                        onClick={() => onReview(center, "APPROVE")}
+                      >
+                        Aprobar
+                      </Button>
+                      <Button
+                        size="small"
+                        color="error"
                         variant="text"
+                        disabled={workingCode !== null}
+                        onClick={() => onReview(center, "REJECT")}
+                      >
+                        Rechazar
+                      </Button>
+                    </Stack>
+                  </TableCell>
+                ) : onOpen ? (
+                  <TableCell align="right">
+                    <Tooltip title="Editar">
+                      <IconButton
+                        aria-label={`Editar ${center.name}`}
                         onClick={() => onOpen(center.code)}
                       >
-                        Ver ficha
-                      </Button>
-                    ) : null}
-                    <Button
-                      size="small"
-                      variant="contained"
-                      disabled={workingCode !== null}
-                      onClick={() => onReview(center, "APPROVE")}
-                    >
-                      Aprobar
-                    </Button>
-                    <Button
-                      size="small"
-                      color="error"
-                      variant="text"
-                      disabled={workingCode !== null}
-                      onClick={() => onReview(center, "REJECT")}
-                    >
-                      Rechazar
-                    </Button>
-                  </Stack>
-                </TableCell>
-              ) : onOpen ? (
-                <TableCell align="right">
-                  <Button size="small" variant="text" onClick={() => onOpen(center.code)}>
-                    Editar
-                  </Button>
-                </TableCell>
-              ) : null}
-            </TableRow>
-          ))}
+                        <EditRounded fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </TableCell>
+                ) : null}
+              </TableRow>
+            ))
+          )}
         </TableBody>
       </Table>
     </TableContainer>
@@ -985,20 +992,28 @@ function PaginationFooter({
           : `${page * pageSize + 1}–${Math.min((page + 1) * pageSize, total)} de ${total}`}
       </Typography>
       <Stack direction="row">
-        <IconButton
-          aria-label="Página anterior"
-          onClick={() => onPageChange(page - 1)}
-          disabled={page <= 0}
-        >
-          <ChevronLeftRounded />
-        </IconButton>
-        <IconButton
-          aria-label="Página siguiente"
-          onClick={() => onPageChange(page + 1)}
-          disabled={page >= lastPage}
-        >
-          <ChevronRightRounded />
-        </IconButton>
+        <Tooltip title="Página anterior">
+          <span>
+            <IconButton
+              aria-label="Página anterior"
+              onClick={() => onPageChange(page - 1)}
+              disabled={page <= 0}
+            >
+              <ChevronLeftRounded />
+            </IconButton>
+          </span>
+        </Tooltip>
+        <Tooltip title="Página siguiente">
+          <span>
+            <IconButton
+              aria-label="Página siguiente"
+              onClick={() => onPageChange(page + 1)}
+              disabled={page >= lastPage}
+            >
+              <ChevronRightRounded />
+            </IconButton>
+          </span>
+        </Tooltip>
       </Stack>
     </Stack>
   );
@@ -1008,14 +1023,17 @@ function ColorModeButton() {
   const { mode, setMode } = useColorScheme();
   const dark = mode === "dark";
   return (
-    <IconButton
-      onClick={() => setMode(dark ? "light" : "dark")}
-      disabled={mode === undefined}
-      aria-label={dark ? "Cambiar a tema claro" : "Cambiar a tema oscuro"}
-      title={dark ? "Tema claro" : "Tema oscuro"}
-    >
-      {dark ? <LightModeRounded /> : <DarkModeRounded />}
-    </IconButton>
+    <Tooltip title={dark ? "Tema claro" : "Tema oscuro"}>
+      <span>
+        <IconButton
+          onClick={() => setMode(dark ? "light" : "dark")}
+          disabled={mode === undefined}
+          aria-label={dark ? "Cambiar a tema claro" : "Cambiar a tema oscuro"}
+        >
+          {dark ? <LightModeRounded /> : <DarkModeRounded />}
+        </IconButton>
+      </span>
+    </Tooltip>
   );
 }
 

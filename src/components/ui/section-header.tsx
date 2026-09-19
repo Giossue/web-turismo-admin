@@ -30,7 +30,19 @@ export function SectionHeader({
         gap={webTokens.spacing.control}
       >
         <Stack direction="row" spacing={webTokens.spacing.inline} alignItems="flex-start">
-          {icon}
+          {icon ? (
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                pt: 0.25,
+                color: "primary.main",
+                flexShrink: 0,
+              }}
+            >
+              {icon}
+            </Box>
+          ) : null}
           <Box>
             <Typography variant="h6">{title}</Typography>
             <Typography variant="body2" color="text.secondary">

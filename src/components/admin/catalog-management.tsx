@@ -1,7 +1,6 @@
 "use client";
 
 import EditRounded from "@mui/icons-material/EditRounded";
-import SearchRounded from "@mui/icons-material/SearchRounded";
 import {
   Alert,
   Button,
@@ -11,7 +10,6 @@ import {
   DialogTitle,
   FormControlLabel,
   IconButton,
-  InputAdornment,
   Stack,
   Switch,
   Tab,
@@ -22,13 +20,14 @@ import {
   TableHead,
   TableRow,
   TextField,
+  Tooltip,
 } from "@mui/material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 
 import { FlatSurface } from "@/components/ui/flat-surface";
 import { ContentState } from "@/components/ui/content-state";
-import { SectionHeader } from "@/components/ui/section-header";
+import { SearchField } from "@/components/ui/search-field";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
   getAdminCatalogs,
@@ -112,42 +111,27 @@ export function CatalogManagement({
 
   return (
     <Stack spacing={webTokens.spacing.control}>
-      <FlatSurface padding="default">
-        <Stack spacing={webTokens.spacing.control}>
-          <SectionHeader
-            title="Catálogos técnicos"
-            description="Mantén disponibles las opciones que se muestran al capturar fichas. Los cambios no modifican fichas ya publicadas."
-          />
-          <Tabs
-            value={selected}
-            onChange={(_, value: AdminCatalogKey) => {
-              setSelected(value);
-              setSearch("");
-            }}
-            variant="scrollable"
-            allowScrollButtonsMobile
-            aria-label="Tipo de catálogo"
-          >
-            {catalogMeta.map((item) => (
-              <Tab key={item.key} value={item.key} label={item.label} />
-            ))}
-          </Tabs>
-          <TextField
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Buscar opción"
-            inputProps={{ maxLength: 180 }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchRounded fontSize="small" />
-                </InputAdornment>
-              ),
-            }}
-            fullWidth
-          />
-        </Stack>
-      </FlatSurface>
+      <Stack spacing={webTokens.spacing.control}>
+        <Tabs
+          value={selected}
+          onChange={(_, value: AdminCatalogKey) => {
+            setSelected(value);
+            setSearch("");
+          }}
+          variant="scrollable"
+          allowScrollButtonsMobile
+          aria-label="Tipo de catálogo"
+        >
+          {catalogMeta.map((item) => (
+            <Tab key={item.key} value={item.key} label={item.label} />
+          ))}
+        </Tabs>
+        <SearchField
+          label="Buscar opción"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+      </Stack>
 
       <FlatSurface sx={{ overflow: "hidden" }}>
         {catalogsQuery.isLoading ? (
@@ -181,12 +165,14 @@ export function CatalogManagement({
                     />
                   </TableCell>
                   <TableCell align="right">
-                    <IconButton
-                      aria-label={`Editar ${option.name}`}
-                      onClick={() => openEdit(option)}
-                    >
-                      <EditRounded fontSize="small" />
-                    </IconButton>
+                    <Tooltip title="Editar">
+                      <IconButton
+                        aria-label={`Editar ${option.name}`}
+                        onClick={() => openEdit(option)}
+                      >
+                        <EditRounded fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                   </TableCell>
                 </TableRow>
               ))}

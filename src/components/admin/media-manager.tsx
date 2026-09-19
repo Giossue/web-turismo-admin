@@ -12,6 +12,7 @@ import {
   IconButton,
   Stack,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -97,7 +98,7 @@ export function MediaManager({
     <FlatSurface padding="default">
       <Stack spacing={webTokens.spacing.control}>
         <SectionHeader
-          icon={<PhotoLibraryRounded color="primary" />}
+          icon={<PhotoLibraryRounded />}
           title="Fotos y multimedia"
           description="Sube fotografías, videos o audios institucionales. Imágenes hasta 10 MB y multimedia hasta 50 MB."
         />
@@ -197,13 +198,17 @@ export function MediaManager({
                   Abrir
                 </Button>
               ) : null}
-              <IconButton
-                aria-label={`Eliminar ${item.originalName}`}
-                onClick={() => void remove(item)}
-                disabled={!canEdit || working}
-              >
-                <DeleteOutlineRounded />
-              </IconButton>
+              <Tooltip title="Eliminar">
+                <span>
+                  <IconButton
+                    aria-label={`Eliminar ${item.originalName}`}
+                    onClick={() => void remove(item)}
+                    disabled={!canEdit || working}
+                  >
+                    <DeleteOutlineRounded />
+                  </IconButton>
+                </span>
+              </Tooltip>
             </Stack>
             <Divider sx={{ my: webTokens.spacing.inline }} />
           </Stack>

@@ -1,7 +1,14 @@
 "use client";
 
 import ArrowBackRounded from "@mui/icons-material/ArrowBackRounded";
+import AccessTimeRounded from "@mui/icons-material/AccessTimeRounded";
+import AccessibleRounded from "@mui/icons-material/AccessibleRounded";
+import BusinessRounded from "@mui/icons-material/BusinessRounded";
+import CategoryRounded from "@mui/icons-material/CategoryRounded";
 import CloudUploadRounded from "@mui/icons-material/CloudUploadRounded";
+import DirectionsWalkRounded from "@mui/icons-material/DirectionsWalkRounded";
+import MapRounded from "@mui/icons-material/MapRounded";
+import MiscellaneousServicesRounded from "@mui/icons-material/MiscellaneousServicesRounded";
 import PublishRounded from "@mui/icons-material/PublishRounded";
 import SaveRounded from "@mui/icons-material/SaveRounded";
 import {
@@ -273,7 +280,6 @@ export function CenterEditor({
               key="publish"
               type="button"
               variant="contained"
-              color="success"
               startIcon={<PublishRounded />}
               onClick={() => void publish()}
               disabled={working !== null}
@@ -302,6 +308,7 @@ export function CenterEditor({
       <FlatSurface padding="default">
         <Stack spacing={webTokens.spacing.section}>
           <SectionHeader
+            icon={<CategoryRounded />}
             title="Identificación y clasificación"
             description="Estos campos determinan el código institucional y la ubicación territorial."
           />
@@ -387,6 +394,7 @@ export function CenterEditor({
       <FlatSurface padding="default">
         <Stack spacing={webTokens.spacing.section}>
           <SectionHeader
+            icon={<MapRounded />}
             title="Ubicación y descripción"
             description="La API sincroniza las coordenadas con PostGIS."
           />
@@ -473,6 +481,7 @@ export function CenterEditor({
       <FlatSurface padding="default">
         <Stack spacing={webTokens.spacing.section}>
           <SectionHeader
+            icon={<BusinessRounded />}
             title="Administración"
             description="Contacto institucional responsable del atractivo."
           />
@@ -543,6 +552,7 @@ export function CenterEditor({
       <FlatSurface padding="default">
         <Stack spacing={webTokens.spacing.section}>
           <SectionHeader
+            icon={<AccessTimeRounded />}
             title="Ingreso y atención"
             description="Información que se mostrará en la ficha pública cuando se publique."
           />
@@ -627,6 +637,7 @@ export function CenterEditor({
       <FlatSurface padding="default">
         <Stack spacing={webTokens.spacing.section}>
           <SectionHeader
+            icon={<DirectionsWalkRounded />}
             title="Actividades"
             description="Selecciona únicamente las actividades que se practican en el atractivo."
           />
@@ -641,6 +652,7 @@ export function CenterEditor({
       <FlatSurface padding="default">
         <Stack spacing={webTokens.spacing.section}>
           <SectionHeader
+            icon={<AccessibleRounded />}
             title="Accesibilidad"
             description="Registra las condiciones verificadas para orientar a turistas."
           />
@@ -655,6 +667,7 @@ export function CenterEditor({
       <FlatSurface padding="default">
         <Stack spacing={webTokens.spacing.section}>
           <SectionHeader
+            icon={<MiscellaneousServicesRounded />}
             title="Facilidades"
             description="Indica los servicios y elementos disponibles en el entorno."
           />
@@ -707,9 +720,6 @@ function CatalogSelect({
           required: required ? `${label} es obligatorio` : false,
         })}
       >
-        <MenuItem value="">
-          <em>Selecciona</em>
-        </MenuItem>
         {options.map((option) => (
           <MenuItem key={option.id} value={String(option.id)}>
             {option.name}

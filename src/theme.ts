@@ -54,10 +54,10 @@ const theme = createTheme({
           boxShadow: "none",
         },
         outlined: {
-          border: "1px solid var(--mui-palette-primary-main)",
+          border: 0,
           backgroundColor: "var(--mui-palette-action-hover)",
         },
-        contained: { border: "1px solid var(--mui-palette-primary-dark)" },
+        contained: { border: 0 },
       },
     },
     MuiCard: {
@@ -91,7 +91,29 @@ const theme = createTheme({
       },
     },
     MuiTextField: {
-      defaultProps: { variant: "filled" },
+      defaultProps: { variant: "outlined" },
+    },
+    MuiSelect: {
+      defaultProps: { variant: "outlined" },
+    },
+    MuiOutlinedInput: {
+      styleOverrides: {
+        root: {
+          borderRadius: webTokens.shape.radius,
+          minHeight: webTokens.form.controlHeight,
+          backgroundColor: "var(--mui-palette-action-hover)",
+          "& .MuiOutlinedInput-notchedOutline": {
+            border: "1px solid var(--mui-palette-divider)",
+          },
+          "&:hover .MuiOutlinedInput-notchedOutline": {
+            borderColor: "var(--mui-palette-text-secondary)",
+          },
+          "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+            borderColor: "var(--mui-palette-primary-main)",
+            borderWidth: 1,
+          },
+        },
+      },
     },
     MuiFilledInput: {
       styleOverrides: {
@@ -122,7 +144,8 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           border: "1px solid var(--mui-palette-divider)",
-          borderRadius: webTokens.shape.radius,
+          borderRadius: webTokens.shape.pill,
+          fontWeight: 600,
         },
       },
     },

@@ -51,25 +51,25 @@ export const webTokens = {
     },
     dark: {
       primary: {
-        main: "#55c7b8",
-        dark: "#2da596",
-        light: "#8be0d5",
-        contrastText: "#102522",
+        main: "#22c55e",
+        dark: "#15803d",
+        light: "#4ade80",
+        contrastText: "#06130a",
       },
       secondary: {
-        main: "#f0aa56",
-        contrastText: "#2b1b0b",
+        main: "#b8b8b8",
+        contrastText: "#0b0b0b",
       },
       background: {
-        default: "#101817",
-        paper: "#182321",
-        subtle: "#20302c",
+        default: "#080808",
+        paper: "#151515",
+        subtle: "#202020",
       },
       text: {
-        primary: "#e8f1ef",
-        secondary: "#afc2be",
+        primary: "#f5f5f5",
+        secondary: "#b3b3b3",
       },
-      divider: "rgba(232, 241, 239, 0.14)",
+      divider: "rgba(245, 245, 245, 0.12)",
       status: {
         error: {
           main: "#f44336",
@@ -90,10 +90,10 @@ export const webTokens = {
           contrastText: "#102522",
         },
         success: {
-          main: "#66bb6a",
-          dark: "#388e3c",
-          light: "#81c784",
-          contrastText: "#102522",
+          main: "#4ade80",
+          dark: "#16a34a",
+          light: "#86efac",
+          contrastText: "#07130a",
         },
       },
     },
