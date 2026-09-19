@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Roboto } from "next/font/google";
 import { AppRouterCacheProvider } from "@mui/material-nextjs/v16-appRouter";
 import { CssBaseline, ThemeProvider } from "@mui/material";
+import InitColorSchemeScript from "@mui/material/InitColorSchemeScript";
 
 import theme from "@/theme";
 import "./globals.css";
@@ -23,10 +24,11 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="es">
+    <html lang="es" suppressHydrationWarning>
       <body className={roboto.variable}>
+        <InitColorSchemeScript defaultMode="light" attribute="data" />
         <AppRouterCacheProvider options={{ enableCssLayer: true }}>
-          <ThemeProvider theme={theme}>
+          <ThemeProvider theme={theme} defaultMode="light">
             <CssBaseline />
             {children}
           </ThemeProvider>

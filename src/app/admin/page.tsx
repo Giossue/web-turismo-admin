@@ -1,4 +1,6 @@
 import { AdminShell } from "@/components/admin/admin-shell";
+import { AdminProviders } from "@/components/admin/admin-providers";
+import { AdminAuthProvider } from "@/lib/auth";
 
 export const metadata = {
   title: "Panel institucional | Turismo Vinculación",
@@ -6,5 +8,11 @@ export const metadata = {
 };
 
 export default function AdminPage() {
-  return <AdminShell />;
+  return (
+    <AdminProviders>
+      <AdminAuthProvider>
+        <AdminShell />
+      </AdminAuthProvider>
+    </AdminProviders>
+  );
 }

@@ -2,22 +2,28 @@
 
 import { createTheme } from "@mui/material/styles";
 
+import { webTokens } from "@/theme/tokens";
+
 const theme = createTheme({
-  cssVariables: true,
-  palette: {
-    primary: {
-      main: "#00796b",
-      dark: "#00574f",
-      light: "#48a999",
-      contrastText: "#ffffff",
+  cssVariables: { colorSchemeSelector: "data" },
+  colorSchemes: {
+    light: {
+      palette: {
+        ...webTokens.colors.light,
+        error: webTokens.colors.light.status.error,
+        warning: webTokens.colors.light.status.warning,
+        info: webTokens.colors.light.status.info,
+        success: webTokens.colors.light.status.success,
+      },
     },
-    secondary: {
-      main: "#e28a2b",
-      contrastText: "#1f2933",
-    },
-    background: {
-      default: "#f5f8f7",
-      paper: "#ffffff",
+    dark: {
+      palette: {
+        ...webTokens.colors.dark,
+        error: webTokens.colors.dark.status.error,
+        warning: webTokens.colors.dark.status.warning,
+        info: webTokens.colors.dark.status.info,
+        success: webTokens.colors.dark.status.success,
+      },
     },
   },
   typography: {
@@ -27,14 +33,121 @@ const theme = createTheme({
     h3: { fontWeight: 700 },
     button: { fontWeight: 700, textTransform: "none" },
   },
-  shape: { borderRadius: 16 },
+  shape: { borderRadius: webTokens.shape.radius },
   components: {
+    MuiPaper: {
+      defaultProps: { elevation: 0 },
+      styleOverrides: {
+        root: {
+          boxShadow: "none",
+          border: "1px solid var(--mui-palette-divider)",
+          borderRadius: webTokens.shape.radius,
+        },
+      },
+    },
     MuiButton: {
       defaultProps: { disableElevation: true },
-      styleOverrides: { root: { borderRadius: 12, minHeight: 44 } },
+      styleOverrides: {
+        root: {
+          borderRadius: webTokens.shape.radius,
+          minHeight: 44,
+          boxShadow: "none",
+        },
+        outlined: {
+          border: "1px solid var(--mui-palette-primary-main)",
+          backgroundColor: "var(--mui-palette-action-hover)",
+        },
+        contained: { border: "1px solid var(--mui-palette-primary-dark)" },
+      },
     },
     MuiCard: {
-      styleOverrides: { root: { border: "1px solid #e1ebe8" } },
+      styleOverrides: {
+        root: {
+          border: "1px solid var(--mui-palette-divider)",
+          boxShadow: "none",
+          borderRadius: webTokens.shape.radius,
+        },
+      },
+    },
+    MuiAppBar: {
+      defaultProps: { elevation: 0 },
+      styleOverrides: {
+        root: {
+          boxShadow: "none",
+          border: 0,
+          borderBottom: "1px solid var(--mui-palette-divider)",
+          borderRadius: webTokens.shape.navigation,
+        },
+      },
+    },
+    MuiDrawer: {
+      styleOverrides: {
+        paper: {
+          boxShadow: "none",
+          border: 0,
+          borderRight: "1px solid var(--mui-palette-divider)",
+          borderRadius: webTokens.shape.navigation,
+        },
+      },
+    },
+    MuiTextField: {
+      defaultProps: { variant: "filled" },
+    },
+    MuiFilledInput: {
+      styleOverrides: {
+        root: {
+          borderRadius: webTokens.shape.radius,
+          minHeight: webTokens.form.controlHeight,
+          backgroundColor: "var(--mui-palette-action-hover)",
+          border: "1px solid var(--mui-palette-divider)",
+          "&:before, &:after": { display: "none" },
+          "& input.MuiFilledInput-input": {
+            paddingTop: webTokens.form.inputPaddingTop,
+            paddingBottom: webTokens.form.inputPaddingBottom,
+          },
+          "&:hover": { backgroundColor: "var(--mui-palette-action-selected)" },
+          "&.Mui-focused": {
+            backgroundColor: "var(--mui-palette-action-hover)",
+            borderColor: "var(--mui-palette-primary-main)",
+          },
+        },
+      },
+    },
+    MuiDivider: {
+      styleOverrides: {
+        root: { border: 0, backgroundColor: "var(--mui-palette-divider)" },
+      },
+    },
+    MuiChip: {
+      styleOverrides: {
+        root: {
+          border: "1px solid var(--mui-palette-divider)",
+          borderRadius: webTokens.shape.radius,
+        },
+      },
+    },
+    MuiTableCell: {
+      styleOverrides: {
+        root: { borderBottom: "1px solid var(--mui-palette-divider)" },
+        head: {
+          fontWeight: 700,
+          backgroundColor: "var(--mui-palette-action-hover)",
+        },
+      },
+    },
+    MuiListItemButton: {
+      styleOverrides: {
+        root: { borderRadius: webTokens.shape.radius, margin: "2px 12px" },
+      },
+    },
+    MuiAlert: {
+      styleOverrides: {
+        root: {
+          border: "1px solid currentColor",
+          borderRadius: webTokens.shape.radius,
+          boxShadow: "none",
+        },
+      },
     },
   },
 });

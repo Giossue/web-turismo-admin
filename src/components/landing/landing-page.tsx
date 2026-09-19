@@ -1,3 +1,5 @@
+"use client";
+
 import ArrowForwardRounded from "@mui/icons-material/ArrowForwardRounded";
 import ExploreRounded from "@mui/icons-material/ExploreRounded";
 import FactCheckRounded from "@mui/icons-material/FactCheckRounded";
@@ -10,13 +12,13 @@ import {
   CardContent,
   Chip,
   Container,
-  Divider,
   Grid,
   Stack,
   Typography,
 } from "@mui/material";
 
 import type { PublishedCenter } from "@/lib/api";
+import { webTokens } from "@/theme/tokens";
 
 type LandingPageProps = {
   centers: PublishedCenter[];
@@ -31,12 +33,12 @@ export function LandingPage({ centers, apiOnline }: LandingPageProps) {
         sx={{
           bgcolor: "primary.dark",
           color: "common.white",
-          py: { xs: 2, md: 3 },
+          py: webTokens.spacing.surface,
         }}
       >
         <Container maxWidth="lg">
           <Stack direction="row" alignItems="center" justifyContent="space-between">
-            <Stack direction="row" spacing={1.25} alignItems="center">
+            <Stack direction="row" spacing={webTokens.spacing.brand} alignItems="center">
               <ExploreRounded />
               <Typography variant="h6" fontWeight={700}>
                 Turismo Vinculación
@@ -45,17 +47,16 @@ export function LandingPage({ centers, apiOnline }: LandingPageProps) {
             <Chip
               label="Información institucional"
               size="small"
-              sx={{ color: "common.white", borderColor: "rgba(255,255,255,.4)" }}
-              variant="outlined"
+              sx={{ color: "primary.contrastText", bgcolor: "primary.main" }}
             />
           </Stack>
         </Container>
       </Box>
 
-      <Container maxWidth="lg" sx={{ py: { xs: 7, md: 11 } }}>
-        <Grid container spacing={{ xs: 5, md: 9 }} alignItems="center">
+      <Container maxWidth="lg" sx={{ py: webTokens.spacing.hero }}>
+        <Grid container spacing={webTokens.spacing.publicHeroGrid} alignItems="center">
           <Grid size={{ xs: 12, md: 7 }}>
-            <Stack spacing={3}>
+            <Stack spacing={webTokens.spacing.section}>
               <Chip
                 icon={<VerifiedRounded />}
                 label="Información turística validada"
@@ -78,7 +79,10 @@ export function LandingPage({ centers, apiOnline }: LandingPageProps) {
                 experiencias verificadas. Este portal acompaña la operación institucional
                 que alimenta la aplicación móvil.
               </Typography>
-              <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                spacing={webTokens.spacing.actionGroup}
+              >
                 <Button
                   href="#como-funciona"
                   variant="contained"
@@ -96,12 +100,14 @@ export function LandingPage({ centers, apiOnline }: LandingPageProps) {
             <Card
               sx={{ bgcolor: "primary.main", color: "common.white", overflow: "hidden" }}
             >
-              <CardContent sx={{ p: { xs: 3, md: 4 } }}>
+              <CardContent sx={{ p: webTokens.spacing.publicHeroCard }}>
                 <MapRounded sx={{ fontSize: 52, mb: 3 }} />
                 <Typography variant="h4" gutterBottom>
                   Una fuente institucional.
                 </Typography>
-                <Typography sx={{ color: "rgba(255,255,255,.86)", lineHeight: 1.6 }}>
+                <Typography
+                  sx={{ color: "primary.contrastText", opacity: 0.86, lineHeight: 1.6 }}
+                >
                   Guías y equipos turísticos registran la información. Los revisores la
                   validan antes de que llegue a la experiencia móvil del visitante.
                 </Typography>
@@ -110,9 +116,11 @@ export function LandingPage({ centers, apiOnline }: LandingPageProps) {
           </Grid>
         </Grid>
 
-        <Divider sx={{ my: { xs: 7, md: 10 } }} />
-
-        <Stack id="como-funciona" spacing={2} sx={{ mb: 5 }}>
+        <Stack
+          id="como-funciona"
+          spacing={webTokens.spacing.control}
+          sx={{ mb: webTokens.spacing.publicHeading }}
+        >
           <Typography component="h2" variant="h2" sx={{ fontSize: { xs: 30, md: 42 } }}>
             Diseñado para mantener la información al día
           </Typography>
@@ -122,7 +130,7 @@ export function LandingPage({ centers, apiOnline }: LandingPageProps) {
           </Typography>
         </Stack>
 
-        <Grid container spacing={2.5}>
+        <Grid container spacing={webTokens.spacing.publicGrid}>
           {[
             [
               <FactCheckRounded key="fact" />,
@@ -142,7 +150,7 @@ export function LandingPage({ centers, apiOnline }: LandingPageProps) {
           ].map(([icon, title, description]) => (
             <Grid key={title as string} size={{ xs: 12, md: 4 }}>
               <Card sx={{ height: "100%" }}>
-                <CardContent sx={{ p: 3 }}>
+                <CardContent sx={{ p: webTokens.spacing.publicCard }}>
                   <Box sx={{ color: "primary.main", mb: 2 }}>{icon}</Box>
                   <Typography variant="h6" gutterBottom>
                     {title}
@@ -154,10 +162,14 @@ export function LandingPage({ centers, apiOnline }: LandingPageProps) {
           ))}
         </Grid>
 
-        <Stack id="lugares" spacing={2} sx={{ mt: { xs: 8, md: 11 }, mb: 3 }}>
+        <Stack
+          id="lugares"
+          spacing={webTokens.spacing.control}
+          sx={{ mt: webTokens.spacing.publicSection, mb: 3 }}
+        >
           <Stack
             direction={{ xs: "column", sm: "row" }}
-            spacing={1}
+            spacing={webTokens.spacing.inline}
             alignItems={{ sm: "center" }}
           >
             <Typography component="h2" variant="h2" sx={{ fontSize: { xs: 30, md: 42 } }}>
@@ -175,7 +187,7 @@ export function LandingPage({ centers, apiOnline }: LandingPageProps) {
         </Stack>
 
         {centers.length > 0 ? (
-          <Grid container spacing={2}>
+          <Grid container spacing={webTokens.spacing.control}>
             {centers.map((center) => (
               <Grid key={center.code} size={{ xs: 12, sm: 6, md: 4 }}>
                 <Card sx={{ height: "100%" }}>
@@ -203,7 +215,10 @@ export function LandingPage({ centers, apiOnline }: LandingPageProps) {
         )}
       </Container>
 
-      <Box component="footer" sx={{ bgcolor: "#e8f0ee", py: 4 }}>
+      <Box
+        component="footer"
+        sx={{ bgcolor: "background.subtle", py: webTokens.spacing.footer }}
+      >
         <Container maxWidth="lg">
           <Typography variant="body2" color="text.secondary">
             Turismo Vinculación · Plataforma institucional para promover el turismo en
