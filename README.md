@@ -51,6 +51,20 @@ corepack pnpm --filter @turismo/api auth:create-user
 unset AUTH_BOOTSTRAP_PASSWORD
 ```
 
+## Despliegue en Dokploy
+
+El repositorio incluye un `Dockerfile` standalone para producción. Usa el contexto raíz,
+puerto de contenedor `3000` y estos valores de build/runtime:
+
+```text
+TURISMO_API_URL=https://api.maps.devs-ueb.tech/api/v1
+NEXT_PUBLIC_TURISMO_API_URL=https://api.maps.devs-ueb.tech/api/v1
+```
+
+`NEXT_PUBLIC_TURISMO_API_URL` debe estar disponible como argumento de build porque Next.js
+lo incorpora al bundle del navegador. `TURISMO_API_URL` también debe quedar como variable
+de runtime para las solicitudes realizadas desde el servidor.
+
 ## Verificación
 
 ```bash

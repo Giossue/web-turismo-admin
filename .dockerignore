@@ -1,0 +1,7 @@
+.git
+.github
+.agents
+node_modules
+.next
+coverage
+*.log
