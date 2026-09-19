@@ -1,6 +1,8 @@
 import { LandingPage } from "@/components/landing/landing-page";
 import { getApiHealth, getPublishedCenters } from "@/lib/api";
 
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
   const [centers, apiOnline] = await Promise.all([
     getPublishedCenters().catch(() => []),
