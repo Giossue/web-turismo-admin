@@ -5,15 +5,18 @@ es el único cliente para turistas; este repositorio no contiene una versión we
 
 ## Arranque local
 
-1. Copia `.env.example` a `.env.local` si la API no está en `http://localhost:3000`.
-2. Inicia la API desde el monorepo principal:
+La forma recomendada es arrancar todo desde el monorepo principal:
 
 ```bash
 cd ../app-turismo-vinculacion
-corepack pnpm --filter @turismo/api dev
+corepack pnpm dev:local
 ```
 
-3. Instala dependencias y arranca Next.js:
+El comando levanta PostgreSQL/PostGIS, aplica las migraciones, inicia la API y arranca esta
+web con las variables `TURISMO_API_URL` y `NEXT_PUBLIC_TURISMO_API_URL` correctas.
+Abre `http://localhost:3002/admin`.
+
+Para arrancar solo esta web manualmente:
 
 ```bash
 bun install
