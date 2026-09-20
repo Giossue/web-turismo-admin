@@ -171,6 +171,10 @@ export type AdminCenterSections = {
   code: string;
   version: number;
   sections: Partial<Record<AdminCenterSectionCode, Record<string, unknown>>>;
+  progress?: Array<{
+    code: AdminCenterSectionCode;
+    status: "SIN_INICIAR" | "INCOMPLETA" | "COMPLETA" | "CON_ERRORES" | "NO_APLICA";
+  }>;
 };
 
 export type AdminCentersOptions = {

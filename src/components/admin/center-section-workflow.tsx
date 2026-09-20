@@ -34,7 +34,6 @@ import {
   saveAdminCenterSection,
   type AdminCenterDetail,
   type AdminCenterSectionCode,
-  type AdminCenterSections,
 } from "@/lib/admin-api";
 import { webTokens } from "@/theme/tokens";
 
@@ -200,7 +199,8 @@ type SectionFormValues = {
   rows: SectionRowForm[];
 };
 
-type SectionProgress = "SIN_INICIAR" | "COMPLETA" | "NO_APLICA";
+type SectionProgress =
+  "SIN_INICIAR" | "INCOMPLETA" | "COMPLETA" | "CON_ERRORES" | "NO_APLICA";
 
 const EMPTY_RESPONSE: SectionResponse = "SIN_INFORMACION";
 
@@ -246,14 +246,22 @@ export function CenterSectionWorkflow({
     centerSectionDefinitions.find((item) => item.code === activeCode) ??
     centerSectionDefinitions[0];
   const coreCompletion = useMemo(() => getCoreCompletion(detail), [detail]);
+  const serverProgress = useMemo(
+    () => new Map((sectionData?.progress ?? []).map((item) => [item.code, item.status])),
+    [sectionData?.progress],
+  );
   const progress = useMemo(
     () =>
       centerSectionDefinitions.filter(
         (item) =>
-          getProgress(item, sections[item.code], coreCompletion[item.code]) !==
-          "SIN_INICIAR",
+          getProgress(
+            item,
+            sections[item.code],
+            coreCompletion[item.code],
+            serverProgress.get(item.code),
+          ) !== "SIN_INICIAR",
       ).length,
-    [coreCompletion, sections],
+    [coreCompletion, sections, serverProgress],
   );
 
   const form = useForm<SectionFormValues>({
@@ -291,12 +299,9 @@ export function CenterSectionWorkflow({
         content,
         detail?.version,
       );
-      const nextSections: AdminCenterSections = {
-        code: saved.code,
-        version: saved.version,
-        sections: saved.draft?.sections ?? {},
-      };
-      queryClient.setQueryData(["admin", "center", code, "sections"], nextSections);
+      await queryClient.invalidateQueries({
+        queryKey: ["admin", "center", code, "sections"],
+      });
       setLocalDrafts((current) => {
         const next = { ...current };
         delete next[definition.code];
@@ -395,6 +400,7 @@ export function CenterSectionWorkflow({
                   item,
                   sections[item.code],
                   coreCompletion[item.code],
+                  serverProgress.get(item.code),
                 );
                 const selected = item.code === activeCode;
                 return (
@@ -444,6 +450,7 @@ export function CenterSectionWorkflow({
                       definition,
                       sections[definition.code],
                       coreCompletion[definition.code],
+                      serverProgress.get(definition.code),
                     )}
                   />
                   {formState.isDirty || activeLocalDraft ? (
@@ -667,6 +674,10 @@ function SectionStatusChip({ status }: { status: SectionProgress }) {
   if (status === "COMPLETA")
     return <Chip size="small" color="success" label="Completa" />;
   if (status === "NO_APLICA") return <Chip size="small" color="info" label="No aplica" />;
+  if (status === "INCOMPLETA")
+    return <Chip size="small" color="warning" label="Incompleta" />;
+  if (status === "CON_ERRORES")
+    return <Chip size="small" color="error" label="Con errores" />;
   return <Chip size="small" variant="outlined" label="Sin iniciar" />;
 }
 
@@ -674,7 +685,9 @@ function getProgress(
   definition: SectionDefinition,
   raw: unknown,
   coreComplete: boolean | undefined,
+  serverStatus?: SectionProgress,
 ): SectionProgress {
+  if (serverStatus && serverStatus !== "SIN_INICIAR") return serverStatus;
   if (isRecord(raw) && isSectionResponse(raw.response)) {
     return raw.response === "NO_APLICA" ? "NO_APLICA" : "COMPLETA";
   }
