@@ -6097,6 +6097,622 @@ function isSectionResponse(value: unknown): value is SectionResponse {
   return SECTION_RESPONSE_OPTIONS.some((option) => option.value === value);
 }
 
+/**
+ * Continuous version of the section editor.
+ *
+ * The original workflow is kept above for backwards compatibility while the
+ * administrative editor uses this layout: every section is visible in one
+ * vertical flow and owns its own react-hook-form state. This keeps the API
+ * contract and the per-section save operation unchanged.
+ */
+export function ContinuousCenterSectionWorkflow({
+  token,
+  code,
+  detail,
+  catalogs,
+  canEdit,
+  onDetailChanged,
+  onNotice,
+  onError,
+}: {
+  token: string;
+  code: string | null;
+  detail: AdminCenterDetail | null;
+  catalogs: AdminCatalogs | null;
+  canEdit: boolean;
+  onDetailChanged: (detail: AdminCenterDetail) => void;
+  onNotice: (message: string) => void;
+  onError: (message: string | null) => void;
+}) {
+  const sectionsQuery = useQuery({
+    queryKey: ["admin", "center", code, "sections"],
+    queryFn: () => getAdminCenterSections(token, code as string),
+    enabled: Boolean(token && code),
+    staleTime: 10_000,
+  });
+  const valuationQuery = useQuery<AdminCenterValuation>({
+    queryKey: ["admin", "center", code, "valuation"],
+    queryFn: () => getAdminCenterValuation(token, code as string),
+    enabled: Boolean(token && code),
+    staleTime: 10_000,
+  });
+  const mediaQuery = useQuery<{ items: AdminMediaItem[] }>({
+    queryKey: ["admin", "media", code],
+    queryFn: () => getAdminCenterMedia(token, code as string),
+    enabled: Boolean(token && code),
+    staleTime: 5_000,
+  });
+  const sectionData = sectionsQuery.data;
+  const sections = useMemo(
+    () => sectionData?.sections ?? detail?.draft?.sections ?? {},
+    [detail?.draft?.sections, sectionData?.sections],
+  );
+  const coreCompletion = useMemo(() => getCoreCompletion(detail), [detail]);
+  const serverProgress = useMemo(
+    () => new Map((sectionData?.progress ?? []).map((item) => [item.code, item.status])),
+    [sectionData?.progress],
+  );
+  const progress = useMemo(
+    () =>
+      centerSectionDefinitions.filter(
+        (item) =>
+          getProgress(
+            item,
+            sections[item.code],
+            coreCompletion[item.code],
+            serverProgress.get(item.code),
+          ) !== "SIN_INICIAR",
+      ).length,
+    [coreCompletion, sections, serverProgress],
+  );
+
+  if (code && sectionsQuery.isLoading) {
+    return <ContentState status="loading" label="Cargando secciones de la ficha" />;
+  }
+
+  if (sectionsQuery.error) {
+    return (
+      <Alert
+        severity="error"
+        action={
+          <Button
+            type="button"
+            color="inherit"
+            size="small"
+            onClick={() => void sectionsQuery.refetch()}
+          >
+            Reintentar
+          </Button>
+        }
+      >
+        {sectionsQuery.error instanceof Error
+          ? sectionsQuery.error.message
+          : "No se pudieron cargar las secciones de la ficha."}
+      </Alert>
+    );
+  }
+
+  return (
+    <Stack
+      spacing={webTokens.spacing.section}
+      onKeyDown={(event) => {
+        if (
+          event.key === "Enter" &&
+          (event.target as HTMLElement).tagName !== "TEXTAREA"
+        ) {
+          event.preventDefault();
+        }
+      }}
+    >
+      <FlatSurface padding="default">
+        <Stack spacing={webTokens.spacing.section}>
+          <SectionHeader
+            icon={<FactCheckRounded />}
+            title="Ficha integral por secciones"
+            description="Completa la ficha en un solo recorrido. Cada apartado conserva su avance y se guarda como un borrador versionado."
+          />
+          <InstitutionalCodeCard
+            code={detail?.code ?? null}
+            valuation={valuationQuery.data ?? null}
+          />
+          {!code ? (
+            <Alert severity="info">
+              Guarda primero los datos generales. Después podrás registrar el detalle de
+              cada sección sin perder el avance.
+            </Alert>
+          ) : null}
+          <Stack spacing={1}>
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              alignItems="center"
+              gap={2}
+            >
+              <Typography variant="body2" color="text.secondary">
+                Progreso de captura: {progress} de {centerSectionDefinitions.length}{" "}
+                secciones
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {Math.round((progress / centerSectionDefinitions.length) * 100)}%
+              </Typography>
+            </Stack>
+            <LinearProgress
+              variant="determinate"
+              value={(progress / centerSectionDefinitions.length) * 100}
+              aria-label="Progreso de la ficha integral"
+            />
+          </Stack>
+        </Stack>
+      </FlatSurface>
+
+      {centerSectionDefinitions.map((definition, index) => (
+        <ContinuousSectionCard
+          key={definition.code}
+          index={index}
+          definition={definition}
+          token={token}
+          code={code}
+          detail={detail}
+          catalogs={catalogs}
+          canEdit={canEdit}
+          rawSection={sections[definition.code]}
+          status={getProgress(
+            definition,
+            sections[definition.code],
+            coreCompletion[definition.code],
+            serverProgress.get(definition.code),
+          )}
+          mediaItems={mediaQuery.data?.items ?? []}
+          onDetailChanged={onDetailChanged}
+          onNotice={onNotice}
+          onError={onError}
+        />
+      ))}
+    </Stack>
+  );
+}
+
+function ContinuousSectionCard({
+  index,
+  definition,
+  token,
+  code,
+  detail,
+  catalogs,
+  canEdit,
+  rawSection,
+  status,
+  mediaItems,
+  onDetailChanged,
+  onNotice,
+  onError,
+}: {
+  index: number;
+  definition: SectionDefinition;
+  token: string;
+  code: string | null;
+  detail: AdminCenterDetail | null;
+  catalogs: AdminCatalogs | null;
+  canEdit: boolean;
+  rawSection: unknown;
+  status: SectionProgress;
+  mediaItems: AdminMediaItem[];
+  onDetailChanged: (detail: AdminCenterDetail) => void;
+  onNotice: (message: string) => void;
+  onError: (message: string | null) => void;
+}) {
+  const [working, setWorking] = useState(false);
+  const queryClient = useQueryClient();
+  const form = useForm<SectionFormValues>({
+    defaultValues: createSectionValues(definition, rawSection),
+    mode: "onBlur",
+  });
+  const { control, register, reset, handleSubmit, formState } = form;
+  const { fields, append, remove } = useFieldArray({ control, name: "rows" });
+  const {
+    fields: conservationFactorFields,
+    append: appendConservationFactor,
+    remove: removeConservationFactor,
+  } = useFieldArray({ control, name: "conservationFactors" });
+  const {
+    fields: declarationFields,
+    append: appendDeclaration,
+    remove: removeDeclaration,
+  } = useFieldArray({ control, name: "declarations" });
+  const {
+    fields: hygieneEntryFields,
+    append: appendHygieneEntry,
+    remove: removeHygieneEntry,
+  } = useFieldArray({ control, name: "hygieneEntries" });
+  const { fields: policyFields } = useFieldArray({ control, name: "policies" });
+  const {
+    fields: promotionMediaFields,
+    append: appendPromotionMedia,
+    remove: removePromotionMedia,
+  } = useFieldArray({ control, name: "promotionMedia" });
+  const {
+    fields: visitorSeasonFields,
+    append: appendVisitorSeason,
+    remove: removeVisitorSeason,
+  } = useFieldArray({ control, name: "visitorSeasons" });
+  const {
+    fields: visitorOriginFields,
+    append: appendVisitorOrigin,
+    remove: removeVisitorOrigin,
+  } = useFieldArray({ control, name: "visitorOrigins" });
+  const {
+    fields: visitorInformantFields,
+    append: appendVisitorInformant,
+    remove: removeVisitorInformant,
+  } = useFieldArray({ control, name: "visitorInformants" });
+  const {
+    fields: humanResourceTrainingFields,
+    append: appendHumanResourceTraining,
+    remove: removeHumanResourceTraining,
+  } = useFieldArray({ control, name: "humanResourceTraining" });
+  const {
+    fields: annexDocumentFields,
+    append: appendAnnexDocument,
+    remove: removeAnnexDocument,
+  } = useFieldArray({ control, name: "annexDocuments" });
+  const {
+    fields: annexResponsibleFields,
+    append: appendAnnexResponsible,
+    remove: removeAnnexResponsible,
+  } = useFieldArray({ control, name: "annexResponsibles" });
+
+  useEffect(() => {
+    reset(createSectionValues(definition, rawSection));
+  }, [definition, rawSection, reset]);
+
+  async function saveSection(values: SectionFormValues) {
+    if (!code) {
+      onError("Guarda primero los campos núcleo para obtener el código de la ficha.");
+      return;
+    }
+    setWorking(true);
+    onError(null);
+    try {
+      const content = toSectionContent(definition.code, values);
+      const saved = await saveAdminCenterSection(
+        token,
+        code,
+        definition.code,
+        content,
+        detail?.version,
+      );
+      await queryClient.invalidateQueries({
+        queryKey: ["admin", "center", code, "sections"],
+      });
+      onDetailChanged(saved);
+      onNotice(`Sección «${definition.title}» guardada.`);
+    } catch (cause) {
+      onError(cause instanceof Error ? cause.message : "No se pudo guardar la sección.");
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  const responseLabelId = `section-response-label-${definition.code}`;
+
+  return (
+    <FlatSurface id={`center-detail-section-${definition.code}`} padding="default">
+      <Stack spacing={webTokens.spacing.section}>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          justifyContent="space-between"
+          alignItems={{ sm: "flex-start" }}
+          gap={webTokens.spacing.control}
+        >
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <SectionHeader
+              icon={<FactCheckRounded />}
+              title={`${index + 1}. ${definition.title}`}
+              description={definition.description}
+            />
+          </Box>
+          <Stack
+            direction="row"
+            alignItems="center"
+            gap={1}
+            sx={{ flexShrink: 0, pt: { sm: 0.5 } }}
+          >
+            <SectionStatusChip status={status} />
+            {formState.isDirty ? (
+              <Chip size="small" color="warning" label="Cambios sin guardar" />
+            ) : null}
+          </Stack>
+        </Stack>
+        {definition.coreAnchor ? (
+          <Alert severity="info">
+            Esta sección reutiliza campos del formulario principal. Sus respuestas
+            detalladas y observaciones se guardan aquí, dentro de la misma ficha.
+          </Alert>
+        ) : null}
+        {definition.code === "accesibilidad" ? (
+          <AccessibilitySectionFields
+            catalogs={catalogs}
+            canEdit={canEdit}
+            control={control}
+            register={register}
+          />
+        ) : null}
+        {definition.code === "caracteristicas" ? (
+          <CharacteristicsSectionFields
+            catalogs={catalogs}
+            canEdit={canEdit}
+            register={register}
+          />
+        ) : null}
+        {definition.code === "planta" ? (
+          <PlantSectionFields
+            catalogs={catalogs}
+            canEdit={canEdit}
+            control={control}
+            register={register}
+          />
+        ) : null}
+        {definition.code === "conservacion" ? (
+          <ConservationSectionFields
+            catalogs={catalogs}
+            canEdit={canEdit}
+            register={register}
+            factorFields={conservationFactorFields}
+            declarationFields={declarationFields}
+            appendFactor={appendConservationFactor}
+            removeFactor={removeConservationFactor}
+            appendDeclaration={appendDeclaration}
+            removeDeclaration={removeDeclaration}
+          />
+        ) : null}
+        {definition.code === "higiene-seguridad" ? (
+          <HygieneSafetySectionFields
+            catalogs={catalogs}
+            canEdit={canEdit}
+            control={control}
+            register={register}
+            entryFields={hygieneEntryFields}
+            appendEntry={appendHygieneEntry}
+            removeEntry={removeHygieneEntry}
+          />
+        ) : null}
+        {definition.code === "politicas" ? (
+          <PoliciesSectionFields
+            canEdit={canEdit}
+            register={register}
+            fields={policyFields}
+          />
+        ) : null}
+        {definition.code === "promocion" ? (
+          <PromotionSectionFields
+            catalogs={catalogs}
+            canEdit={canEdit}
+            register={register}
+            mediaFields={promotionMediaFields}
+            appendMedia={appendPromotionMedia}
+            removeMedia={removePromotionMedia}
+          />
+        ) : null}
+        {definition.code === "visitantes" ? (
+          <VisitorsSectionFields
+            canEdit={canEdit}
+            register={register}
+            seasonFields={visitorSeasonFields}
+            originFields={visitorOriginFields}
+            informantFields={visitorInformantFields}
+            appendSeason={appendVisitorSeason}
+            removeSeason={removeVisitorSeason}
+            appendOrigin={appendVisitorOrigin}
+            removeOrigin={removeVisitorOrigin}
+            appendInformant={appendVisitorInformant}
+            removeInformant={removeVisitorInformant}
+          />
+        ) : null}
+        {definition.code === "recurso-humano" ? (
+          <HumanResourcesSectionFields
+            catalogs={catalogs}
+            canEdit={canEdit}
+            register={register}
+            trainingFields={humanResourceTrainingFields}
+            appendTraining={appendHumanResourceTraining}
+            removeTraining={removeHumanResourceTraining}
+          />
+        ) : null}
+        {definition.code === "anexos" ? (
+          <AnnexesSectionFields
+            catalogs={catalogs}
+            canEdit={canEdit}
+            register={register}
+            mediaItems={mediaItems}
+            documentFields={annexDocumentFields}
+            responsibleFields={annexResponsibleFields}
+            appendDocument={appendAnnexDocument}
+            removeDocument={removeAnnexDocument}
+            appendResponsible={appendAnnexResponsible}
+            removeResponsible={removeAnnexResponsible}
+          />
+        ) : null}
+        <Divider />
+        <Stack spacing={webTokens.spacing.control}>
+          <FormControl fullWidth disabled={!canEdit}>
+            <InputLabel id={responseLabelId}>Resultado de la sección</InputLabel>
+            <Select
+              labelId={responseLabelId}
+              label="Resultado de la sección"
+              defaultValue={EMPTY_RESPONSE}
+              {...register("response")}
+            >
+              {SECTION_RESPONSE_OPTIONS.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <TextField
+            label="Observación general del apartado"
+            multiline
+            minRows={3}
+            fullWidth
+            disabled={!canEdit}
+            {...register("observation", {
+              maxLength: { value: 2_000, message: "Máximo 2.000 caracteres" },
+            })}
+            error={Boolean(formState.errors.observation)}
+            helperText={formState.errors.observation?.message}
+          />
+          <Stack spacing={1.5}>
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              justifyContent="space-between"
+              alignItems={{ sm: "center" }}
+              gap={2}
+            >
+              <Box>
+                <Typography variant="subtitle1">Filas repetibles</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Conserva el resultado, la cantidad y la observación de cada elemento.
+                  Cero y dato desconocido no significan lo mismo.
+                </Typography>
+              </Box>
+              <Button
+                type="button"
+                size="small"
+                variant="outlined"
+                startIcon={<AddRounded />}
+                disabled={!canEdit}
+                onClick={() =>
+                  append({
+                    label: "",
+                    response: EMPTY_RESPONSE,
+                    quantity: "",
+                    observation: "",
+                  })
+                }
+              >
+                Añadir fila
+              </Button>
+            </Stack>
+            {fields.length === 0 ? (
+              <Typography variant="body2" color="text.secondary">
+                No hay filas añadidas. Usa «Añadir fila» para registrar un detalle.
+              </Typography>
+            ) : (
+              <Stack spacing={1.5}>
+                {fields.map((field, rowIndex) => (
+                  <FlatSurface key={field.id} padding="compact" tone="subtle">
+                    <Grid
+                      container
+                      spacing={webTokens.spacing.control}
+                      alignItems="flex-start"
+                    >
+                      <Grid size={{ xs: 12, md: 4 }}>
+                        <TextField
+                          label="Elemento o indicador"
+                          fullWidth
+                          disabled={!canEdit}
+                          {...register(`rows.${rowIndex}.label`, {
+                            required: "Indica el elemento o indicador",
+                            maxLength: { value: 180, message: "Máximo 180 caracteres" },
+                          })}
+                          error={Boolean(formState.errors.rows?.[rowIndex]?.label)}
+                          helperText={formState.errors.rows?.[rowIndex]?.label?.message}
+                        />
+                      </Grid>
+                      <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                        <FormControl fullWidth disabled={!canEdit}>
+                          <InputLabel id={`row-response-${definition.code}-${rowIndex}`}>
+                            Respuesta
+                          </InputLabel>
+                          <Select
+                            labelId={`row-response-${definition.code}-${rowIndex}`}
+                            label="Respuesta"
+                            defaultValue={EMPTY_RESPONSE}
+                            {...register(`rows.${rowIndex}.response`)}
+                          >
+                            {SECTION_RESPONSE_OPTIONS.map((option) => (
+                              <MenuItem key={option.value} value={option.value}>
+                                {option.label}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                      <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                        <TextField
+                          label="Cantidad"
+                          type="number"
+                          fullWidth
+                          disabled={!canEdit}
+                          slotProps={{ htmlInput: { min: 0, step: 1 } }}
+                          {...register(`rows.${rowIndex}.quantity`, {
+                            validate: (value) =>
+                              !value.trim() ||
+                              (Number.isInteger(Number(value)) && Number(value) >= 0)
+                                ? true
+                                : "Usa un entero igual o mayor que cero",
+                          })}
+                          error={Boolean(formState.errors.rows?.[rowIndex]?.quantity)}
+                          helperText={
+                            formState.errors.rows?.[rowIndex]?.quantity?.message
+                          }
+                        />
+                      </Grid>
+                      <Grid size={{ xs: 12, md: 2 }}>
+                        <Tooltip title="Eliminar fila">
+                          <IconButton
+                            type="button"
+                            aria-label={`Eliminar fila ${rowIndex + 1}`}
+                            disabled={!canEdit}
+                            onClick={() => remove(rowIndex)}
+                            sx={{ mt: { md: 1 } }}
+                          >
+                            <DeleteOutlineRounded />
+                          </IconButton>
+                        </Tooltip>
+                      </Grid>
+                      <Grid size={12}>
+                        <TextField
+                          label="Observación de la fila"
+                          fullWidth
+                          multiline
+                          minRows={2}
+                          disabled={!canEdit}
+                          {...register(`rows.${rowIndex}.observation`, {
+                            maxLength: {
+                              value: 1_000,
+                              message: "Máximo 1.000 caracteres",
+                            },
+                          })}
+                          error={Boolean(formState.errors.rows?.[rowIndex]?.observation)}
+                          helperText={
+                            formState.errors.rows?.[rowIndex]?.observation?.message
+                          }
+                        />
+                      </Grid>
+                    </Grid>
+                  </FlatSurface>
+                ))}
+              </Stack>
+            )}
+          </Stack>
+          <Stack direction="row" justifyContent="flex-end">
+            <Button
+              type="button"
+              variant="contained"
+              startIcon={<SaveRounded />}
+              disabled={!code || !canEdit || working}
+              onClick={() => void handleSubmit(saveSection)()}
+            >
+              {working ? "Guardando…" : "Guardar sección"}
+            </Button>
+          </Stack>
+        </Stack>
+      </Stack>
+    </FlatSurface>
+  );
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }

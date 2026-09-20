@@ -33,7 +33,7 @@ import { FlatSurface } from "@/components/ui/flat-surface";
 import { ContentState } from "@/components/ui/content-state";
 import { MediaManager } from "@/components/admin/media-manager";
 import { CenterReviewDiff } from "@/components/admin/center-review-diff";
-import { CenterSectionWorkflow } from "@/components/admin/center-section-workflow";
+import { ContinuousCenterSectionWorkflow } from "@/components/admin/center-section-workflow";
 import { PageHeader } from "@/components/ui/page-header";
 import { SectionHeader } from "@/components/ui/section-header";
 import {
@@ -339,7 +339,7 @@ export function CenterEditor({
 
       <CenterReviewDiff detail={detail} catalogs={catalogs} />
 
-      <CenterSectionWorkflow
+      <ContinuousCenterSectionWorkflow
         token={token}
         code={detail?.code ?? code}
         detail={detail}
@@ -352,11 +352,6 @@ export function CenterEditor({
         }}
         onNotice={onNotice}
         onError={setError}
-        onOpenCoreSection={(anchor) => {
-          document
-            .getElementById(anchor)
-            ?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }}
       />
 
       <FlatSurface id="center-section-identificacion" padding="default">
