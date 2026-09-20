@@ -962,70 +962,126 @@ function CenterWizardStepper({
 }) {
   const isSummary = activeStep >= steps.length;
   const active = steps[activeStep];
-  const visibleStep = Math.min(activeStep, Math.max(steps.length - 1, 0));
   return (
-    <FlatSurface padding="compact" sx={{ overflow: "hidden" }}>
+    <FlatSurface padding="compact">
       <Stack spacing={webTokens.spacing.control}>
-        <Box sx={{ overflowX: "hidden", overflowY: "hidden", pb: 1 }}>
-          <Stepper
-            nonLinear
-            activeStep={visibleStep}
-            alternativeLabel
-            sx={{
-              width: "100%",
-              "& .MuiStep-root": {
-                minWidth: 0,
-                flex: "1 1 0",
-                px: { xs: 0.1, sm: 0.35 },
-              },
-              "& .MuiStepButton-root": {
-                minWidth: 0,
-                px: 0,
-                py: 0.25,
-              },
-              "& .MuiStepLabel-root": {
-                minWidth: 0,
-              },
-              "& .MuiStepLabel-label": {
-                display: { xs: "none", sm: "-webkit-box" },
-                maxWidth: { sm: 92, md: 116 },
-                mx: "auto",
-                overflow: "hidden",
-                overflowWrap: "anywhere",
-                textOverflow: "ellipsis",
-                WebkitBoxOrient: "vertical",
-                WebkitLineClamp: 3,
-                whiteSpace: "normal",
-                fontSize: { sm: "0.75rem", md: "0.82rem" },
-                lineHeight: 1.2,
-              },
-              "& .MuiStepIcon-root": {
-                fontSize: { xs: 20, sm: 24 },
-              },
-              "& .MuiStepConnector-root": {
-                display: { xs: "none", sm: "block" },
-              },
-            }}
-          >
-            {steps.map((step, index) => (
-              <Step key={step.key} completed={isSummary || index < activeStep}>
-                <StepButton
-                  aria-label={`Sección ${index + 1}: ${step.title}`}
-                  disabled={index > 0 && !canNavigate}
-                  onClick={() => onSelect(index)}
-                  title={step.title}
+        <Box
+          component="nav"
+          aria-label="Secciones de la ficha turística"
+          role="tablist"
+          sx={{
+            display: "grid",
+            gridTemplateColumns: {
+              xs: "repeat(2, minmax(0, 1fr))",
+              sm: "repeat(4, minmax(0, 1fr))",
+              md: "repeat(7, minmax(0, 1fr))",
+            },
+            gap: { xs: 1, sm: 1.25 },
+          }}
+        >
+          {steps.map((step, index) => {
+            const completed = isSummary || index < activeStep;
+            const selected = !isSummary && index === activeStep;
+            return (
+              <ButtonBase
+                key={step.key}
+                component="button"
+                type="button"
+                role="tab"
+                aria-label={`Sección ${index + 1}: ${step.title}`}
+                aria-selected={selected}
+                aria-current={selected ? "step" : undefined}
+                disabled={index > 0 && !canNavigate}
+                onClick={() => onSelect(index)}
+                title={step.title}
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "stretch",
+                  justifyContent: "flex-start",
+                  minWidth: 0,
+                  minHeight: { xs: 64, sm: 78 },
+                  p: { xs: 1, sm: 1.25 },
+                  border: 1,
+                  borderColor: selected ? "primary.main" : "divider",
+                  borderRadius: 1.5,
+                  bgcolor: selected ? "action.selected" : "transparent",
+                  textAlign: "left",
+                  transition: "border-color 120ms ease, background-color 120ms ease",
+                  "&:hover": {
+                    borderColor: selected ? "primary.main" : "text.secondary",
+                    bgcolor: selected ? "action.selected" : "action.hover",
+                  },
+                  "&.Mui-disabled": {
+                    opacity: 0.55,
+                  },
+                }}
+              >
+                <Stack direction="row" alignItems="center" gap={1} minWidth={0}>
+                  <Box
+                    component="span"
+                    sx={{
+                      display: "grid",
+                      placeItems: "center",
+                      flex: "0 0 auto",
+                      width: { xs: 24, sm: 28 },
+                      height: { xs: 24, sm: 28 },
+                      borderRadius: "50%",
+                      bgcolor:
+                        selected || completed
+                          ? "primary.main"
+                          : "action.disabledBackground",
+                      color:
+                        selected || completed ? "primary.contrastText" : "text.secondary",
+                      fontSize: { xs: "0.72rem", sm: "0.78rem" },
+                      fontWeight: 700,
+                    }}
+                  >
+                    {index + 1}
+                  </Box>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    noWrap
+                    sx={{ minWidth: 0, textOverflow: "ellipsis", overflow: "hidden" }}
+                  >
+                    {completed ? "Completada" : selected ? "Actual" : "Pendiente"}
+                  </Typography>
+                </Stack>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    mt: 0.75,
+                    minWidth: 0,
+                    fontWeight: selected ? 700 : 500,
+                    lineHeight: 1.2,
+                    display: "-webkit-box",
+                    overflow: "hidden",
+                    overflowWrap: "anywhere",
+                    WebkitBoxOrient: "vertical",
+                    WebkitLineClamp: 2,
+                  }}
                 >
                   {step.title}
-                </StepButton>
-              </Step>
-            ))}
-          </Stepper>
+                </Typography>
+              </ButtonBase>
+            );
+          })}
         </Box>
-        <Stack direction="row" justifyContent="space-between" gap={2}>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          justifyContent="space-between"
+          alignItems={{ sm: "center" }}
+          gap={1}
+        >
           <Typography variant="body2" color="text.secondary">
             {isSummary ? "Resumen final" : `Sección ${activeStep + 1} de ${steps.length}`}
           </Typography>
-          <Typography variant="body2" color="text.secondary" textAlign="right">
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            textAlign={{ xs: "left", sm: "right" }}
+          >
             {isSummary
               ? "Revisa la ficha completa antes de enviarla a revisión."
               : active?.description}

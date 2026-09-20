@@ -7,8 +7,9 @@ campos, contratos de API y validaciones existentes, con guardado automático inv
 
 ## Cambios
 
-- Reemplazar la navegación lateral y la pila continua por un stepper horizontal
-  compacto, sin sidebar durante la edición.
+- Reemplazar la navegación lateral y la pila continua por un navegador de pasos
+  compacto y responsive, sin sidebar durante la edición; los pasos se distribuyen en
+  una cuadrícula para evitar desbordes.
 - Mostrar una sola tanda de campos por vez, siguiendo las 14 secciones de la ficha; el
   resumen final se presenta fuera del conteo de secciones.
 - Permitir saltar entre pasos ya disponibles y conservar montadas las secciones para no
