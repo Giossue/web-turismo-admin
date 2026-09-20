@@ -192,6 +192,20 @@ export type AdminCenterSections = {
   }>;
 };
 
+export type AdminCenterValuation = {
+  configured: boolean;
+  total: number | null;
+  hierarchyCode: string;
+  hierarchyId: number | null;
+  criteria: Array<{
+    code: string;
+    name: string;
+    maximum: number;
+    score: number | null;
+    appliedMaximum: number | null;
+  }>;
+};
+
 export type AdminCentersOptions = {
   status?: string;
   q?: string;
@@ -393,6 +407,14 @@ export async function getAdminCenter(token: string, code: string) {
 export async function getAdminCenterSections(token: string, code: string) {
   return request<AdminCenterSections>(
     `/admin/centers/${encodeURIComponent(code)}/sections`,
+    token,
+    { cache: "no-store" },
+  );
+}
+
+export async function getAdminCenterValuation(token: string, code: string) {
+  return request<AdminCenterValuation>(
+    `/admin/centers/${encodeURIComponent(code)}/valuation`,
     token,
     { cache: "no-store" },
   );

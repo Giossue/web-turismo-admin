@@ -36,10 +36,12 @@ import { FlatSurface } from "@/components/ui/flat-surface";
 import { SectionHeader } from "@/components/ui/section-header";
 import {
   getAdminCenterSections,
+  getAdminCenterValuation,
   saveAdminCenterSection,
   type AdminCenterDetail,
   type AdminCenterSectionCode,
   type AdminCatalogs,
+  type AdminCenterValuation,
 } from "@/lib/admin-api";
 import { webTokens } from "@/theme/tokens";
 
@@ -533,6 +535,12 @@ export function CenterSectionWorkflow({
     enabled: Boolean(token && code),
     staleTime: 10_000,
   });
+  const valuationQuery = useQuery<AdminCenterValuation>({
+    queryKey: ["admin", "center", code, "valuation"],
+    queryFn: () => getAdminCenterValuation(token, code as string),
+    enabled: Boolean(token && code),
+    staleTime: 10_000,
+  });
   const sectionData = sectionsQuery.data;
   const sections = useMemo(
     () => sectionData?.sections ?? detail?.draft?.sections ?? {},
@@ -708,7 +716,10 @@ export function CenterSectionWorkflow({
           title="Ficha integral por secciones"
           description="Registra cada apartado de la ficha sin crear centros derivados. Las secciones se guardan como un borrador versionado."
         />
-        <InstitutionalCodeCard code={detail?.code ?? null} />
+        <InstitutionalCodeCard
+          code={detail?.code ?? null}
+          valuation={valuationQuery.data ?? null}
+        />
         {!code ? (
           <Alert severity="info">
             Completa y guarda primero los datos generales. Después podrás capturar las 14
@@ -1114,7 +1125,13 @@ export function CenterSectionWorkflow({
   );
 }
 
-function InstitutionalCodeCard({ code }: { code: string | null }) {
+function InstitutionalCodeCard({
+  code,
+  valuation,
+}: {
+  code: string | null;
+  valuation: AdminCenterValuation | null;
+}) {
   const normalized = code?.replace(/\s/g, "") ?? "";
   const parts =
     normalized.length === 17
@@ -1144,6 +1161,19 @@ function InstitutionalCodeCard({ code }: { code: string | null }) {
             {normalized || "Pendiente"}
           </Typography>
         </Stack>
+        {valuation ? (
+          <Alert
+            severity={
+              valuation.configured && valuation.total !== null ? "success" : "warning"
+            }
+          >
+            {valuation.configured && valuation.total !== null
+              ? `Valoración calculada: ${valuation.total.toFixed(2)} puntos · jerarquía ${valuation.hierarchyCode}.`
+              : valuation.configured
+                ? "Hay indicadores configurados, pero todavía no existe un resultado persistido para esta ficha."
+                : "No hay indicadores de valoración configurados; la jerarquía 00 es provisional."}
+          </Alert>
+        ) : null}
         {parts.length > 0 ? (
           <Grid container spacing={1} aria-label="Partes del código institucional">
             {parts.map(([label, value]) => (
