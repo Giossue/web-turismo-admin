@@ -339,6 +339,7 @@ export function AdminShell() {
     { key: "settings", label: "Configuración", icon: <SettingsRounded /> },
   ];
   const meta = sectionMeta[section];
+  const editorMode = section === "editor";
 
   const drawer = (
     <Box
@@ -394,8 +395,10 @@ export function AdminShell() {
         color="inherit"
         sx={{
           bgcolor: "background.default",
-          width: { xs: "100%", md: `calc(100% - ${drawerWidth}px)` },
-          ml: { md: `${drawerWidth}px` },
+          width: editorMode
+            ? "100%"
+            : { xs: "100%", md: `calc(100% - ${drawerWidth}px)` },
+          ml: editorMode ? 0 : { md: `${drawerWidth}px` },
           borderRadius: webTokens.shape.navigation,
           borderBottom: 0,
         }}
@@ -406,7 +409,9 @@ export function AdminShell() {
               edge="start"
               onClick={() => setOpen(true)}
               aria-label="Abrir menú"
-              sx={{ display: { xs: "inline-flex", md: "none" } }}
+              sx={{
+                display: editorMode ? "none" : { xs: "inline-flex", md: "none" },
+              }}
             >
               <MenuRounded />
             </IconButton>
@@ -416,44 +421,46 @@ export function AdminShell() {
         </Toolbar>
       </AppBar>
 
-      <Box component="nav" aria-label="Navegación administrativa">
-        <Drawer
-          variant="temporary"
-          open={open}
-          onClose={() => setOpen(false)}
-          ModalProps={{ keepMounted: true }}
-          sx={{
-            display: { xs: "block", md: "none" },
-            "& .MuiDrawer-paper": {
-              width: drawerWidth,
-              boxSizing: "border-box",
-              overflowX: "hidden",
-              borderRadius: 0,
-              bgcolor: "background.default",
-              borderRight: 0,
-            },
-          }}
-        >
-          {drawer}
-        </Drawer>
-        <Drawer
-          variant="permanent"
-          open
-          sx={{
-            display: { xs: "none", md: "block" },
-            "& .MuiDrawer-paper": {
-              width: drawerWidth,
-              boxSizing: "border-box",
-              overflowX: "hidden",
-              borderRadius: 0,
-              bgcolor: "background.default",
-              borderRight: 0,
-            },
-          }}
-        >
-          {drawer}
-        </Drawer>
-      </Box>
+      {!editorMode ? (
+        <Box component="nav" aria-label="Navegación administrativa">
+          <Drawer
+            variant="temporary"
+            open={open}
+            onClose={() => setOpen(false)}
+            ModalProps={{ keepMounted: true }}
+            sx={{
+              display: { xs: "block", md: "none" },
+              "& .MuiDrawer-paper": {
+                width: drawerWidth,
+                boxSizing: "border-box",
+                overflowX: "hidden",
+                borderRadius: 0,
+                bgcolor: "background.default",
+                borderRight: 0,
+              },
+            }}
+          >
+            {drawer}
+          </Drawer>
+          <Drawer
+            variant="permanent"
+            open
+            sx={{
+              display: { xs: "none", md: "block" },
+              "& .MuiDrawer-paper": {
+                width: drawerWidth,
+                boxSizing: "border-box",
+                overflowX: "hidden",
+                borderRadius: 0,
+                bgcolor: "background.default",
+                borderRight: 0,
+              },
+            }}
+          >
+            {drawer}
+          </Drawer>
+        </Box>
+      ) : null}
 
       <Box
         component="main"
@@ -461,7 +468,7 @@ export function AdminShell() {
           flexGrow: 1,
           p: webTokens.spacing.page,
           mt: webTokens.layout.headerOffset,
-          ml: { md: `${drawerWidth}px` },
+          ml: editorMode ? 0 : { md: `${drawerWidth}px` },
           minWidth: 0,
         }}
       >

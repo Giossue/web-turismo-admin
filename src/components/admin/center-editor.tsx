@@ -152,23 +152,11 @@ const emptyValues: FormValues = {
   facilityObservations: {},
 };
 
-const centerWizardSteps = [
-  {
-    key: "core",
-    title: "Datos principales",
-    description: "Identificación, ubicación, administración, ingreso y facilidades.",
-  },
-  ...centerSectionDefinitions.map((section) => ({
-    key: section.code,
-    title: section.title,
-    description: section.description,
-  })),
-  {
-    key: "summary",
-    title: "Resumen",
-    description: "Revisa la ficha completa antes de enviarla a revisión.",
-  },
-] as const;
+const centerWizardSteps = centerSectionDefinitions.map((section) => ({
+  key: section.code,
+  title: section.title,
+  description: section.description,
+}));
 
 export function CenterEditor({
   token,
@@ -257,12 +245,11 @@ export function CenterEditor({
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const skipNextAutoSaveRef = useRef(false);
   const lastAttemptedSignatureRef = useRef<string | null>(null);
-  const summaryStepIndex = centerWizardSteps.length - 1;
-  const isCoreStep = activeStep === 0;
-  const isSectionStep = activeStep > 0 && activeStep < summaryStepIndex;
+  const summaryStepIndex = centerSectionDefinitions.length;
+  const isSectionStep = activeStep >= 0 && activeStep < summaryStepIndex;
   const isSummaryStep = activeStep === summaryStepIndex;
   const activeSectionCode = isSectionStep
-    ? (centerSectionDefinitions[activeStep - 1]?.code ?? null)
+    ? (centerSectionDefinitions[activeStep]?.code ?? null)
     : null;
 
   const save = useCallback(
@@ -351,7 +338,7 @@ export function CenterEditor({
   async function goNext() {
     if (activeStep >= summaryStepIndex) return;
     const nextStep = activeStep + 1;
-    if (isCoreStep) {
+    if (activeStep === 0) {
       await handleSubmit(
         async (values) => {
           const persisted = isDirty || isNew ? await save(values, false, true) : true;
@@ -474,8 +461,12 @@ export function CenterEditor({
         onError={setError}
       />
 
-      <Box sx={{ display: isCoreStep ? "block" : "none" }}>
-        <FlatSurface id="center-section-identificacion" padding="default">
+      <Box sx={{ display: isSectionStep ? "block" : "none" }}>
+        <FlatSurface
+          id="center-section-identificacion"
+          padding="default"
+          sx={{ display: activeSectionCode === "identificacion" ? "block" : "none" }}
+        >
           <Stack spacing={webTokens.spacing.section}>
             <SectionHeader
               icon={<CategoryRounded />}
@@ -613,11 +604,15 @@ export function CenterEditor({
           </Stack>
         </FlatSurface>
 
-        <FlatSurface id="center-section-ubicacion-admin" padding="default">
+        <FlatSurface
+          id="center-section-ubicacion-admin"
+          padding="default"
+          sx={{ display: activeSectionCode === "ubicacion-admin" ? "block" : "none" }}
+        >
           <Stack spacing={webTokens.spacing.section}>
             <SectionHeader
               icon={<MapRounded />}
-              title="Ubicación y descripción"
+              title="Ubicación"
               description="La API sincroniza las coordenadas con PostGIS."
             />
             <Grid container spacing={webTokens.spacing.control}>
@@ -682,25 +677,14 @@ export function CenterEditor({
                   {...register("address.crossStreet")}
                 />
               </Grid>
-              <Grid id="center-section-descripcion" size={12}>
-                <TextField
-                  label="Descripción"
-                  fullWidth
-                  multiline
-                  minRows={4}
-                  disabled={!canEdit}
-                  {...register("description", {
-                    maxLength: { value: 500, message: "Máximo 500 caracteres" },
-                  })}
-                  error={Boolean(errors.description)}
-                  helperText={errors.description?.message}
-                />
-              </Grid>
             </Grid>
           </Stack>
         </FlatSurface>
 
-        <FlatSurface padding="default">
+        <FlatSurface
+          padding="default"
+          sx={{ display: activeSectionCode === "ubicacion-admin" ? "block" : "none" }}
+        >
           <Stack spacing={webTokens.spacing.section}>
             <SectionHeader
               icon={<BusinessRounded />}
@@ -771,7 +755,37 @@ export function CenterEditor({
           </Stack>
         </FlatSurface>
 
-        <FlatSurface id="center-section-caracteristicas" padding="default">
+        <FlatSurface
+          id="center-section-descripcion"
+          padding="default"
+          sx={{ display: activeSectionCode === "descripcion" ? "block" : "none" }}
+        >
+          <Stack spacing={webTokens.spacing.section}>
+            <SectionHeader
+              icon={<FactCheckRounded />}
+              title="Descripción del atractivo"
+              description="Redacta la descripción pública de la ficha, con un máximo de 500 caracteres."
+            />
+            <TextField
+              label="Descripción"
+              fullWidth
+              multiline
+              minRows={6}
+              disabled={!canEdit}
+              {...register("description", {
+                maxLength: { value: 500, message: "Máximo 500 caracteres" },
+              })}
+              error={Boolean(errors.description)}
+              helperText={errors.description?.message}
+            />
+          </Stack>
+        </FlatSurface>
+
+        <FlatSurface
+          id="center-section-caracteristicas"
+          padding="default"
+          sx={{ display: activeSectionCode === "caracteristicas" ? "block" : "none" }}
+        >
           <Stack spacing={webTokens.spacing.section}>
             <SectionHeader
               icon={<AccessTimeRounded />}
@@ -856,7 +870,11 @@ export function CenterEditor({
             </Grid>
           </Stack>
         </FlatSurface>
-        <FlatSurface id="center-section-actividades" padding="default">
+        <FlatSurface
+          id="center-section-actividades"
+          padding="default"
+          sx={{ display: activeSectionCode === "actividades" ? "block" : "none" }}
+        >
           <Stack spacing={webTokens.spacing.section}>
             <SectionHeader
               icon={<DirectionsWalkRounded />}
@@ -871,7 +889,11 @@ export function CenterEditor({
             />
           </Stack>
         </FlatSurface>
-        <FlatSurface id="center-section-accesibilidad" padding="default">
+        <FlatSurface
+          id="center-section-accesibilidad"
+          padding="default"
+          sx={{ display: activeSectionCode === "accesibilidad" ? "block" : "none" }}
+        >
           <Stack spacing={webTokens.spacing.section}>
             <SectionHeader
               icon={<AccessibleRounded />}
@@ -886,7 +908,11 @@ export function CenterEditor({
             />
           </Stack>
         </FlatSurface>
-        <FlatSurface id="center-section-planta" padding="default">
+        <FlatSurface
+          id="center-section-planta"
+          padding="default"
+          sx={{ display: activeSectionCode === "planta" ? "block" : "none" }}
+        >
           <Stack spacing={webTokens.spacing.section}>
             <SectionHeader
               icon={<MiscellaneousServicesRounded />}
@@ -902,12 +928,14 @@ export function CenterEditor({
             />
           </Stack>
         </FlatSurface>
-        <MediaManager
-          token={token}
-          code={effectiveCode}
-          canEdit={canEdit || state === "APROBADO"}
-          onNotice={onNotice}
-        />
+        <Box sx={{ display: activeSectionCode === "anexos" ? "block" : "none" }}>
+          <MediaManager
+            token={token}
+            code={effectiveCode}
+            canEdit={canEdit || state === "APROBADO"}
+            onNotice={onNotice}
+          />
+        </Box>
       </Box>
 
       {isSummaryStep ? <CenterSummaryStep detail={detail} catalogs={catalogs} /> : null}
@@ -929,27 +957,65 @@ function CenterWizardStepper({
   canNavigate,
   onSelect,
 }: {
-  steps: ReadonlyArray<{ title: string; description: string }>;
+  steps: ReadonlyArray<{ key: string; title: string; description: string }>;
   activeStep: number;
   canNavigate: boolean;
   onSelect: (step: number) => void;
 }) {
+  const isSummary = activeStep >= steps.length;
   const active = steps[activeStep];
+  const visibleStep = Math.min(activeStep, Math.max(steps.length - 1, 0));
   return (
-    <FlatSurface padding="compact">
+    <FlatSurface padding="compact" sx={{ overflow: "hidden" }}>
       <Stack spacing={webTokens.spacing.control}>
-        <Box sx={{ overflowX: "auto", pb: 1 }}>
+        <Box sx={{ overflowX: "hidden", overflowY: "hidden", pb: 1 }}>
           <Stepper
             nonLinear
-            activeStep={activeStep}
+            activeStep={visibleStep}
             alternativeLabel
-            sx={{ minWidth: 980 }}
+            sx={{
+              width: "100%",
+              "& .MuiStep-root": {
+                minWidth: 0,
+                flex: "1 1 0",
+                px: { xs: 0.1, sm: 0.35 },
+              },
+              "& .MuiStepButton-root": {
+                minWidth: 0,
+                px: 0,
+                py: 0.25,
+              },
+              "& .MuiStepLabel-root": {
+                minWidth: 0,
+              },
+              "& .MuiStepLabel-label": {
+                display: { xs: "none", sm: "-webkit-box" },
+                maxWidth: { sm: 92, md: 116 },
+                mx: "auto",
+                overflow: "hidden",
+                overflowWrap: "anywhere",
+                textOverflow: "ellipsis",
+                WebkitBoxOrient: "vertical",
+                WebkitLineClamp: 3,
+                whiteSpace: "normal",
+                fontSize: { sm: "0.75rem", md: "0.82rem" },
+                lineHeight: 1.2,
+              },
+              "& .MuiStepIcon-root": {
+                fontSize: { xs: 20, sm: 24 },
+              },
+              "& .MuiStepConnector-root": {
+                display: { xs: "none", sm: "block" },
+              },
+            }}
           >
             {steps.map((step, index) => (
-              <Step key={step.title} completed={index < activeStep}>
+              <Step key={step.key} completed={isSummary || index < activeStep}>
                 <StepButton
+                  aria-label={`Sección ${index + 1}: ${step.title}`}
                   disabled={index > 0 && !canNavigate}
                   onClick={() => onSelect(index)}
+                  title={step.title}
                 >
                   {step.title}
                 </StepButton>
@@ -959,10 +1025,12 @@ function CenterWizardStepper({
         </Box>
         <Stack direction="row" justifyContent="space-between" gap={2}>
           <Typography variant="body2" color="text.secondary">
-            Paso {activeStep + 1} de {steps.length}
+            {isSummary ? "Resumen final" : `Sección ${activeStep + 1} de ${steps.length}`}
           </Typography>
           <Typography variant="body2" color="text.secondary" textAlign="right">
-            {active?.description}
+            {isSummary
+              ? "Revisa la ficha completa antes de enviarla a revisión."
+              : active?.description}
           </Typography>
         </Stack>
       </Stack>
