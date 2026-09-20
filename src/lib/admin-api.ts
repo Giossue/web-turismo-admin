@@ -76,6 +76,7 @@ export type CenterDraft = {
     detailOther?: string;
     observation?: string;
   }>;
+  sections?: Record<string, unknown>;
 };
 
 export type AdminCenterDetail = {
@@ -131,6 +132,7 @@ export type AdminCatalogs = {
   provinces: CatalogOption[];
   cantons: CatalogOption[];
   parishes: CatalogOption[];
+  localities: CatalogOption[];
   zones: CatalogOption[];
   lines: CatalogOption[];
   scenarios: CatalogOption[];
@@ -147,9 +149,84 @@ export type AdminCatalogs = {
 
 export type SaveCenterInput = Partial<CenterDraft> & { version?: number };
 
+export const adminCenterSectionCodes = [
+  "identificacion",
+  "ubicacion-admin",
+  "caracteristicas",
+  "accesibilidad",
+  "planta",
+  "conservacion",
+  "higiene-seguridad",
+  "politicas",
+  "actividades",
+  "promocion",
+  "visitantes",
+  "recurso-humano",
+  "descripcion",
+  "anexos",
+] as const;
+export type AdminCenterSectionCode = (typeof adminCenterSectionCodes)[number];
+
+export type AdminCenterSections = {
+  code: string;
+  version: number;
+  sections: Partial<Record<AdminCenterSectionCode, Record<string, unknown>>>;
+};
+
 export type AdminCentersOptions = {
   status?: string;
   q?: string;
+  limit?: number;
+  offset?: number;
+};
+
+export type AdminEstablishment = {
+  id: number;
+  localityId: number;
+  localityName: string;
+  localityType: string;
+  cantonName: string;
+  provinceName: string;
+  numeroRegistro: string | null;
+  ruc: string | null;
+  nombreComercial: string;
+  razonSocial: string | null;
+  actividad: string;
+  clasificacion: string | null;
+  categoria: string | null;
+  direccion: string | null;
+  telefono: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type SaveEstablishmentInput = {
+  localityId: number;
+  numeroRegistro?: string;
+  ruc?: string;
+  nombreComercial: string;
+  razonSocial?: string;
+  actividad: string;
+  clasificacion?: string;
+  categoria?: string;
+  direccion?: string;
+  telefono?: string;
+  latitude?: number;
+  longitude?: number;
+};
+
+export type AdminEstablishmentsOptions = {
+  q?: string;
+  activity?: string;
+  classification?: string;
+  category?: string;
+  provinceId?: number;
+  cantonId?: number;
+  localityId?: number;
+  active?: boolean;
   limit?: number;
   offset?: number;
 };
@@ -208,6 +285,63 @@ export async function getAdminSummary(token: string) {
   return request<AdminSummary>("/admin/summary", token, { cache: "no-store" });
 }
 
+export async function getAdminEstablishments(
+  token: string,
+  options: AdminEstablishmentsOptions = {},
+) {
+  const params = new URLSearchParams();
+  if (options.q?.trim()) params.set("q", options.q.trim());
+  if (options.activity?.trim()) params.set("activity", options.activity.trim());
+  if (options.classification?.trim())
+    params.set("classification", options.classification.trim());
+  if (options.category?.trim()) params.set("category", options.category.trim());
+  if (options.provinceId) params.set("provinceId", String(options.provinceId));
+  if (options.cantonId) params.set("cantonId", String(options.cantonId));
+  if (options.localityId) params.set("localityId", String(options.localityId));
+  if (options.active !== undefined) params.set("active", String(options.active));
+  params.set("limit", String(options.limit ?? 20));
+  params.set("offset", String(options.offset ?? 0));
+  return request<{
+    items: AdminEstablishment[];
+    total: number;
+    limit: number;
+    offset: number;
+  }>(`/admin/establishments?${params.toString()}`, token, { cache: "no-store" });
+}
+
+export async function createAdminEstablishment(
+  token: string,
+  input: SaveEstablishmentInput,
+) {
+  return request<AdminEstablishment>("/admin/establishments", token, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function saveAdminEstablishment(
+  token: string,
+  id: number,
+  input: Partial<SaveEstablishmentInput>,
+) {
+  return request<AdminEstablishment>(`/admin/establishments/${id}`, token, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function setAdminEstablishmentActive(
+  token: string,
+  id: number,
+  active: boolean,
+) {
+  return request<AdminEstablishment>(
+    `/admin/establishments/${id}/${active ? "reactivate" : "deactivate"}`,
+    token,
+    { method: "POST", body: JSON.stringify({}) },
+  );
+}
+
 export async function getAdminCatalogs(token: string, includeInactive = false) {
   const query = includeInactive ? "?includeInactive=true" : "";
   return request<AdminCatalogs>(`/admin/catalogs${query}`, token, { cache: "no-store" });
@@ -235,6 +369,31 @@ export async function getAdminCenter(token: string, code: string) {
   return request<AdminCenterDetail>(`/admin/centers/${encodeURIComponent(code)}`, token, {
     cache: "no-store",
   });
+}
+
+export async function getAdminCenterSections(token: string, code: string) {
+  return request<AdminCenterSections>(
+    `/admin/centers/${encodeURIComponent(code)}/sections`,
+    token,
+    { cache: "no-store" },
+  );
+}
+
+export async function saveAdminCenterSection(
+  token: string,
+  code: string,
+  sectionCode: AdminCenterSectionCode,
+  content: Record<string, unknown>,
+  version?: number,
+) {
+  return request<AdminCenterDetail>(
+    `/admin/centers/${encodeURIComponent(code)}/sections/${sectionCode}`,
+    token,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ content, version }),
+    },
+  );
 }
 
 export async function createAdminCenter(token: string, input: SaveCenterInput) {

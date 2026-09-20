@@ -27,7 +27,7 @@ import {
 } from "@mui/material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 
 import { FlatSurface } from "@/components/ui/flat-surface";
 import { ContentState } from "@/components/ui/content-state";
@@ -42,6 +42,7 @@ import {
   saveAdminCenter,
   submitAdminCenterReview,
   type AdminCenterDetail,
+  type AdminCatalogs,
   type CenterDraft,
   type SaveCenterInput,
 } from "@/lib/admin-api";
@@ -49,8 +50,12 @@ import { webTokens } from "@/theme/tokens";
 
 type FormValues = {
   name: string;
+  categoryId: string;
+  typeId: string;
   subtypeId: string;
   touristZoneId: string;
+  provinceId: string;
+  cantonId: string;
   parishId: string;
   productLineId: string;
   scenarioId: string;
@@ -92,8 +97,12 @@ type FormValues = {
 
 const emptyValues: FormValues = {
   name: "",
+  categoryId: "",
+  typeId: "",
   subtypeId: "",
   touristZoneId: "",
+  provinceId: "",
+  cantonId: "",
   parishId: "",
   productLineId: "",
   scenarioId: "",
@@ -145,9 +154,11 @@ export function CenterEditor({
   const [error, setError] = useState<string | null>(null);
   const [working, setWorking] = useState<"save" | "review" | "publish" | null>(null);
   const {
+    control,
     register,
     reset,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<FormValues>({
     defaultValues: emptyValues,
@@ -168,10 +179,10 @@ export function CenterEditor({
   const loading = catalogsQuery.isLoading || centerQuery.isLoading;
 
   useEffect(() => {
-    if (centerQuery.data) {
-      reset(toFormValues(centerQuery.data.draft ?? centerQuery.data.published));
+    if (centerQuery.data && catalogs) {
+      reset(toFormValues(centerQuery.data.draft ?? centerQuery.data.published, catalogs));
     }
-  }, [centerQuery.data, reset]);
+  }, [centerQuery.data, catalogs, reset]);
 
   const isNew = code === null;
   const queryError = catalogsQuery.error ?? centerQuery.error;
@@ -186,9 +197,23 @@ export function CenterEditor({
   const canEdit =
     isNew || state === "BORRADOR" || state === "RECHAZADO" || state === "PUBLICADO";
   const selectedDraft = detail?.draft ?? detail?.published;
-  const parishOptions = catalogs?.parishes ?? [];
+  const categoryId = useWatch({ control, name: "categoryId" });
+  const typeId = useWatch({ control, name: "typeId" });
+  const provinceId = useWatch({ control, name: "provinceId" });
+  const cantonId = useWatch({ control, name: "cantonId" });
+  const typeOptions = (catalogs?.types ?? []).filter(
+    (option) => !categoryId || Number(option.categoryId) === Number(categoryId),
+  );
+  const subtypeOptions = (catalogs?.subtypes ?? []).filter(
+    (option) => !typeId || Number(option.typeId) === Number(typeId),
+  );
+  const cantonOptions = (catalogs?.cantons ?? []).filter(
+    (option) => !provinceId || Number(option.provinceId) === Number(provinceId),
+  );
+  const parishOptions = (catalogs?.parishes ?? []).filter(
+    (option) => !cantonId || Number(option.cantonId) === Number(cantonId),
+  );
   const zoneOptions = catalogs?.zones ?? [];
-  const subtypeOptions = catalogs?.subtypes ?? [];
   const canReview = state === "BORRADOR" || state === "RECHAZADO";
   const canPublish = state === "APROBADO";
 
@@ -203,7 +228,7 @@ export function CenterEditor({
       if (submitForReview) saved = await submitAdminCenterReview(token, saved.code);
       setDetailOverride(saved);
       queryClient.setQueryData(["admin", "center", saved.code], saved);
-      reset(toFormValues(saved.draft ?? saved.published));
+      if (catalogs) reset(toFormValues(saved.draft ?? saved.published, catalogs));
       onSaved(saved);
       onNotice(
         submitForReview ? "La ficha fue enviada a revisión." : "Borrador guardado.",
@@ -223,7 +248,7 @@ export function CenterEditor({
       const published = await publishAdminCenter(token, detail.code);
       setDetailOverride(published);
       queryClient.setQueryData(["admin", "center", published.code], published);
-      reset(toFormValues(published.draft ?? published.published));
+      if (catalogs) reset(toFormValues(published.draft ?? published.published, catalogs));
       onSaved(published);
       onNotice("La ficha fue publicada en la aplicación móvil.");
     } catch (cause) {
@@ -329,11 +354,36 @@ export function CenterEditor({
             </Grid>
             <Grid size={{ xs: 12, md: 4 }}>
               <CatalogSelect
+                label="Categoría"
+                name="categoryId"
+                options={catalogs?.categories ?? []}
+                register={register}
+                disabled={!canEdit}
+                required
+                onValueChange={() => {
+                  setValue("typeId", "");
+                  setValue("subtypeId", "");
+                }}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <CatalogSelect
+                label="Tipo"
+                name="typeId"
+                options={typeOptions}
+                register={register}
+                disabled={!canEdit || !categoryId}
+                required
+                onValueChange={() => setValue("subtypeId", "")}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <CatalogSelect
                 label="Subtipo"
                 name="subtypeId"
                 options={subtypeOptions}
                 register={register}
-                disabled={!canEdit}
+                disabled={!canEdit || !typeId}
                 required
               />
             </Grid>
@@ -349,11 +399,36 @@ export function CenterEditor({
             </Grid>
             <Grid size={{ xs: 12, md: 4 }}>
               <CatalogSelect
+                label="Provincia"
+                name="provinceId"
+                options={catalogs?.provinces ?? []}
+                register={register}
+                disabled={!canEdit}
+                required
+                onValueChange={() => {
+                  setValue("cantonId", "");
+                  setValue("parishId", "");
+                }}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <CatalogSelect
+                label="Cantón"
+                name="cantonId"
+                options={cantonOptions}
+                register={register}
+                disabled={!canEdit || !provinceId}
+                required
+                onValueChange={() => setValue("parishId", "")}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <CatalogSelect
                 label="Parroquia"
                 name="parishId"
                 options={parishOptions}
                 register={register}
-                disabled={!canEdit}
+                disabled={!canEdit || !cantonId}
                 required
               />
             </Grid>
@@ -701,6 +776,7 @@ function CatalogSelect({
   register,
   disabled,
   required,
+  onValueChange,
 }: {
   label: string;
   name: keyof FormValues | `administration.${string}` | `admission.${string}`;
@@ -708,7 +784,11 @@ function CatalogSelect({
   register: ReturnType<typeof useForm<FormValues>>["register"];
   disabled: boolean;
   required?: boolean;
+  onValueChange?: (value: string) => void;
 }) {
+  const field = register(name as never, {
+    required: required ? `${label} es obligatorio` : false,
+  });
   return (
     <FormControl fullWidth required={required}>
       <InputLabel>{label}</InputLabel>
@@ -716,9 +796,11 @@ function CatalogSelect({
         label={label}
         defaultValue=""
         disabled={disabled}
-        {...register(name as never, {
-          required: required ? `${label} es obligatorio` : false,
-        })}
+        {...field}
+        onChange={(event) => {
+          field.onChange(event);
+          onValueChange?.(String(event.target.value));
+        }}
       >
         {options.map((option) => (
           <MenuItem key={option.id} value={String(option.id)}>
@@ -764,12 +846,31 @@ function OptionGrid({
   );
 }
 
-function toFormValues(data?: CenterDraft | null): FormValues {
+function toFormValues(
+  data: CenterDraft | null | undefined,
+  catalogs: AdminCatalogs,
+): FormValues {
   if (!data) return emptyValues;
+  const subtype = catalogs.subtypes.find(
+    (option) => Number(option.id) === Number(data.subtypeId),
+  );
+  const type = catalogs.types.find(
+    (option) => Number(option.id) === Number(subtype?.typeId),
+  );
+  const parish = catalogs.parishes.find(
+    (option) => Number(option.id) === Number(data.parishId),
+  );
+  const canton = catalogs.cantons.find(
+    (option) => Number(option.id) === Number(parish?.cantonId),
+  );
   return {
     name: data.name ?? "",
+    categoryId: String(type?.categoryId ?? ""),
+    typeId: String(subtype?.typeId ?? ""),
     subtypeId: String(data.subtypeId ?? ""),
     touristZoneId: String(data.touristZoneId ?? ""),
+    provinceId: String(canton?.provinceId ?? ""),
+    cantonId: String(parish?.cantonId ?? ""),
     parishId: String(data.parishId ?? ""),
     productLineId: String(data.productLineId ?? ""),
     scenarioId: String(data.scenarioId ?? ""),

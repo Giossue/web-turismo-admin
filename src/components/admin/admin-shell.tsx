@@ -16,6 +16,7 @@ import MenuRounded from "@mui/icons-material/MenuRounded";
 import PlaceRounded from "@mui/icons-material/PlaceRounded";
 import RefreshRounded from "@mui/icons-material/RefreshRounded";
 import SettingsRounded from "@mui/icons-material/SettingsRounded";
+import StorefrontRounded from "@mui/icons-material/StorefrontRounded";
 import {
   Alert,
   AppBar,
@@ -64,6 +65,7 @@ import { SectionHeader } from "@/components/ui/section-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { CenterEditor } from "@/components/admin/center-editor";
 import { CatalogManagement } from "@/components/admin/catalog-management";
+import { EstablishmentManagement } from "@/components/admin/establishment-management";
 import {
   getAdminCenters,
   getAdminSummary,
@@ -77,7 +79,14 @@ import { webTokens } from "@/theme/tokens";
 const drawerWidth = webTokens.layout.drawerWidth;
 const pageSize = 20;
 
-type AdminSection = "summary" | "review" | "centers" | "catalogs" | "editor" | "settings";
+type AdminSection =
+  | "summary"
+  | "review"
+  | "centers"
+  | "establishments"
+  | "catalogs"
+  | "editor"
+  | "settings";
 type ReviewIntent = { center: AdminCenter; action: "APPROVE" | "REJECT" };
 
 const sectionMeta: Record<AdminSection, { title: string; description: string }> = {
@@ -93,6 +102,11 @@ const sectionMeta: Record<AdminSection, { title: string; description: string }> 
   centers: {
     title: "Centros turísticos",
     description: "Consulta el inventario institucional por estado y búsqueda.",
+  },
+  establishments: {
+    title: "Catastro por localidad",
+    description:
+      "Administra establecimientos que el turista puede encontrar cerca de una localidad.",
   },
   settings: {
     title: "Configuración",
@@ -113,6 +127,7 @@ function isAdminSection(value: string | null): value is AdminSection {
     value === "summary" ||
     value === "review" ||
     value === "centers" ||
+    value === "establishments" ||
     value === "catalogs" ||
     value === "editor" ||
     value === "settings"
@@ -320,6 +335,7 @@ export function AdminShell() {
     { key: "summary", label: "Resumen", icon: <AssessmentRounded /> },
     { key: "review", label: "Revisión de fichas", icon: <FactCheckRounded /> },
     { key: "centers", label: "Centros turísticos", icon: <PlaceRounded /> },
+    { key: "establishments", label: "Catastro", icon: <StorefrontRounded /> },
     { key: "catalogs", label: "Catálogos", icon: <CategoryRounded /> },
     { key: "settings", label: "Configuración", icon: <SettingsRounded /> },
   ];
@@ -533,6 +549,9 @@ export function AdminShell() {
               onPageChange={setPage}
               onOpen={openEditor}
             />
+          ) : null}
+          {section === "establishments" ? (
+            <EstablishmentManagement token={accessToken ?? ""} onNotice={setNotice} />
           ) : null}
           {section === "editor" ? (
             <CenterEditor
