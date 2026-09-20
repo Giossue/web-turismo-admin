@@ -9,7 +9,11 @@ import {
   Button,
   CircularProgress,
   Divider,
+  FormControl,
   IconButton,
+  InputLabel,
+  MenuItem,
+  Select,
   Stack,
   TextField,
   Tooltip,
@@ -46,6 +50,7 @@ export function MediaManager({
   const queryClient = useQueryClient();
   const [description, setDescription] = useState("");
   const [sourceAuthor, setSourceAuthor] = useState("");
+  const [typeCode, setTypeCode] = useState<AdminMediaItem["typeCode"]>("FOTOGRAFIA");
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const mediaQuery = useQuery({
@@ -59,11 +64,15 @@ export function MediaManager({
     setWorking(true);
     setError(null);
     try {
-      await uploadAdminCenterMedia(token, code, file, { description, sourceAuthor });
+      await uploadAdminCenterMedia(token, code, file, {
+        typeCode,
+        description,
+        sourceAuthor,
+      });
       setDescription("");
       setSourceAuthor("");
       await queryClient.invalidateQueries({ queryKey: ["admin", "media", code] });
-      onNotice("Archivo multimedia cargado. Quedará pendiente hasta publicar la ficha.");
+      onNotice("Archivo cargado. Quedará pendiente hasta publicar la ficha.");
     } catch (cause) {
       setError(
         cause instanceof Error
@@ -99,8 +108,8 @@ export function MediaManager({
       <Stack spacing={webTokens.spacing.control}>
         <SectionHeader
           icon={<PhotoLibraryRounded />}
-          title="Fotos y multimedia"
-          description="Sube fotografías, videos o audios institucionales. Imágenes hasta 10 MB y multimedia hasta 50 MB."
+          title="Archivos institucionales"
+          description="Sube fotografías, multimedia o anexos documentales. Las imágenes tienen límite de 10 MB y el resto de archivos de 50 MB."
         />
         {!code ? (
           <Alert severity="info">
@@ -112,6 +121,24 @@ export function MediaManager({
           direction={{ xs: "column", md: "row" }}
           spacing={webTokens.spacing.control}
         >
+          <FormControl fullWidth disabled={!canEdit || !code || working}>
+            <InputLabel id="media-type-label">Tipo de archivo</InputLabel>
+            <Select
+              labelId="media-type-label"
+              label="Tipo de archivo"
+              value={typeCode}
+              onChange={(event) =>
+                setTypeCode(event.target.value as AdminMediaItem["typeCode"])
+              }
+            >
+              <MenuItem value="FOTOGRAFIA">Fotografía</MenuItem>
+              <MenuItem value="VIDEO">Video</MenuItem>
+              <MenuItem value="AUDIO">Audio</MenuItem>
+              <MenuItem value="MAPA">Mapa</MenuItem>
+              <MenuItem value="PLAN_CONTINGENCIA">Plan de contingencia</MenuItem>
+              <MenuItem value="OTRO">Otro anexo</MenuItem>
+            </Select>
+          </FormControl>
           <TextField
             label="Descripción del archivo"
             value={description}
@@ -130,7 +157,7 @@ export function MediaManager({
             ref={fileInput}
             hidden
             type="file"
-            accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,audio/mpeg,audio/mp4,audio/wav,audio/ogg"
+            accept={acceptForType(typeCode)}
             onChange={(event) => {
               const file = event.target.files?.[0];
               if (file) void upload(file);
@@ -216,4 +243,15 @@ export function MediaManager({
       </Stack>
     </FlatSurface>
   );
+}
+
+function acceptForType(typeCode: AdminMediaItem["typeCode"]): string {
+  if (typeCode === "FOTOGRAFIA" || typeCode === "MAPA") {
+    return "image/jpeg,image/png,image/webp,application/pdf";
+  }
+  if (typeCode === "PLAN_CONTINGENCIA" || typeCode === "OTRO") {
+    return "application/pdf,image/jpeg,image/png,image/webp";
+  }
+  if (typeCode === "VIDEO") return "video/mp4,video/webm";
+  return "audio/mpeg,audio/mp4,audio/wav,audio/ogg";
 }

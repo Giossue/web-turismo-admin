@@ -38,11 +38,13 @@ import { SectionHeader } from "@/components/ui/section-header";
 import {
   getAdminCenterSections,
   getAdminCenterValuation,
+  getAdminCenterMedia,
   saveAdminCenterSection,
   type AdminCenterDetail,
   type AdminCenterSectionCode,
   type AdminCatalogs,
   type AdminCenterValuation,
+  type AdminMediaItem,
 } from "@/lib/admin-api";
 import { webTokens } from "@/theme/tokens";
 
@@ -415,6 +417,7 @@ type HumanResourceTrainingForm = {
 };
 
 type AnnexDocumentForm = {
+  fileId: string;
   type: string;
   source: string;
   author: string;
@@ -550,6 +553,13 @@ export function CenterSectionWorkflow({
     enabled: Boolean(token && code),
     staleTime: 10_000,
   });
+  const mediaQuery = useQuery<{ items: AdminMediaItem[] }>({
+    queryKey: ["admin", "media", code],
+    queryFn: () => getAdminCenterMedia(token, code as string),
+    enabled: Boolean(token && code),
+    staleTime: 5_000,
+  });
+  const annexMedia = mediaQuery.data?.items ?? [];
   const sectionData = sectionsQuery.data;
   const sections = useMemo(
     () => sectionData?.sections ?? detail?.draft?.sections ?? {},
@@ -938,6 +948,7 @@ export function CenterSectionWorkflow({
                   catalogs={catalogs}
                   canEdit={canEdit}
                   register={register}
+                  mediaItems={annexMedia}
                   documentFields={annexDocumentFields}
                   responsibleFields={annexResponsibleFields}
                   appendDocument={appendAnnexDocument}
@@ -4522,6 +4533,7 @@ function AnnexesSectionFields({
   catalogs,
   canEdit,
   register,
+  mediaItems,
   documentFields,
   responsibleFields,
   appendDocument,
@@ -4532,6 +4544,7 @@ function AnnexesSectionFields({
   catalogs: AdminCatalogs | null;
   canEdit: boolean;
   register: UseFormRegister<SectionFormValues>;
+  mediaItems: AdminMediaItem[];
   documentFields: Array<{ id: string }>;
   responsibleFields: Array<{ id: string }>;
   appendDocument: (value: AnnexDocumentForm) => void;
@@ -4540,6 +4553,9 @@ function AnnexesSectionFields({
   removeResponsible: (index: number) => void;
 }) {
   const responsibilityTypes = catalogs?.responsibilityTypes ?? [];
+  const documentMedia = mediaItems.filter((item) =>
+    ["MAPA", "PLAN_CONTINGENCIA", "OTRO"].includes(item.typeCode),
+  );
   return (
     <Stack spacing={webTokens.spacing.section}>
       <Box>
@@ -4571,6 +4587,7 @@ function AnnexesSectionFields({
             disabled={!canEdit}
             onClick={() =>
               appendDocument({
+                fileId: "",
                 type: "",
                 source: "",
                 author: "",
@@ -4596,6 +4613,28 @@ function AnnexesSectionFields({
                   spacing={webTokens.spacing.control}
                   alignItems="flex-start"
                 >
+                  <Grid size={{ xs: 12, md: 5 }}>
+                    <FormControl
+                      fullWidth
+                      disabled={!canEdit || documentMedia.length === 0}
+                    >
+                      <InputLabel id={`annex-file-${index}`}>Archivo cargado</InputLabel>
+                      <Select
+                        labelId={`annex-file-${index}`}
+                        label="Archivo cargado"
+                        defaultValue=""
+                        {...register(`annexDocuments.${index}.fileId`)}
+                      >
+                        <MenuItem value="">Sin seleccionar</MenuItem>
+                        {documentMedia.map((item) => (
+                          <MenuItem key={item.id} value={String(item.id)}>
+                            {item.typeName} · {item.originalName}
+                            {item.state === "PENDIENTE" ? " (pendiente)" : ""}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
                   <Grid size={{ xs: 12, sm: 4, md: 3 }}>
                     <TextField
                       label="Tipo de anexo"
@@ -5455,6 +5494,7 @@ function toSectionContent(
       ? {
           annexes: {
             documents: values.annexDocuments.map((document) => ({
+              fileId: toNullableInteger(document.fileId),
               type: document.type.trim(),
               source: document.source.trim(),
               author: document.author.trim(),
@@ -5929,6 +5969,7 @@ function readAnnexDocuments(value: unknown): AnnexDocumentForm[] {
     const item = isRecord(document) ? document : {};
     const visibility = new Set(["PUBLICA", "ADMINISTRATIVA", "RESTRINGIDA"]);
     return {
+      fileId: toFormNumber(item.fileId),
       type: typeof item.type === "string" ? item.type : "",
       source: typeof item.source === "string" ? item.source : "",
       author: typeof item.author === "string" ? item.author : "",

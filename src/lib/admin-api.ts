@@ -99,7 +99,7 @@ export type AdminCenterDetail = {
 export type AdminMediaItem = {
   id: number;
   name: string;
-  typeCode: "FOTOGRAFIA" | "VIDEO" | "AUDIO";
+  typeCode: "FOTOGRAFIA" | "VIDEO" | "AUDIO" | "MAPA" | "PLAN_CONTINGENCIA" | "OTRO";
   typeName: string;
   originalName: string;
   mimeType: string;
@@ -532,9 +532,14 @@ export async function uploadAdminCenterMedia(
   token: string,
   code: string,
   file: File,
-  metadata: { description?: string; sourceAuthor?: string } = {},
+  metadata: {
+    typeCode?: AdminMediaItem["typeCode"];
+    description?: string;
+    sourceAuthor?: string;
+  } = {},
 ) {
   const body = new FormData();
+  if (metadata.typeCode) body.append("typeCode", metadata.typeCode);
   if (metadata.description?.trim())
     body.append("description", metadata.description.trim());
   if (metadata.sourceAuthor?.trim())
