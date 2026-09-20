@@ -304,6 +304,14 @@ type VisitorInfluxForm = {
   observation: string;
 };
 
+type HumanResourceTrainingForm = {
+  group: "EDUCACION" | "CAPACITACION" | "IDIOMA";
+  name: string;
+  quantity: string;
+  detailOther: string;
+  observation: string;
+};
+
 type SectionFormValues = {
   response: SectionResponse;
   observation: string;
@@ -339,6 +347,12 @@ type SectionFormValues = {
   visitorOrigins: VisitorOriginForm[];
   visitorInformants: VisitorInformantForm[];
   visitorInflux: VisitorInfluxForm;
+  humanResourceSummary: {
+    administrationOperation: string;
+    specializedTourism: string;
+    observation: string;
+  };
+  humanResourceTraining: HumanResourceTrainingForm[];
 };
 
 type SectionProgress =
@@ -450,6 +464,11 @@ export function CenterSectionWorkflow({
     append: appendVisitorInformant,
     remove: removeVisitorInformant,
   } = useFieldArray({ control, name: "visitorInformants" });
+  const {
+    fields: humanResourceTrainingFields,
+    append: appendHumanResourceTraining,
+    remove: removeHumanResourceTraining,
+  } = useFieldArray({ control, name: "humanResourceTraining" });
   const activeLocalDraft = localDrafts[definition.code];
 
   useEffect(() => {
@@ -721,6 +740,15 @@ export function CenterSectionWorkflow({
                   removeOrigin={removeVisitorOrigin}
                   appendInformant={appendVisitorInformant}
                   removeInformant={removeVisitorInformant}
+                />
+              ) : null}
+              {definition.code === "recurso-humano" ? (
+                <HumanResourcesSectionFields
+                  canEdit={canEdit}
+                  register={register}
+                  trainingFields={humanResourceTrainingFields}
+                  appendTraining={appendHumanResourceTraining}
+                  removeTraining={removeHumanResourceTraining}
                 />
               ) : null}
               <Divider />
@@ -2569,6 +2597,208 @@ function VisitorRepeatableBlock({
   );
 }
 
+function HumanResourcesSectionFields({
+  canEdit,
+  register,
+  trainingFields,
+  appendTraining,
+  removeTraining,
+}: {
+  canEdit: boolean;
+  register: UseFormRegister<SectionFormValues>;
+  trainingFields: Array<{ id: string }>;
+  appendTraining: (value: HumanResourceTrainingForm) => void;
+  removeTraining: (index: number) => void;
+}) {
+  return (
+    <Stack spacing={webTokens.spacing.section}>
+      <Box>
+        <Typography variant="subtitle1">Recurso humano</Typography>
+        <Typography variant="body2" color="text.secondary">
+          Registra el resumen del personal y la formación, capacitación e idiomas
+          disponibles en el mismo centro turístico.
+        </Typography>
+      </Box>
+      <FlatSurface padding="compact" tone="subtle">
+        <Stack spacing={webTokens.spacing.control}>
+          <Typography variant="subtitle1">Resumen del personal</Typography>
+          <Grid container spacing={webTokens.spacing.control}>
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <TextField
+                label="Administración y operación"
+                type="number"
+                fullWidth
+                disabled={!canEdit}
+                slotProps={{ htmlInput: { min: 0, step: 1 } }}
+                {...register("humanResourceSummary.administrationOperation", {
+                  validate: (value) =>
+                    !value.trim() ||
+                    (Number.isInteger(Number(value)) && Number(value) >= 0)
+                      ? true
+                      : "Usa un entero no negativo",
+                })}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <TextField
+                label="Personal especializado en turismo"
+                type="number"
+                fullWidth
+                disabled={!canEdit}
+                slotProps={{ htmlInput: { min: 0, step: 1 } }}
+                {...register("humanResourceSummary.specializedTourism", {
+                  validate: (value) =>
+                    !value.trim() ||
+                    (Number.isInteger(Number(value)) && Number(value) >= 0)
+                      ? true
+                      : "Usa un entero no negativo",
+                })}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <TextField
+                label="Observación"
+                fullWidth
+                disabled={!canEdit}
+                {...register("humanResourceSummary.observation", {
+                  maxLength: { value: 1_000, message: "Máximo 1.000 caracteres" },
+                })}
+              />
+            </Grid>
+          </Grid>
+        </Stack>
+      </FlatSurface>
+
+      <Stack spacing={webTokens.spacing.control}>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          justifyContent="space-between"
+          alignItems={{ xs: "flex-start", sm: "center" }}
+          gap={1}
+        >
+          <Box>
+            <Typography variant="subtitle1">Formación y capacidades</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Agrupa educación, capacitación e idiomas y conserva la cantidad de personas.
+            </Typography>
+          </Box>
+          <Button
+            type="button"
+            size="small"
+            variant="outlined"
+            startIcon={<AddRounded />}
+            disabled={!canEdit}
+            onClick={() =>
+              appendTraining({
+                group: "EDUCACION",
+                name: "",
+                quantity: "",
+                detailOther: "",
+                observation: "",
+              })
+            }
+          >
+            Añadir formación
+          </Button>
+        </Stack>
+        {trainingFields.length === 0 ? (
+          <Typography variant="body2" color="text.secondary">
+            No hay formación registrada.
+          </Typography>
+        ) : (
+          <Stack spacing={1.5}>
+            {trainingFields.map((field, index) => (
+              <FlatSurface key={field.id} padding="compact" tone="subtle">
+                <Grid
+                  container
+                  spacing={webTokens.spacing.control}
+                  alignItems="flex-start"
+                >
+                  <Grid size={{ xs: 12, sm: 3 }}>
+                    <FormControl fullWidth disabled={!canEdit}>
+                      <InputLabel id={`human-resource-group-${index}`}>Grupo</InputLabel>
+                      <Select
+                        labelId={`human-resource-group-${index}`}
+                        label="Grupo"
+                        defaultValue="EDUCACION"
+                        {...register(`humanResourceTraining.${index}.group`)}
+                      >
+                        <MenuItem value="EDUCACION">Educación</MenuItem>
+                        <MenuItem value="CAPACITACION">Capacitación</MenuItem>
+                        <MenuItem value="IDIOMA">Idioma</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 4 }}>
+                    <TextField
+                      label="Formación, curso o idioma"
+                      fullWidth
+                      disabled={!canEdit}
+                      {...register(`humanResourceTraining.${index}.name`, {
+                        required: "Indica la formación",
+                        maxLength: { value: 140, message: "Máximo 140 caracteres" },
+                      })}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 2 }}>
+                    <TextField
+                      label="Personas"
+                      type="number"
+                      fullWidth
+                      disabled={!canEdit}
+                      slotProps={{ htmlInput: { min: 0, step: 1 } }}
+                      {...register(`humanResourceTraining.${index}.quantity`, {
+                        validate: (value) =>
+                          !value.trim() ||
+                          (Number.isInteger(Number(value)) && Number(value) >= 0)
+                            ? true
+                            : "Usa un entero no negativo",
+                      })}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 2 }}>
+                    <TextField
+                      label="Detalle de otro"
+                      fullWidth
+                      disabled={!canEdit}
+                      {...register(`humanResourceTraining.${index}.detailOther`, {
+                        maxLength: { value: 180, message: "Máximo 180 caracteres" },
+                      })}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 1 }}>
+                    <Tooltip title="Eliminar formación">
+                      <IconButton
+                        type="button"
+                        aria-label={`Eliminar formación ${index + 1}`}
+                        disabled={!canEdit}
+                        onClick={() => removeTraining(index)}
+                        sx={{ mt: { md: 1 } }}
+                      >
+                        <DeleteOutlineRounded />
+                      </IconButton>
+                    </Tooltip>
+                  </Grid>
+                  <Grid size={12}>
+                    <TextField
+                      label="Observación"
+                      fullWidth
+                      disabled={!canEdit}
+                      {...register(`humanResourceTraining.${index}.observation`, {
+                        maxLength: { value: 1_000, message: "Máximo 1.000 caracteres" },
+                      })}
+                    />
+                  </Grid>
+                </Grid>
+              </FlatSurface>
+            ))}
+          </Stack>
+        )}
+      </Stack>
+    </Stack>
+  );
+}
+
 function CharacteristicsSectionFields({
   catalogs,
   canEdit,
@@ -2733,6 +2963,8 @@ function createSectionValues(
     visitorOrigins: readVisitorOrigins(record?.visitors),
     visitorInformants: readVisitorInformants(record?.visitors),
     visitorInflux: readVisitorInflux(record?.visitors),
+    humanResourceSummary: readHumanResourceSummary(record?.humanResources),
+    humanResourceTraining: readHumanResourceTraining(record?.humanResources),
   };
 }
 
@@ -2890,6 +3122,28 @@ function toSectionContent(
               frequency: values.visitorInflux.frequency || null,
               observation: values.visitorInflux.observation.trim(),
             },
+          },
+        }
+      : {}),
+    ...(sectionCode === "recurso-humano"
+      ? {
+          humanResources: {
+            summary: {
+              administrationOperation: toNullableInteger(
+                values.humanResourceSummary.administrationOperation,
+              ),
+              specializedTourism: toNullableInteger(
+                values.humanResourceSummary.specializedTourism,
+              ),
+              observation: values.humanResourceSummary.observation.trim(),
+            },
+            training: values.humanResourceTraining.map((training) => ({
+              group: training.group,
+              name: training.name.trim(),
+              quantity: toNullableInteger(training.quantity),
+              detailOther: training.detailOther.trim(),
+              observation: training.observation.trim(),
+            })),
           },
         }
       : {}),
@@ -3119,6 +3373,34 @@ function readVisitorInflux(value: unknown): VisitorInfluxForm {
       : "",
     observation: typeof visitors.observation === "string" ? visitors.observation : "",
   };
+}
+
+function readHumanResourceSummary(
+  value: unknown,
+): SectionFormValues["humanResourceSummary"] {
+  const resources = isRecord(value) && isRecord(value.summary) ? value.summary : {};
+  return {
+    administrationOperation: toFormNumber(resources.administrationOperation),
+    specializedTourism: toFormNumber(resources.specializedTourism),
+    observation: typeof resources.observation === "string" ? resources.observation : "",
+  };
+}
+
+function readHumanResourceTraining(value: unknown): HumanResourceTrainingForm[] {
+  if (!isRecord(value) || !Array.isArray(value.training)) return [];
+  return value.training.map((training) => {
+    const item = isRecord(training) ? training : {};
+    const group = new Set(["EDUCACION", "CAPACITACION", "IDIOMA"]);
+    return {
+      group: group.has(String(item.group))
+        ? (item.group as HumanResourceTrainingForm["group"])
+        : "EDUCACION",
+      name: typeof item.name === "string" ? item.name : "",
+      quantity: toFormNumber(item.quantity),
+      detailOther: typeof item.detailOther === "string" ? item.detailOther : "",
+      observation: typeof item.observation === "string" ? item.observation : "",
+    };
+  });
 }
 
 function parseMonths(value: string): number[] {
