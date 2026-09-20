@@ -545,7 +545,7 @@ function useSectionAutosave({
   const saveSection = useCallback(
     async (values: SectionFormValues) => {
       if (!code) {
-        onError("Guarda primero los campos núcleo para obtener el código de la ficha.");
+        onError("Completa primero los datos núcleo para obtener el código de la ficha.");
         return;
       }
       const submittedSignature = JSON.stringify(values);
@@ -828,7 +828,7 @@ export function CenterSectionWorkflow({
         <SectionHeader
           icon={<FactCheckRounded />}
           title="Ficha integral por secciones"
-          description="Registra cada apartado de la ficha sin crear centros derivados. Las secciones se guardan como un borrador versionado."
+          description="Registra cada apartado de la ficha sin crear centros derivados. El avance queda asociado a la ficha para su revisión."
         />
         <InstitutionalCodeCard
           code={detail?.code ?? null}
@@ -926,7 +926,8 @@ export function CenterSectionWorkflow({
                   }
                 >
                   Esta sección reutiliza campos normalizados del formulario principal. Sus
-                  respuestas detalladas y observaciones adicionales se guardan aquí.
+                  respuestas detalladas y observaciones adicionales forman parte de esta
+                  ficha.
                 </Alert>
               ) : null}
               {definition.code === "accesibilidad" ? (
@@ -6260,7 +6261,7 @@ export function ContinuousCenterSectionWorkflow({
           <SectionHeader
             icon={<FactCheckRounded />}
             title="Ficha integral por secciones"
-            description="Completa la ficha en un solo recorrido. Cada apartado conserva su avance y se guarda como un borrador versionado."
+            description="Completa la ficha en un solo recorrido. Cada apartado conserva su avance para la revisión."
           />
           <InstitutionalCodeCard
             code={detail?.code ?? null}
@@ -6432,7 +6433,7 @@ function ContinuousSectionCard({
         {definition.coreAnchor ? (
           <Alert severity="info">
             Esta sección reutiliza campos del formulario principal. Sus respuestas
-            detalladas y observaciones se guardan aquí, dentro de la misma ficha.
+            detalladas y observaciones forman parte de la misma ficha.
           </Alert>
         ) : null}
         {definition.code === "accesibilidad" ? (

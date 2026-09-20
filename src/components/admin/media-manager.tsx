@@ -113,7 +113,7 @@ export function MediaManager({
         />
         {!code ? (
           <Alert severity="info">
-            Guarda la ficha antes de cargar archivos multimedia.
+            Completa los datos generales para habilitar la carga de archivos multimedia.
           </Alert>
         ) : null}
         {error ? <Alert severity="error">{error}</Alert> : null}
