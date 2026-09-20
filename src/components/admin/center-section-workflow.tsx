@@ -24,7 +24,12 @@ import {
 } from "@mui/material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { useFieldArray, useForm, type UseFormRegister } from "react-hook-form";
+import {
+  useFieldArray,
+  useForm,
+  type Control,
+  type UseFormRegister,
+} from "react-hook-form";
 
 import { ContentState } from "@/components/ui/content-state";
 import { FlatSurface } from "@/components/ui/flat-surface";
@@ -86,14 +91,7 @@ export const centerSectionDefinitions: readonly SectionDefinition[] = [
     title: "Accesibilidad y conectividad",
     description: "Localidad cercana, vías, transporte, accesibilidad y señalización.",
     coreAnchor: "center-section-accesibilidad",
-    suggestedRows: [
-      "Localidad cercana",
-      "Vía terrestre",
-      "Vía acuática",
-      "Vía aérea",
-      "Accesibilidad detallada",
-      "Señalización de aproximación",
-    ],
+    suggestedRows: [],
   },
   {
     code: "planta",
@@ -191,6 +189,67 @@ type SectionRowForm = {
   label: string;
   response: SectionResponse;
   quantity: string;
+  observation: string;
+};
+
+type AccessibilityRoadForm = {
+  roadTypeId: string;
+  typeLabel: string;
+  startLatitude: string;
+  startLongitude: string;
+  endLatitude: string;
+  endLongitude: string;
+  distanceKm: string;
+  materialId: string;
+  conditionId: string;
+  observation: string;
+};
+
+type AccessibilityAquaticForm = {
+  modalityId: string;
+  modalityLabel: string;
+  departure: string;
+  departureConditionId: string;
+  arrival: string;
+  arrivalConditionId: string;
+  observation: string;
+};
+
+type AccessibilityAerialForm = {
+  coverageId: string;
+  coverageLabel: string;
+  observation: string;
+};
+
+type AccessibilityTransportTypeForm = {
+  typeId: string;
+  label: string;
+  applies: "SI" | "NO";
+  detailOther: string;
+  observation: string;
+};
+
+type AccessibilityTransportDetailForm = {
+  operator: string;
+  terminal: string;
+  frequencyId: string;
+  frequencyLabel: string;
+  transferDetail: string;
+  observation: string;
+};
+
+type AccessibilityCriterionForm = {
+  accessibilityTypeId: string;
+  criterionId: string;
+  label: string;
+  response: SectionResponse;
+  detail: string;
+  observation: string;
+};
+
+type AccessibilitySignageForm = {
+  available: SectionResponse;
+  conditionId: string;
   observation: string;
 };
 
@@ -335,6 +394,13 @@ type SectionFormValues = {
   observation: string;
   localityId: string;
   distanceKm: string;
+  accessibilityRoads: AccessibilityRoadForm[];
+  accessibilityAquatic: AccessibilityAquaticForm[];
+  accessibilityAerial: AccessibilityAerialForm[];
+  accessibilityTransportTypes: AccessibilityTransportTypeForm[];
+  accessibilityTransportDetails: AccessibilityTransportDetailForm[];
+  accessibilityCriteria: AccessibilityCriterionForm[];
+  accessibilitySignage: AccessibilitySignageForm;
   climateId: string;
   minTemperature: string;
   maxTemperature: string;
@@ -726,6 +792,7 @@ export function CenterSectionWorkflow({
                 <AccessibilitySectionFields
                   catalogs={catalogs}
                   canEdit={canEdit}
+                  control={control}
                   register={register}
                 />
               ) : null}
@@ -1068,12 +1135,96 @@ function SectionStatusChip({ status }: { status: SectionProgress }) {
 function AccessibilitySectionFields({
   catalogs,
   canEdit,
+  control,
   register,
 }: {
   catalogs: AdminCatalogs | null;
   canEdit: boolean;
+  control: Control<SectionFormValues>;
   register: UseFormRegister<SectionFormValues>;
 }) {
+  const {
+    fields: roadFields,
+    append: appendRoad,
+    remove: removeRoad,
+  } = useFieldArray({ control, name: "accessibilityRoads" });
+  const {
+    fields: aquaticFields,
+    append: appendAquatic,
+    remove: removeAquatic,
+  } = useFieldArray({ control, name: "accessibilityAquatic" });
+  const {
+    fields: aerialFields,
+    append: appendAerial,
+    remove: removeAerial,
+  } = useFieldArray({ control, name: "accessibilityAerial" });
+  const {
+    fields: transportTypeFields,
+    append: appendTransportType,
+    remove: removeTransportType,
+  } = useFieldArray({ control, name: "accessibilityTransportTypes" });
+  const {
+    fields: transportDetailFields,
+    append: appendTransportDetail,
+    remove: removeTransportDetail,
+  } = useFieldArray({ control, name: "accessibilityTransportDetails" });
+  const {
+    fields: criterionFields,
+    append: appendCriterion,
+    remove: removeCriterion,
+  } = useFieldArray({ control, name: "accessibilityCriteria" });
+
+  const conditionOptions = catalogs?.conditionStates ?? [];
+  const roadTypeOptions = catalogs?.roadTypes ?? [];
+  const roadMaterialOptions = catalogs?.roadMaterials ?? [];
+  const aquaticModeOptions = catalogs?.aquaticAccessModes ?? [];
+  const aerialCoverageOptions = catalogs?.aerialAccessCoverages ?? [];
+  const transportOptions = catalogs?.transportTypes ?? [];
+  const frequencyOptions = catalogs?.serviceFrequencies ?? [];
+  const accessibilityTypeOptions = catalogs?.accessibilityTypes ?? [];
+  const criterionOptions = catalogs?.accessibilityCriteria ?? [];
+
+  const emptyState = (label: string, actionLabel: string, onAdd: () => void) => (
+    <Stack direction="row" justifyContent="space-between" alignItems="center" gap={2}>
+      <Typography variant="body2" color="text.secondary">
+        {label}
+      </Typography>
+      <Button
+        type="button"
+        size="small"
+        variant="outlined"
+        startIcon={<AddRounded />}
+        disabled={!canEdit}
+        onClick={onAdd}
+      >
+        {actionLabel}
+      </Button>
+    </Stack>
+  );
+
+  const conditionSelect = (
+    name: string,
+    label: string,
+    options: AdminCatalogs["conditionStates"] = conditionOptions,
+  ) => (
+    <FormControl fullWidth disabled={!canEdit}>
+      <InputLabel id={`${name}-label`}>{label}</InputLabel>
+      <Select
+        labelId={`${name}-label`}
+        label={label}
+        defaultValue=""
+        {...register(name as never)}
+      >
+        <MenuItem value="">Sin seleccionar</MenuItem>
+        {options.map((option) => (
+          <MenuItem key={option.id} value={String(option.id)}>
+            {option.name}
+          </MenuItem>
+        ))}
+      </Select>
+    </FormControl>
+  );
+
   return (
     <Stack spacing={webTokens.spacing.control}>
       <Typography variant="subtitle1">Referencia territorial y conectividad</Typography>
@@ -1112,6 +1263,750 @@ function AccessibilitySectionFields({
           />
         </Grid>
       </Grid>
+
+      <Divider />
+      <AccessibilitySubsectionHeader
+        title="Vías terrestres de acceso"
+        description="Registra cada alternativa con coordenadas, distancia, material y estado."
+        actionLabel="Añadir vía"
+        canEdit={canEdit}
+        onAdd={() =>
+          appendRoad({
+            roadTypeId: "",
+            typeLabel: "",
+            startLatitude: "",
+            startLongitude: "",
+            endLatitude: "",
+            endLongitude: "",
+            distanceKm: "",
+            materialId: "",
+            conditionId: "",
+            observation: "",
+          })
+        }
+      />
+      {roadFields.length === 0
+        ? emptyState("No hay vías terrestres registradas.", "Añadir vía", () =>
+            appendRoad({
+              roadTypeId: "",
+              typeLabel: "",
+              startLatitude: "",
+              startLongitude: "",
+              endLatitude: "",
+              endLongitude: "",
+              distanceKm: "",
+              materialId: "",
+              conditionId: "",
+              observation: "",
+            }),
+          )
+        : roadFields.map((field, index) => (
+            <FlatSurface key={field.id} padding="compact" tone="subtle">
+              <Stack spacing={1.5}>
+                <Grid container spacing={webTokens.spacing.control}>
+                  <Grid size={{ xs: 12, md: 4 }}>
+                    <FormControl fullWidth disabled={!canEdit}>
+                      <InputLabel id={`access-road-type-${index}-label`}>
+                        Tipo de vía
+                      </InputLabel>
+                      <Select
+                        labelId={`access-road-type-${index}-label`}
+                        label="Tipo de vía"
+                        defaultValue=""
+                        {...register(`accessibilityRoads.${index}.roadTypeId`)}
+                      >
+                        <MenuItem value="">Seleccionar catálogo</MenuItem>
+                        {roadTypeOptions.map((option) => (
+                          <MenuItem key={option.id} value={String(option.id)}>
+                            {option.name}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 4 }}>
+                    <TextField
+                      label="Tipo de vía (si no está catalogado)"
+                      fullWidth
+                      disabled={!canEdit}
+                      {...register(`accessibilityRoads.${index}.typeLabel`, {
+                        maxLength: { value: 180, message: "Máximo 180 caracteres" },
+                      })}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                    <TextField
+                      label="Distancia (km)"
+                      type="number"
+                      fullWidth
+                      disabled={!canEdit}
+                      slotProps={{ htmlInput: { min: 0, step: 0.1 } }}
+                      {...register(`accessibilityRoads.${index}.distanceKm`)}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                    <IconButton
+                      type="button"
+                      aria-label={`Eliminar vía terrestre ${index + 1}`}
+                      disabled={!canEdit}
+                      onClick={() => removeRoad(index)}
+                      sx={{ mt: { md: 1 } }}
+                    >
+                      <DeleteOutlineRounded />
+                    </IconButton>
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 4 }}>
+                    {conditionSelect(
+                      `accessibilityRoads.${index}.materialId`,
+                      "Material de vía",
+                      roadMaterialOptions,
+                    )}
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 4 }}>
+                    {conditionSelect(
+                      `accessibilityRoads.${index}.conditionId`,
+                      "Estado de la vía",
+                    )}
+                  </Grid>
+                </Grid>
+                <Typography variant="caption" color="text.secondary">
+                  Coordenadas de inicio y fin (grados decimales)
+                </Typography>
+                <Grid container spacing={webTokens.spacing.control}>
+                  {(
+                    [
+                      ["startLatitude", "Latitud inicial"],
+                      ["startLongitude", "Longitud inicial"],
+                      ["endLatitude", "Latitud final"],
+                      ["endLongitude", "Longitud final"],
+                    ] as const
+                  ).map(([key, label]) => (
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }} key={key}>
+                      <TextField
+                        label={label}
+                        type="number"
+                        fullWidth
+                        disabled={!canEdit}
+                        {...register(`accessibilityRoads.${index}.${key}`)}
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+                <TextField
+                  label="Observación de la vía"
+                  fullWidth
+                  multiline
+                  minRows={2}
+                  disabled={!canEdit}
+                  {...register(`accessibilityRoads.${index}.observation`, {
+                    maxLength: { value: 1_000, message: "Máximo 1.000 caracteres" },
+                  })}
+                />
+              </Stack>
+            </FlatSurface>
+          ))}
+
+      <Divider />
+      <AccessibilitySubsectionHeader
+        title="Accesos acuáticos"
+        description="Registra puerto o muelle de partida y llegada por modalidad."
+        actionLabel="Añadir acceso acuático"
+        canEdit={canEdit}
+        onAdd={() =>
+          appendAquatic({
+            modalityId: "",
+            modalityLabel: "",
+            departure: "",
+            departureConditionId: "",
+            arrival: "",
+            arrivalConditionId: "",
+            observation: "",
+          })
+        }
+      />
+      {aquaticFields.length === 0
+        ? emptyState(
+            "No hay accesos acuáticos registrados.",
+            "Añadir acceso acuático",
+            () =>
+              appendAquatic({
+                modalityId: "",
+                modalityLabel: "",
+                departure: "",
+                departureConditionId: "",
+                arrival: "",
+                arrivalConditionId: "",
+                observation: "",
+              }),
+          )
+        : aquaticFields.map((field, index) => (
+            <FlatSurface key={field.id} padding="compact" tone="subtle">
+              <Grid container spacing={webTokens.spacing.control}>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <FormControl fullWidth disabled={!canEdit}>
+                    <InputLabel id={`access-aquatic-mode-${index}-label`}>
+                      Modalidad
+                    </InputLabel>
+                    <Select
+                      labelId={`access-aquatic-mode-${index}-label`}
+                      label="Modalidad"
+                      defaultValue=""
+                      {...register(`accessibilityAquatic.${index}.modalityId`)}
+                    >
+                      <MenuItem value="">Seleccionar catálogo</MenuItem>
+                      {aquaticModeOptions.map((option) => (
+                        <MenuItem key={option.id} value={String(option.id)}>
+                          {option.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <TextField
+                    label="Modalidad (si no está catalogada)"
+                    fullWidth
+                    disabled={!canEdit}
+                    {...register(`accessibilityAquatic.${index}.modalityLabel`)}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <IconButton
+                    type="button"
+                    aria-label={`Eliminar acceso acuático ${index + 1}`}
+                    disabled={!canEdit}
+                    onClick={() => removeAquatic(index)}
+                  >
+                    <DeleteOutlineRounded />
+                  </IconButton>
+                </Grid>
+                <Grid size={{ xs: 12, md: 5 }}>
+                  <TextField
+                    label="Puerto / muelle de partida"
+                    fullWidth
+                    disabled={!canEdit}
+                    {...register(`accessibilityAquatic.${index}.departure`)}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 3 }}>
+                  {conditionSelect(
+                    `accessibilityAquatic.${index}.departureConditionId`,
+                    "Estado de partida",
+                  )}
+                </Grid>
+                <Grid size={{ xs: 12, md: 5 }}>
+                  <TextField
+                    label="Puerto / muelle de llegada"
+                    fullWidth
+                    disabled={!canEdit}
+                    {...register(`accessibilityAquatic.${index}.arrival`)}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 3 }}>
+                  {conditionSelect(
+                    `accessibilityAquatic.${index}.arrivalConditionId`,
+                    "Estado de llegada",
+                  )}
+                </Grid>
+                <Grid size={12}>
+                  <TextField
+                    label="Observación del acceso acuático"
+                    fullWidth
+                    multiline
+                    minRows={2}
+                    disabled={!canEdit}
+                    {...register(`accessibilityAquatic.${index}.observation`)}
+                  />
+                </Grid>
+              </Grid>
+            </FlatSurface>
+          ))}
+
+      <Divider />
+      <AccessibilitySubsectionHeader
+        title="Accesos aéreos"
+        description="Registra la cobertura del acceso cuando aplique."
+        actionLabel="Añadir acceso aéreo"
+        canEdit={canEdit}
+        onAdd={() => appendAerial({ coverageId: "", coverageLabel: "", observation: "" })}
+      />
+      {aerialFields.length === 0
+        ? emptyState("No hay accesos aéreos registrados.", "Añadir acceso aéreo", () =>
+            appendAerial({ coverageId: "", coverageLabel: "", observation: "" }),
+          )
+        : aerialFields.map((field, index) => (
+            <FlatSurface key={field.id} padding="compact" tone="subtle">
+              <Grid container spacing={webTokens.spacing.control}>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <FormControl fullWidth disabled={!canEdit}>
+                    <InputLabel id={`access-aerial-coverage-${index}-label`}>
+                      Cobertura
+                    </InputLabel>
+                    <Select
+                      labelId={`access-aerial-coverage-${index}-label`}
+                      label="Cobertura"
+                      defaultValue=""
+                      {...register(`accessibilityAerial.${index}.coverageId`)}
+                    >
+                      <MenuItem value="">Seleccionar catálogo</MenuItem>
+                      {aerialCoverageOptions.map((option) => (
+                        <MenuItem key={option.id} value={String(option.id)}>
+                          {option.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid size={{ xs: 12, md: 5 }}>
+                  <TextField
+                    label="Cobertura (si no está catalogada)"
+                    fullWidth
+                    disabled={!canEdit}
+                    {...register(`accessibilityAerial.${index}.coverageLabel`)}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 2 }}>
+                  <IconButton
+                    type="button"
+                    aria-label={`Eliminar acceso aéreo ${index + 1}`}
+                    disabled={!canEdit}
+                    onClick={() => removeAerial(index)}
+                  >
+                    <DeleteOutlineRounded />
+                  </IconButton>
+                </Grid>
+                <Grid size={12}>
+                  <TextField
+                    label="Observación del acceso aéreo"
+                    fullWidth
+                    multiline
+                    minRows={2}
+                    disabled={!canEdit}
+                    {...register(`accessibilityAerial.${index}.observation`)}
+                  />
+                </Grid>
+              </Grid>
+            </FlatSurface>
+          ))}
+
+      <Divider />
+      <AccessibilitySubsectionHeader
+        title="Servicio de transporte"
+        description="Separa los tipos disponibles del detalle de operadores y traslados."
+        actionLabel="Añadir tipo"
+        canEdit={canEdit}
+        onAdd={() =>
+          appendTransportType({
+            typeId: "",
+            label: "",
+            applies: "SI",
+            detailOther: "",
+            observation: "",
+          })
+        }
+      />
+      {transportTypeFields.length === 0
+        ? emptyState("No hay tipos de transporte registrados.", "Añadir tipo", () =>
+            appendTransportType({
+              typeId: "",
+              label: "",
+              applies: "SI",
+              detailOther: "",
+              observation: "",
+            }),
+          )
+        : transportTypeFields.map((field, index) => (
+            <FlatSurface key={field.id} padding="compact" tone="subtle">
+              <Grid container spacing={webTokens.spacing.control}>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <FormControl fullWidth disabled={!canEdit}>
+                    <InputLabel id={`access-transport-type-${index}-label`}>
+                      Tipo
+                    </InputLabel>
+                    <Select
+                      labelId={`access-transport-type-${index}-label`}
+                      label="Tipo"
+                      defaultValue=""
+                      {...register(`accessibilityTransportTypes.${index}.typeId`)}
+                    >
+                      <MenuItem value="">Seleccionar catálogo</MenuItem>
+                      {transportOptions.map((option) => (
+                        <MenuItem key={option.id} value={String(option.id)}>
+                          {option.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <TextField
+                    label="Tipo (si no está catalogado)"
+                    fullWidth
+                    disabled={!canEdit}
+                    {...register(`accessibilityTransportTypes.${index}.label`)}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                  <FormControl fullWidth disabled={!canEdit}>
+                    <InputLabel id={`access-transport-applies-${index}-label`}>
+                      Aplica
+                    </InputLabel>
+                    <Select
+                      labelId={`access-transport-applies-${index}-label`}
+                      label="Aplica"
+                      defaultValue="SI"
+                      {...register(`accessibilityTransportTypes.${index}.applies`)}
+                    >
+                      <MenuItem value="SI">Sí</MenuItem>
+                      <MenuItem value="NO">No</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                  <IconButton
+                    type="button"
+                    aria-label={`Eliminar tipo de transporte ${index + 1}`}
+                    disabled={!canEdit}
+                    onClick={() => removeTransportType(index)}
+                  >
+                    <DeleteOutlineRounded />
+                  </IconButton>
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    label="Detalle de otro tipo"
+                    fullWidth
+                    disabled={!canEdit}
+                    {...register(`accessibilityTransportTypes.${index}.detailOther`)}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    label="Observación"
+                    fullWidth
+                    disabled={!canEdit}
+                    {...register(`accessibilityTransportTypes.${index}.observation`)}
+                  />
+                </Grid>
+              </Grid>
+            </FlatSurface>
+          ))}
+
+      <Stack spacing={1.5}>
+        <AccessibilitySubsectionHeader
+          title="Detalle de transporte hacia el atractivo"
+          description="Registra cooperativa, terminal, frecuencia y traslado origen/destino."
+          actionLabel="Añadir operador"
+          canEdit={canEdit}
+          onAdd={() =>
+            appendTransportDetail({
+              operator: "",
+              terminal: "",
+              frequencyId: "",
+              frequencyLabel: "",
+              transferDetail: "",
+              observation: "",
+            })
+          }
+        />
+        {transportDetailFields.length === 0
+          ? emptyState("No hay operadores registrados.", "Añadir operador", () =>
+              appendTransportDetail({
+                operator: "",
+                terminal: "",
+                frequencyId: "",
+                frequencyLabel: "",
+                transferDetail: "",
+                observation: "",
+              }),
+            )
+          : transportDetailFields.map((field, index) => (
+              <FlatSurface key={field.id} padding="compact" tone="subtle">
+                <Grid container spacing={webTokens.spacing.control}>
+                  <Grid size={{ xs: 12, md: 4 }}>
+                    <TextField
+                      label="Cooperativa o asociación"
+                      fullWidth
+                      disabled={!canEdit}
+                      {...register(`accessibilityTransportDetails.${index}.operator`, {
+                        required: "Indica el operador",
+                        maxLength: { value: 180, message: "Máximo 180 caracteres" },
+                      })}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 4 }}>
+                    <TextField
+                      label="Estación / terminal"
+                      fullWidth
+                      disabled={!canEdit}
+                      {...register(`accessibilityTransportDetails.${index}.terminal`)}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 4 }}>
+                    <FormControl fullWidth disabled={!canEdit}>
+                      <InputLabel id={`access-frequency-${index}-label`}>
+                        Frecuencia
+                      </InputLabel>
+                      <Select
+                        labelId={`access-frequency-${index}-label`}
+                        label="Frecuencia"
+                        defaultValue=""
+                        {...register(
+                          `accessibilityTransportDetails.${index}.frequencyId`,
+                        )}
+                      >
+                        <MenuItem value="">Seleccionar catálogo</MenuItem>
+                        {frequencyOptions.map((option) => (
+                          <MenuItem key={option.id} value={String(option.id)}>
+                            {option.name}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 4 }}>
+                    <TextField
+                      label="Frecuencia (si no está catalogada)"
+                      fullWidth
+                      disabled={!canEdit}
+                      {...register(
+                        `accessibilityTransportDetails.${index}.frequencyLabel`,
+                      )}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 7 }}>
+                    <TextField
+                      label="Detalle del traslado (origen / destino)"
+                      fullWidth
+                      disabled={!canEdit}
+                      {...register(
+                        `accessibilityTransportDetails.${index}.transferDetail`,
+                      )}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 1 }}>
+                    <IconButton
+                      type="button"
+                      aria-label={`Eliminar operador ${index + 1}`}
+                      disabled={!canEdit}
+                      onClick={() => removeTransportDetail(index)}
+                    >
+                      <DeleteOutlineRounded />
+                    </IconButton>
+                  </Grid>
+                  <Grid size={12}>
+                    <TextField
+                      label="Observación"
+                      fullWidth
+                      multiline
+                      minRows={2}
+                      disabled={!canEdit}
+                      {...register(`accessibilityTransportDetails.${index}.observation`)}
+                    />
+                  </Grid>
+                </Grid>
+              </FlatSurface>
+            ))}
+      </Stack>
+
+      <Divider />
+      <AccessibilitySubsectionHeader
+        title="Condiciones de accesibilidad para personas con discapacidad"
+        description="Usa los criterios de la ficha por tipo de accesibilidad; el catálogo puede completarse desde administración."
+        actionLabel="Añadir criterio"
+        canEdit={canEdit}
+        onAdd={() =>
+          appendCriterion({
+            accessibilityTypeId: "",
+            criterionId: "",
+            label: "",
+            response: EMPTY_RESPONSE,
+            detail: "",
+            observation: "",
+          })
+        }
+      />
+      {criterionFields.length === 0
+        ? emptyState("No hay criterios registrados.", "Añadir criterio", () =>
+            appendCriterion({
+              accessibilityTypeId: "",
+              criterionId: "",
+              label: "",
+              response: EMPTY_RESPONSE,
+              detail: "",
+              observation: "",
+            }),
+          )
+        : criterionFields.map((field, index) => (
+            <FlatSurface key={field.id} padding="compact" tone="subtle">
+              <Grid container spacing={webTokens.spacing.control}>
+                <Grid size={{ xs: 12, md: 3 }}>
+                  <FormControl fullWidth disabled={!canEdit}>
+                    <InputLabel id={`access-criterion-type-${index}-label`}>
+                      Tipo
+                    </InputLabel>
+                    <Select
+                      labelId={`access-criterion-type-${index}-label`}
+                      label="Tipo"
+                      defaultValue=""
+                      {...register(`accessibilityCriteria.${index}.accessibilityTypeId`)}
+                    >
+                      <MenuItem value="">Sin clasificar</MenuItem>
+                      {accessibilityTypeOptions.map((option) => (
+                        <MenuItem key={option.id} value={String(option.id)}>
+                          {option.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <FormControl fullWidth disabled={!canEdit}>
+                    <InputLabel id={`access-criterion-${index}-label`}>
+                      Criterio catalogado
+                    </InputLabel>
+                    <Select
+                      labelId={`access-criterion-${index}-label`}
+                      label="Criterio catalogado"
+                      defaultValue=""
+                      {...register(`accessibilityCriteria.${index}.criterionId`)}
+                    >
+                      <MenuItem value="">Usar descripción manual</MenuItem>
+                      {criterionOptions.map((option) => (
+                        <MenuItem key={option.id} value={String(option.id)}>
+                          {option.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <TextField
+                    label="Descripción manual del criterio"
+                    fullWidth
+                    disabled={!canEdit}
+                    helperText="Obligatoria solo si no eliges un criterio catalogado"
+                    {...register(`accessibilityCriteria.${index}.label`, {
+                      maxLength: { value: 300, message: "Máximo 300 caracteres" },
+                    })}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 10, md: 1 }}>
+                  <IconButton
+                    type="button"
+                    aria-label={`Eliminar criterio ${index + 1}`}
+                    disabled={!canEdit}
+                    onClick={() => removeCriterion(index)}
+                  >
+                    <DeleteOutlineRounded />
+                  </IconButton>
+                </Grid>
+                <Grid size={{ xs: 12, md: 3 }}>
+                  <FormControl fullWidth disabled={!canEdit}>
+                    <InputLabel id={`access-criterion-response-${index}-label`}>
+                      Respuesta
+                    </InputLabel>
+                    <Select
+                      labelId={`access-criterion-response-${index}-label`}
+                      label="Respuesta"
+                      defaultValue={EMPTY_RESPONSE}
+                      {...register(`accessibilityCriteria.${index}.response`)}
+                    >
+                      {SECTION_RESPONSE_OPTIONS.map((option) => (
+                        <MenuItem key={option.value} value={option.value}>
+                          {option.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <TextField
+                    label="Detalle"
+                    fullWidth
+                    disabled={!canEdit}
+                    {...register(`accessibilityCriteria.${index}.detail`)}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 5 }}>
+                  <TextField
+                    label="Observación"
+                    fullWidth
+                    disabled={!canEdit}
+                    {...register(`accessibilityCriteria.${index}.observation`)}
+                  />
+                </Grid>
+              </Grid>
+            </FlatSurface>
+          ))}
+
+      <Divider />
+      <Typography variant="subtitle1">Señalización de aproximación</Typography>
+      <Grid container spacing={webTokens.spacing.control}>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <FormControl fullWidth disabled={!canEdit}>
+            <InputLabel id="access-signage-available-label">Disponible</InputLabel>
+            <Select
+              labelId="access-signage-available-label"
+              label="Disponible"
+              defaultValue={EMPTY_RESPONSE}
+              {...register("accessibilitySignage.available")}
+            >
+              {SECTION_RESPONSE_OPTIONS.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          {conditionSelect("accessibilitySignage.conditionId", "Estado")}
+        </Grid>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <TextField
+            label="Observación"
+            fullWidth
+            disabled={!canEdit}
+            {...register("accessibilitySignage.observation")}
+          />
+        </Grid>
+      </Grid>
+    </Stack>
+  );
+}
+
+function AccessibilitySubsectionHeader({
+  title,
+  description,
+  actionLabel,
+  canEdit,
+  onAdd,
+}: {
+  title: string;
+  description: string;
+  actionLabel: string;
+  canEdit: boolean;
+  onAdd: () => void;
+}) {
+  return (
+    <Stack direction="row" justifyContent="space-between" alignItems="flex-start" gap={2}>
+      <Box>
+        <Typography variant="subtitle1">{title}</Typography>
+        <Typography variant="body2" color="text.secondary">
+          {description}
+        </Typography>
+      </Box>
+      <Button
+        type="button"
+        size="small"
+        variant="outlined"
+        startIcon={<AddRounded />}
+        disabled={!canEdit}
+        onClick={onAdd}
+      >
+        {actionLabel}
+      </Button>
     </Stack>
   );
 }
@@ -3440,6 +4335,17 @@ function createSectionValues(
       typeof record?.distanceKm === "number" || typeof record?.distanceKm === "string"
         ? String(record.distanceKm)
         : "",
+    accessibilityRoads: readAccessibilityRoads(record?.accessibilityDetails),
+    accessibilityAquatic: readAccessibilityAquatic(record?.accessibilityDetails),
+    accessibilityAerial: readAccessibilityAerial(record?.accessibilityDetails),
+    accessibilityTransportTypes: readAccessibilityTransportTypes(
+      record?.accessibilityDetails,
+    ),
+    accessibilityTransportDetails: readAccessibilityTransportDetails(
+      record?.accessibilityDetails,
+    ),
+    accessibilityCriteria: readAccessibilityCriteria(record?.accessibilityDetails),
+    accessibilitySignage: readAccessibilitySignage(record?.accessibilityDetails),
     climateId: readNestedValue(record?.climate, "climateId"),
     minTemperature: readNestedValue(record?.climate, "minTemperature"),
     maxTemperature: readNestedValue(record?.climate, "maxTemperature"),
@@ -3484,6 +4390,62 @@ function toSectionContent(
       ? {
           localityId: values.localityId.trim() ? Number(values.localityId) : null,
           distanceKm: values.distanceKm.trim() ? Number(values.distanceKm) : null,
+          accessibilityDetails: {
+            roads: values.accessibilityRoads.map((road) => ({
+              roadTypeId: toNullableInteger(road.roadTypeId),
+              typeLabel: road.typeLabel.trim(),
+              startLatitude: toNullableNumber(road.startLatitude),
+              startLongitude: toNullableNumber(road.startLongitude),
+              endLatitude: toNullableNumber(road.endLatitude),
+              endLongitude: toNullableNumber(road.endLongitude),
+              distanceKm: toNullableNumber(road.distanceKm),
+              materialId: toNullableInteger(road.materialId),
+              conditionId: toNullableInteger(road.conditionId),
+              observation: road.observation.trim(),
+            })),
+            aquatic: values.accessibilityAquatic.map((access) => ({
+              modalityId: toNullableInteger(access.modalityId),
+              modalityLabel: access.modalityLabel.trim(),
+              departure: access.departure.trim(),
+              departureConditionId: toNullableInteger(access.departureConditionId),
+              arrival: access.arrival.trim(),
+              arrivalConditionId: toNullableInteger(access.arrivalConditionId),
+              observation: access.observation.trim(),
+            })),
+            aerial: values.accessibilityAerial.map((access) => ({
+              coverageId: toNullableInteger(access.coverageId),
+              coverageLabel: access.coverageLabel.trim(),
+              observation: access.observation.trim(),
+            })),
+            transportTypes: values.accessibilityTransportTypes.map((transport) => ({
+              typeId: toNullableInteger(transport.typeId),
+              label: transport.label.trim(),
+              applies: transport.applies === "SI",
+              detailOther: transport.detailOther.trim(),
+              observation: transport.observation.trim(),
+            })),
+            transportDetails: values.accessibilityTransportDetails.map((detail) => ({
+              operator: detail.operator.trim(),
+              terminal: detail.terminal.trim(),
+              frequencyId: toNullableInteger(detail.frequencyId),
+              frequencyLabel: detail.frequencyLabel.trim(),
+              transferDetail: detail.transferDetail.trim(),
+              observation: detail.observation.trim(),
+            })),
+            criteria: values.accessibilityCriteria.map((criterion) => ({
+              accessibilityTypeId: toNullableInteger(criterion.accessibilityTypeId),
+              criterionId: toNullableInteger(criterion.criterionId),
+              label: criterion.label.trim(),
+              response: criterion.response,
+              detail: criterion.detail.trim(),
+              observation: criterion.observation.trim(),
+            })),
+            signage: {
+              available: values.accessibilitySignage.available,
+              conditionId: toNullableInteger(values.accessibilitySignage.conditionId),
+              observation: values.accessibilitySignage.observation.trim(),
+            },
+          },
         }
       : {}),
     ...(sectionCode === "caracteristicas"
@@ -3702,6 +4664,123 @@ function readNestedValue(value: unknown, key: string): string {
   if (!isRecord(value)) return "";
   const nested = value[key];
   return typeof nested === "number" || typeof nested === "string" ? String(nested) : "";
+}
+
+function readAccessibilityDetails(value: unknown): Record<string, unknown> | null {
+  return isRecord(value) && isRecord(value.accessibilityDetails)
+    ? value.accessibilityDetails
+    : null;
+}
+
+function readAccessibilityRoads(value: unknown): AccessibilityRoadForm[] {
+  const details = readAccessibilityDetails(value);
+  if (!details || !Array.isArray(details.roads)) return [];
+  return details.roads.map((road) => {
+    const item = isRecord(road) ? road : {};
+    return {
+      roadTypeId: toFormNumber(item.roadTypeId),
+      typeLabel: typeof item.typeLabel === "string" ? item.typeLabel : "",
+      startLatitude: toFormNumber(item.startLatitude),
+      startLongitude: toFormNumber(item.startLongitude),
+      endLatitude: toFormNumber(item.endLatitude),
+      endLongitude: toFormNumber(item.endLongitude),
+      distanceKm: toFormNumber(item.distanceKm),
+      materialId: toFormNumber(item.materialId),
+      conditionId: toFormNumber(item.conditionId),
+      observation: typeof item.observation === "string" ? item.observation : "",
+    };
+  });
+}
+
+function readAccessibilityAquatic(value: unknown): AccessibilityAquaticForm[] {
+  const details = readAccessibilityDetails(value);
+  if (!details || !Array.isArray(details.aquatic)) return [];
+  return details.aquatic.map((access) => {
+    const item = isRecord(access) ? access : {};
+    return {
+      modalityId: toFormNumber(item.modalityId),
+      modalityLabel: typeof item.modalityLabel === "string" ? item.modalityLabel : "",
+      departure: typeof item.departure === "string" ? item.departure : "",
+      departureConditionId: toFormNumber(item.departureConditionId),
+      arrival: typeof item.arrival === "string" ? item.arrival : "",
+      arrivalConditionId: toFormNumber(item.arrivalConditionId),
+      observation: typeof item.observation === "string" ? item.observation : "",
+    };
+  });
+}
+
+function readAccessibilityAerial(value: unknown): AccessibilityAerialForm[] {
+  const details = readAccessibilityDetails(value);
+  if (!details || !Array.isArray(details.aerial)) return [];
+  return details.aerial.map((access) => {
+    const item = isRecord(access) ? access : {};
+    return {
+      coverageId: toFormNumber(item.coverageId),
+      coverageLabel: typeof item.coverageLabel === "string" ? item.coverageLabel : "",
+      observation: typeof item.observation === "string" ? item.observation : "",
+    };
+  });
+}
+
+function readAccessibilityTransportTypes(
+  value: unknown,
+): AccessibilityTransportTypeForm[] {
+  const details = readAccessibilityDetails(value);
+  if (!details || !Array.isArray(details.transportTypes)) return [];
+  return details.transportTypes.map((transport) => {
+    const item = isRecord(transport) ? transport : {};
+    return {
+      typeId: toFormNumber(item.typeId),
+      label: typeof item.label === "string" ? item.label : "",
+      applies: item.applies === false ? "NO" : "SI",
+      detailOther: typeof item.detailOther === "string" ? item.detailOther : "",
+      observation: typeof item.observation === "string" ? item.observation : "",
+    };
+  });
+}
+
+function readAccessibilityTransportDetails(
+  value: unknown,
+): AccessibilityTransportDetailForm[] {
+  const details = readAccessibilityDetails(value);
+  if (!details || !Array.isArray(details.transportDetails)) return [];
+  return details.transportDetails.map((detail) => {
+    const item = isRecord(detail) ? detail : {};
+    return {
+      operator: typeof item.operator === "string" ? item.operator : "",
+      terminal: typeof item.terminal === "string" ? item.terminal : "",
+      frequencyId: toFormNumber(item.frequencyId),
+      frequencyLabel: typeof item.frequencyLabel === "string" ? item.frequencyLabel : "",
+      transferDetail: typeof item.transferDetail === "string" ? item.transferDetail : "",
+      observation: typeof item.observation === "string" ? item.observation : "",
+    };
+  });
+}
+
+function readAccessibilityCriteria(value: unknown): AccessibilityCriterionForm[] {
+  const details = readAccessibilityDetails(value);
+  if (!details || !Array.isArray(details.criteria)) return [];
+  return details.criteria.map((criterion) => {
+    const item = isRecord(criterion) ? criterion : {};
+    return {
+      accessibilityTypeId: toFormNumber(item.accessibilityTypeId),
+      criterionId: toFormNumber(item.criterionId),
+      label: typeof item.label === "string" ? item.label : "",
+      response: isSectionResponse(item.response) ? item.response : EMPTY_RESPONSE,
+      detail: typeof item.detail === "string" ? item.detail : "",
+      observation: typeof item.observation === "string" ? item.observation : "",
+    };
+  });
+}
+
+function readAccessibilitySignage(value: unknown): AccessibilitySignageForm {
+  const details = readAccessibilityDetails(value);
+  const signage = details && isRecord(details.signage) ? details.signage : {};
+  return {
+    available: isSectionResponse(signage.available) ? signage.available : EMPTY_RESPONSE,
+    conditionId: toFormNumber(signage.conditionId),
+    observation: typeof signage.observation === "string" ? signage.observation : "",
+  };
 }
 
 function readConservationComponent(

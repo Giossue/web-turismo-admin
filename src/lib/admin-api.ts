@@ -141,6 +141,14 @@ export type AdminCatalogs = {
   incomeTypes: CatalogOption[];
   attentionModes: CatalogOption[];
   accessibilityTypes: CatalogOption[];
+  accessibilityCriteria: CatalogOption[];
+  conditionStates: CatalogOption[];
+  roadTypes: CatalogOption[];
+  roadMaterials: CatalogOption[];
+  aquaticAccessModes: CatalogOption[];
+  aerialAccessCoverages: CatalogOption[];
+  transportTypes: CatalogOption[];
+  serviceFrequencies: CatalogOption[];
   activityGroups: CatalogOption[];
   activities: CatalogOption[];
   facilityCategories: CatalogOption[];

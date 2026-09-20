@@ -186,6 +186,22 @@ const FIELD_LABELS: Record<string, string> = {
   applies: "Aplica",
   active: "Activo",
   detailOther: "Detalle",
+  accessibilityDetails: "Detalle de accesibilidad y conectividad",
+  accessibilityTypeId: "Tipo de accesibilidad",
+  criterionId: "Criterio de accesibilidad",
+  roadTypeId: "Tipo de vía terrestre",
+  materialId: "Material de vía",
+  conditionId: "Estado",
+  modalityId: "Modalidad acuática",
+  coverageId: "Cobertura aérea",
+  frequencyId: "Frecuencia de transporte",
+  transportDetails: "Operadores de transporte",
+  transportTypes: "Tipos de transporte",
+  roads: "Vías terrestres",
+  aquatic: "Accesos acuáticos",
+  aerial: "Accesos aéreos",
+  criteria: "Criterios de accesibilidad",
+  signage: "Señalización de aproximación",
 };
 
 const SECTION_STATUS_LABELS: Record<DiffStatus, string> = {
@@ -459,6 +475,31 @@ function findCatalogOption(
   if (key === "localityId") return catalogs.localities.find((item) => item.id === value);
   if (key === "climateId") return catalogs.climates.find((item) => item.id === value);
   if (key === "activityId") return catalogs.activities.find((item) => item.id === value);
+  if (key === "accessibilityTypeId") {
+    return catalogs.accessibilityTypes.find((item) => item.id === value);
+  }
+  if (key === "criterionId") {
+    return catalogs.accessibilityCriteria.find((item) => item.id === value);
+  }
+  if (key === "roadTypeId") return catalogs.roadTypes.find((item) => item.id === value);
+  if (key === "materialId") {
+    return catalogs.roadMaterials.find((item) => item.id === value);
+  }
+  if (key === "conditionId") {
+    return catalogs.conditionStates.find((item) => item.id === value);
+  }
+  if (key === "modalityId") {
+    return catalogs.aquaticAccessModes.find((item) => item.id === value);
+  }
+  if (key === "coverageId") {
+    return catalogs.aerialAccessCoverages.find((item) => item.id === value);
+  }
+  if (key === "frequencyId") {
+    return catalogs.serviceFrequencies.find((item) => item.id === value);
+  }
+  if (key === "typeId" && path.includes("transportTypes")) {
+    return catalogs.transportTypes.find((item) => item.id === value);
+  }
   if (key === "typeId" && path.includes("accessibility")) {
     return catalogs.accessibilityTypes.find((item) => item.id === value);
   }
