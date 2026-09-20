@@ -351,6 +351,7 @@ type PolicyForm = {
 
 type PromotionMediaForm = {
   response: SectionResponse;
+  typeId: string;
   name: string;
   url: string;
   periodicity: string;
@@ -400,6 +401,7 @@ type VisitorInfluxForm = {
 
 type HumanResourceTrainingForm = {
   group: "EDUCACION" | "CAPACITACION" | "IDIOMA";
+  typeId: string;
   name: string;
   quantity: string;
   detailOther: string;
@@ -416,6 +418,7 @@ type AnnexDocumentForm = {
 };
 
 type AnnexResponsibleForm = {
+  typeId: string;
   name: string;
   role: string;
   institution: string;
@@ -888,6 +891,7 @@ export function CenterSectionWorkflow({
               ) : null}
               {definition.code === "promocion" ? (
                 <PromotionSectionFields
+                  catalogs={catalogs}
                   canEdit={canEdit}
                   register={register}
                   mediaFields={promotionMediaFields}
@@ -912,6 +916,7 @@ export function CenterSectionWorkflow({
               ) : null}
               {definition.code === "recurso-humano" ? (
                 <HumanResourcesSectionFields
+                  catalogs={catalogs}
                   canEdit={canEdit}
                   register={register}
                   trainingFields={humanResourceTrainingFields}
@@ -921,6 +926,7 @@ export function CenterSectionWorkflow({
               ) : null}
               {definition.code === "anexos" ? (
                 <AnnexesSectionFields
+                  catalogs={catalogs}
                   canEdit={canEdit}
                   register={register}
                   documentFields={annexDocumentFields}
@@ -3376,18 +3382,21 @@ function PoliciesSectionFields({
 }
 
 function PromotionSectionFields({
+  catalogs,
   canEdit,
   register,
   mediaFields,
   appendMedia,
   removeMedia,
 }: {
+  catalogs: AdminCatalogs | null;
   canEdit: boolean;
   register: UseFormRegister<SectionFormValues>;
   mediaFields: Array<{ id: string }>;
   appendMedia: (value: PromotionMediaForm) => void;
   removeMedia: (index: number) => void;
 }) {
+  const mediaTypes = catalogs?.promotionMediaTypes ?? [];
   return (
     <Stack spacing={webTokens.spacing.section}>
       <Box>
@@ -3510,6 +3519,7 @@ function PromotionSectionFields({
             onClick={() =>
               appendMedia({
                 response: EMPTY_RESPONSE,
+                typeId: "",
                 name: "",
                 url: "",
                 periodicity: "",
@@ -3534,7 +3544,7 @@ function PromotionSectionFields({
                   spacing={webTokens.spacing.control}
                   alignItems="flex-start"
                 >
-                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                  <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                     <FormControl fullWidth disabled={!canEdit}>
                       <InputLabel id={`promotion-media-response-${index}`}>
                         Utilizado
@@ -3553,18 +3563,37 @@ function PromotionSectionFields({
                       </Select>
                     </FormControl>
                   </Grid>
-                  <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <FormControl fullWidth disabled={!canEdit || mediaTypes.length === 0}>
+                      <InputLabel id={`promotion-media-type-${index}`}>
+                        Tipo de medio
+                      </InputLabel>
+                      <Select
+                        labelId={`promotion-media-type-${index}`}
+                        label="Tipo de medio"
+                        defaultValue=""
+                        {...register(`promotionMedia.${index}.typeId`)}
+                      >
+                        <MenuItem value="">Sin seleccionar</MenuItem>
+                        {mediaTypes.map((type) => (
+                          <MenuItem key={type.id} value={String(type.id)}>
+                            {type.name}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <TextField
-                      label="Tipo o nombre del medio"
+                      label="Nombre o cuenta"
                       fullWidth
                       disabled={!canEdit}
                       {...register(`promotionMedia.${index}.name`, {
-                        required: "Indica el medio",
                         maxLength: { value: 180, message: "Máximo 180 caracteres" },
                       })}
                     />
                   </Grid>
-                  <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <TextField
                       label="URL"
                       type="url"
@@ -4118,18 +4147,21 @@ function VisitorRepeatableBlock({
 }
 
 function HumanResourcesSectionFields({
+  catalogs,
   canEdit,
   register,
   trainingFields,
   appendTraining,
   removeTraining,
 }: {
+  catalogs: AdminCatalogs | null;
   canEdit: boolean;
   register: UseFormRegister<SectionFormValues>;
   trainingFields: Array<{ id: string }>;
   appendTraining: (value: HumanResourceTrainingForm) => void;
   removeTraining: (index: number) => void;
 }) {
+  const trainingTypes = catalogs?.trainingTypes ?? [];
   return (
     <Stack spacing={webTokens.spacing.section}>
       <Box>
@@ -4211,6 +4243,7 @@ function HumanResourcesSectionFields({
             onClick={() =>
               appendTraining({
                 group: "EDUCACION",
+                typeId: "",
                 name: "",
                 quantity: "",
                 detailOther: "",
@@ -4234,7 +4267,7 @@ function HumanResourcesSectionFields({
                   spacing={webTokens.spacing.control}
                   alignItems="flex-start"
                 >
-                  <Grid size={{ xs: 12, sm: 3 }}>
+                  <Grid size={{ xs: 12, sm: 3, md: 2 }}>
                     <FormControl fullWidth disabled={!canEdit}>
                       <InputLabel id={`human-resource-group-${index}`}>Grupo</InputLabel>
                       <Select
@@ -4249,18 +4282,40 @@ function HumanResourcesSectionFields({
                       </Select>
                     </FormControl>
                   </Grid>
-                  <Grid size={{ xs: 12, sm: 4 }}>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <FormControl
+                      fullWidth
+                      disabled={!canEdit || trainingTypes.length === 0}
+                    >
+                      <InputLabel id={`human-resource-type-${index}`}>
+                        Tipo de formación
+                      </InputLabel>
+                      <Select
+                        labelId={`human-resource-type-${index}`}
+                        label="Tipo de formación"
+                        defaultValue=""
+                        {...register(`humanResourceTraining.${index}.typeId`)}
+                      >
+                        <MenuItem value="">Sin seleccionar</MenuItem>
+                        {trainingTypes.map((type) => (
+                          <MenuItem key={type.id} value={String(type.id)}>
+                            {type.name}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <TextField
                       label="Formación, curso o idioma"
                       fullWidth
                       disabled={!canEdit}
                       {...register(`humanResourceTraining.${index}.name`, {
-                        required: "Indica la formación",
                         maxLength: { value: 140, message: "Máximo 140 caracteres" },
                       })}
                     />
                   </Grid>
-                  <Grid size={{ xs: 12, sm: 2 }}>
+                  <Grid size={{ xs: 12, sm: 3, md: 2 }}>
                     <TextField
                       label="Personas"
                       type="number"
@@ -4276,17 +4331,7 @@ function HumanResourcesSectionFields({
                       })}
                     />
                   </Grid>
-                  <Grid size={{ xs: 12, sm: 2 }}>
-                    <TextField
-                      label="Detalle de otro"
-                      fullWidth
-                      disabled={!canEdit}
-                      {...register(`humanResourceTraining.${index}.detailOther`, {
-                        maxLength: { value: 180, message: "Máximo 180 caracteres" },
-                      })}
-                    />
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 1 }}>
+                  <Grid size={{ xs: 12, sm: 3, md: 2 }}>
                     <Tooltip title="Eliminar formación">
                       <IconButton
                         type="button"
@@ -4298,6 +4343,16 @@ function HumanResourcesSectionFields({
                         <DeleteOutlineRounded />
                       </IconButton>
                     </Tooltip>
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField
+                      label="Detalle de otro"
+                      fullWidth
+                      disabled={!canEdit}
+                      {...register(`humanResourceTraining.${index}.detailOther`, {
+                        maxLength: { value: 180, message: "Máximo 180 caracteres" },
+                      })}
+                    />
                   </Grid>
                   <Grid size={12}>
                     <TextField
@@ -4320,6 +4375,7 @@ function HumanResourcesSectionFields({
 }
 
 function AnnexesSectionFields({
+  catalogs,
   canEdit,
   register,
   documentFields,
@@ -4329,6 +4385,7 @@ function AnnexesSectionFields({
   appendResponsible,
   removeResponsible,
 }: {
+  catalogs: AdminCatalogs | null;
   canEdit: boolean;
   register: UseFormRegister<SectionFormValues>;
   documentFields: Array<{ id: string }>;
@@ -4338,6 +4395,7 @@ function AnnexesSectionFields({
   appendResponsible: (value: AnnexResponsibleForm) => void;
   removeResponsible: (index: number) => void;
 }) {
+  const responsibilityTypes = catalogs?.responsibilityTypes ?? [];
   return (
     <Stack spacing={webTokens.spacing.section}>
       <Box>
@@ -4503,6 +4561,7 @@ function AnnexesSectionFields({
             disabled={!canEdit}
             onClick={() =>
               appendResponsible({
+                typeId: "",
                 name: "",
                 role: "",
                 institution: "",
@@ -4528,6 +4587,29 @@ function AnnexesSectionFields({
                   spacing={webTokens.spacing.control}
                   alignItems="flex-start"
                 >
+                  <Grid size={{ xs: 12, sm: 4, md: 3 }}>
+                    <FormControl
+                      fullWidth
+                      disabled={!canEdit || responsibilityTypes.length === 0}
+                    >
+                      <InputLabel id={`annex-responsibility-type-${index}`}>
+                        Responsabilidad
+                      </InputLabel>
+                      <Select
+                        labelId={`annex-responsibility-type-${index}`}
+                        label="Responsabilidad"
+                        defaultValue=""
+                        {...register(`annexResponsibles.${index}.typeId`)}
+                      >
+                        <MenuItem value="">Sin seleccionar</MenuItem>
+                        {responsibilityTypes.map((type) => (
+                          <MenuItem key={type.id} value={String(type.id)}>
+                            {type.name}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
                   <Grid size={{ xs: 12, sm: 4, md: 3 }}>
                     <TextField
                       label="Nombre"
@@ -4559,6 +4641,7 @@ function AnnexesSectionFields({
                       })}
                     />
                   </Grid>
+                  <Grid size={12} />
                   <Grid size={{ xs: 12, sm: 5, md: 2 }}>
                     <TextField
                       label="Teléfono"
@@ -5145,6 +5228,7 @@ function toSectionContent(
             observation: values.promotion.observation.trim(),
             media: values.promotionMedia.map((media) => ({
               response: media.response,
+              typeId: toNullableInteger(media.typeId),
               name: media.name.trim(),
               url: media.url.trim(),
               periodicity: media.periodicity.trim(),
@@ -5209,6 +5293,7 @@ function toSectionContent(
             },
             training: values.humanResourceTraining.map((training) => ({
               group: training.group,
+              typeId: toNullableInteger(training.typeId),
               name: training.name.trim(),
               quantity: toNullableInteger(training.quantity),
               detailOther: training.detailOther.trim(),
@@ -5229,6 +5314,7 @@ function toSectionContent(
               observation: document.observation.trim(),
             })),
             responsibles: values.annexResponsibles.map((responsible) => ({
+              typeId: toNullableInteger(responsible.typeId),
               name: responsible.name.trim(),
               role: responsible.role.trim(),
               institution: responsible.institution.trim(),
@@ -5576,6 +5662,7 @@ function readPromotionMedia(value: unknown): PromotionMediaForm[] {
     const item = isRecord(media) ? media : {};
     return {
       response: isSectionResponse(item.response) ? item.response : EMPTY_RESPONSE,
+      typeId: toFormNumber(item.typeId),
       name: typeof item.name === "string" ? item.name : "",
       url: typeof item.url === "string" ? item.url : "",
       periodicity: typeof item.periodicity === "string" ? item.periodicity : "",
@@ -5675,6 +5762,7 @@ function readHumanResourceTraining(value: unknown): HumanResourceTrainingForm[] 
       group: group.has(String(item.group))
         ? (item.group as HumanResourceTrainingForm["group"])
         : "EDUCACION",
+      typeId: toFormNumber(item.typeId),
       name: typeof item.name === "string" ? item.name : "",
       quantity: toFormNumber(item.quantity),
       detailOther: typeof item.detailOther === "string" ? item.detailOther : "",
@@ -5706,6 +5794,7 @@ function readAnnexResponsibles(value: unknown): AnnexResponsibleForm[] {
   return value.responsibles.map((responsible) => {
     const item = isRecord(responsible) ? responsible : {};
     return {
+      typeId: toFormNumber(item.typeId),
       name: typeof item.name === "string" ? item.name : "",
       role: typeof item.role === "string" ? item.role : "",
       institution: typeof item.institution === "string" ? item.institution : "",
