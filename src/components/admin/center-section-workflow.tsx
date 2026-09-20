@@ -246,6 +246,15 @@ type HygieneContingencyForm = {
   observation: string;
 };
 
+type PolicyForm = {
+  code: string;
+  question: string;
+  response: SectionResponse;
+  year: string;
+  specification: string;
+  observation: string;
+};
+
 type SectionFormValues = {
   response: SectionResponse;
   observation: string;
@@ -266,6 +275,7 @@ type SectionFormValues = {
   hygieneEntries: HygieneEntryForm[];
   hygieneRadios: HygieneRadiosForm;
   hygieneContingency: HygieneContingencyForm;
+  policies: PolicyForm[];
 };
 
 type SectionProgress =
@@ -356,6 +366,7 @@ export function CenterSectionWorkflow({
     append: appendHygieneEntry,
     remove: removeHygieneEntry,
   } = useFieldArray({ control, name: "hygieneEntries" });
+  const { fields: policyFields } = useFieldArray({ control, name: "policies" });
   const activeLocalDraft = localDrafts[definition.code];
 
   useEffect(() => {
@@ -596,6 +607,13 @@ export function CenterSectionWorkflow({
                   entryFields={hygieneEntryFields}
                   appendEntry={appendHygieneEntry}
                   removeEntry={removeHygieneEntry}
+                />
+              ) : null}
+              {definition.code === "politicas" ? (
+                <PoliciesSectionFields
+                  canEdit={canEdit}
+                  register={register}
+                  fields={policyFields}
                 />
               ) : null}
               <Divider />
@@ -1593,6 +1611,115 @@ function HygieneSafetySectionFields({
   );
 }
 
+const POLICY_DEFINITIONS = [
+  {
+    code: "PLAN_DESARROLLO_GAD",
+    question: "¿El atractivo está incluido en el plan de desarrollo turístico del GAD?",
+  },
+  {
+    code: "PLANIFICACION_TERRITORIAL",
+    question: "¿El atractivo está incluido en la planificación territorial?",
+  },
+  {
+    code: "REGULACIONES_APLICABLES",
+    question: "¿Existen regulaciones específicas aplicables al atractivo?",
+  },
+  {
+    code: "ORDENANZAS_APLICABLES",
+    question: "¿Existen ordenanzas aplicables al atractivo?",
+  },
+] as const;
+
+function PoliciesSectionFields({
+  canEdit,
+  register,
+  fields,
+}: {
+  canEdit: boolean;
+  register: UseFormRegister<SectionFormValues>;
+  fields: Array<{ id: string }>;
+}) {
+  return (
+    <Stack spacing={webTokens.spacing.control}>
+      <Box>
+        <Typography variant="subtitle1">Políticas institucionales</Typography>
+        <Typography variant="body2" color="text.secondary">
+          Responde las cuatro preguntas de la ficha y conserva año, especificación y
+          observación sin convertir una ausencia de dato en una respuesta negativa.
+        </Typography>
+      </Box>
+      <Stack spacing={1.5}>
+        {fields.map((field, index) => (
+          <FlatSurface key={field.id} padding="compact" tone="subtle">
+            <Grid container spacing={webTokens.spacing.control} alignItems="flex-start">
+              <Grid size={{ xs: 12, md: 5 }}>
+                <Typography variant="body2" fontWeight={600} sx={{ pt: 1 }}>
+                  {POLICY_DEFINITIONS[index]?.question ?? "Pregunta institucional"}
+                </Typography>
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                <FormControl fullWidth disabled={!canEdit}>
+                  <InputLabel id={`policy-response-${index}`}>Respuesta</InputLabel>
+                  <Select
+                    labelId={`policy-response-${index}`}
+                    label="Respuesta"
+                    defaultValue={EMPTY_RESPONSE}
+                    {...register(`policies.${index}.response`)}
+                  >
+                    {SECTION_RESPONSE_OPTIONS.map((option) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                <TextField
+                  label="Año"
+                  type="number"
+                  fullWidth
+                  disabled={!canEdit}
+                  slotProps={{ htmlInput: { min: 1900, max: 2200, step: 1 } }}
+                  {...register(`policies.${index}.year`, {
+                    validate: (value) =>
+                      !value.trim() ||
+                      (Number.isInteger(Number(value)) &&
+                        Number(value) >= 1900 &&
+                        Number(value) <= 2200)
+                        ? true
+                        : "Usa un año entre 1900 y 2200",
+                  })}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 2 }}>
+                <TextField
+                  label="Especificación"
+                  fullWidth
+                  disabled={!canEdit}
+                  {...register(`policies.${index}.specification`, {
+                    maxLength: { value: 1_000, message: "Máximo 1.000 caracteres" },
+                  })}
+                />
+              </Grid>
+              <Grid size={12}>
+                <TextField
+                  label="Observación"
+                  fullWidth
+                  disabled={!canEdit}
+                  {...register(`policies.${index}.observation`, {
+                    maxLength: { value: 1_000, message: "Máximo 1.000 caracteres" },
+                  })}
+                />
+              </Grid>
+            </Grid>
+          </FlatSurface>
+        ))}
+      </Stack>
+    </Stack>
+  );
+}
+
 function CharacteristicsSectionFields({
   catalogs,
   canEdit,
@@ -1749,6 +1876,7 @@ function createSectionValues(
     hygieneEntries: readHygieneEntries(record?.hygieneSafety),
     hygieneRadios: readHygieneRadios(record?.hygieneSafety),
     hygieneContingency: readHygieneContingency(record?.hygieneSafety),
+    policies: readPolicies(record?.policies),
   };
 }
 
@@ -1834,6 +1962,18 @@ function toSectionContent(
               observation: values.hygieneContingency.observation.trim(),
             },
           },
+        }
+      : {}),
+    ...(sectionCode === "politicas"
+      ? {
+          policies: values.policies.map((policy, index) => ({
+            code: policy.code || POLICY_DEFINITIONS[index]?.code,
+            question: policy.question || POLICY_DEFINITIONS[index]?.question,
+            response: policy.response,
+            year: toNullableInteger(policy.year),
+            specification: policy.specification.trim(),
+            observation: policy.observation.trim(),
+          })),
         }
       : {}),
     rows: values.rows.map((row) => ({
@@ -1939,6 +2079,27 @@ function readHygieneContingency(value: unknown): HygieneContingencyForm {
     observation:
       typeof contingency.observation === "string" ? contingency.observation : "",
   };
+}
+
+function readPolicies(value: unknown): PolicyForm[] {
+  const entries = Array.isArray(value) ? value : [];
+  return POLICY_DEFINITIONS.map((definition) => {
+    const raw = entries.find(
+      (entry) => isRecord(entry) && entry.code === definition.code,
+    );
+    const item = isRecord(raw) ? raw : {};
+    return {
+      code: definition.code,
+      question: definition.question,
+      response: isSectionResponse(item.response) ? item.response : EMPTY_RESPONSE,
+      year:
+        typeof item.year === "number" || typeof item.year === "string"
+          ? String(item.year)
+          : "",
+      specification: typeof item.specification === "string" ? item.specification : "",
+      observation: typeof item.observation === "string" ? item.observation : "",
+    };
+  });
 }
 
 function toConservationFactorForm(value: unknown): ConservationFactorForm {
