@@ -32,6 +32,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { FlatSurface } from "@/components/ui/flat-surface";
 import { ContentState } from "@/components/ui/content-state";
 import { MediaManager } from "@/components/admin/media-manager";
+import { CenterReviewDiff } from "@/components/admin/center-review-diff";
 import { CenterSectionWorkflow } from "@/components/admin/center-section-workflow";
 import { PageHeader } from "@/components/ui/page-header";
 import { SectionHeader } from "@/components/ui/section-header";
@@ -335,6 +336,8 @@ export function CenterEditor({
           La ficha está en revisión. Puedes consultar la propuesta, pero no modificarla.
         </Alert>
       ) : null}
+
+      <CenterReviewDiff detail={detail} catalogs={catalogs} />
 
       <CenterSectionWorkflow
         token={token}
