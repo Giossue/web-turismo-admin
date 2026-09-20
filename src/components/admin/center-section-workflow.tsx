@@ -312,6 +312,24 @@ type HumanResourceTrainingForm = {
   observation: string;
 };
 
+type AnnexDocumentForm = {
+  type: string;
+  source: string;
+  author: string;
+  description: string;
+  visibility: "PUBLICA" | "ADMINISTRATIVA" | "RESTRINGIDA";
+  observation: string;
+};
+
+type AnnexResponsibleForm = {
+  name: string;
+  role: string;
+  institution: string;
+  phone: string;
+  email: string;
+  observation: string;
+};
+
 type SectionFormValues = {
   response: SectionResponse;
   observation: string;
@@ -353,6 +371,24 @@ type SectionFormValues = {
     observation: string;
   };
   humanResourceTraining: HumanResourceTrainingForm[];
+  annexDocuments: AnnexDocumentForm[];
+  annexResponsibles: AnnexResponsibleForm[];
+  accessibilitySurvey: {
+    date: string;
+    responsible: string;
+    scope: string;
+    observation: string;
+  };
+  gadValidation: {
+    acceptance: SectionResponse;
+    name: string;
+    institution: string;
+    position: string;
+    phone: string;
+    email: string;
+    date: string;
+    observation: string;
+  };
 };
 
 type SectionProgress =
@@ -469,6 +505,16 @@ export function CenterSectionWorkflow({
     append: appendHumanResourceTraining,
     remove: removeHumanResourceTraining,
   } = useFieldArray({ control, name: "humanResourceTraining" });
+  const {
+    fields: annexDocumentFields,
+    append: appendAnnexDocument,
+    remove: removeAnnexDocument,
+  } = useFieldArray({ control, name: "annexDocuments" });
+  const {
+    fields: annexResponsibleFields,
+    append: appendAnnexResponsible,
+    remove: removeAnnexResponsible,
+  } = useFieldArray({ control, name: "annexResponsibles" });
   const activeLocalDraft = localDrafts[definition.code];
 
   useEffect(() => {
@@ -749,6 +795,18 @@ export function CenterSectionWorkflow({
                   trainingFields={humanResourceTrainingFields}
                   appendTraining={appendHumanResourceTraining}
                   removeTraining={removeHumanResourceTraining}
+                />
+              ) : null}
+              {definition.code === "anexos" ? (
+                <AnnexesSectionFields
+                  canEdit={canEdit}
+                  register={register}
+                  documentFields={annexDocumentFields}
+                  responsibleFields={annexResponsibleFields}
+                  appendDocument={appendAnnexDocument}
+                  removeDocument={removeAnnexDocument}
+                  appendResponsible={appendAnnexResponsible}
+                  removeResponsible={removeAnnexResponsible}
                 />
               ) : null}
               <Divider />
@@ -2799,6 +2857,448 @@ function HumanResourcesSectionFields({
   );
 }
 
+function AnnexesSectionFields({
+  canEdit,
+  register,
+  documentFields,
+  responsibleFields,
+  appendDocument,
+  removeDocument,
+  appendResponsible,
+  removeResponsible,
+}: {
+  canEdit: boolean;
+  register: UseFormRegister<SectionFormValues>;
+  documentFields: Array<{ id: string }>;
+  responsibleFields: Array<{ id: string }>;
+  appendDocument: (value: AnnexDocumentForm) => void;
+  removeDocument: (index: number) => void;
+  appendResponsible: (value: AnnexResponsibleForm) => void;
+  removeResponsible: (index: number) => void;
+}) {
+  return (
+    <Stack spacing={webTokens.spacing.section}>
+      <Box>
+        <Typography variant="subtitle1">Anexos y responsabilidades</Typography>
+        <Typography variant="body2" color="text.secondary">
+          Los anexos conservan una visibilidad explícita. Los archivos binarios se
+          gestionan en el módulo multimedia; aquí se registra su contexto institucional.
+        </Typography>
+      </Box>
+
+      <Stack spacing={webTokens.spacing.control}>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          justifyContent="space-between"
+          alignItems={{ xs: "flex-start", sm: "center" }}
+          gap={1}
+        >
+          <Box>
+            <Typography variant="subtitle1">Anexos documentales</Typography>
+            <Typography variant="body2" color="text.secondary">
+              No mezcles documentos restringidos con material que pueda publicarse.
+            </Typography>
+          </Box>
+          <Button
+            type="button"
+            size="small"
+            variant="outlined"
+            startIcon={<AddRounded />}
+            disabled={!canEdit}
+            onClick={() =>
+              appendDocument({
+                type: "",
+                source: "",
+                author: "",
+                description: "",
+                visibility: "ADMINISTRATIVA",
+                observation: "",
+              })
+            }
+          >
+            Añadir anexo
+          </Button>
+        </Stack>
+        {documentFields.length === 0 ? (
+          <Typography variant="body2" color="text.secondary">
+            No hay anexos registrados.
+          </Typography>
+        ) : (
+          <Stack spacing={1.5}>
+            {documentFields.map((field, index) => (
+              <FlatSurface key={field.id} padding="compact" tone="subtle">
+                <Grid
+                  container
+                  spacing={webTokens.spacing.control}
+                  alignItems="flex-start"
+                >
+                  <Grid size={{ xs: 12, sm: 4, md: 3 }}>
+                    <TextField
+                      label="Tipo de anexo"
+                      fullWidth
+                      disabled={!canEdit}
+                      {...register(`annexDocuments.${index}.type`, {
+                        required: "Indica el tipo",
+                        maxLength: { value: 180, message: "Máximo 180 caracteres" },
+                      })}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 4, md: 3 }}>
+                    <TextField
+                      label="Fuente"
+                      fullWidth
+                      disabled={!canEdit}
+                      {...register(`annexDocuments.${index}.source`, {
+                        maxLength: { value: 180, message: "Máximo 180 caracteres" },
+                      })}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 4, md: 3 }}>
+                    <TextField
+                      label="Autor"
+                      fullWidth
+                      disabled={!canEdit}
+                      {...register(`annexDocuments.${index}.author`, {
+                        maxLength: { value: 180, message: "Máximo 180 caracteres" },
+                      })}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                    <FormControl fullWidth disabled={!canEdit}>
+                      <InputLabel id={`annex-visibility-${index}`}>
+                        Visibilidad
+                      </InputLabel>
+                      <Select
+                        labelId={`annex-visibility-${index}`}
+                        label="Visibilidad"
+                        defaultValue="ADMINISTRATIVA"
+                        {...register(`annexDocuments.${index}.visibility`)}
+                      >
+                        <MenuItem value="PUBLICA">Pública</MenuItem>
+                        <MenuItem value="ADMINISTRATIVA">Administrativa</MenuItem>
+                        <MenuItem value="RESTRINGIDA">Restringida</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, md: 1 }}>
+                    <Tooltip title="Eliminar anexo">
+                      <IconButton
+                        type="button"
+                        aria-label={`Eliminar anexo ${index + 1}`}
+                        disabled={!canEdit}
+                        onClick={() => removeDocument(index)}
+                        sx={{ mt: { md: 1 } }}
+                      >
+                        <DeleteOutlineRounded />
+                      </IconButton>
+                    </Tooltip>
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 8 }}>
+                    <TextField
+                      label="Descripción"
+                      fullWidth
+                      disabled={!canEdit}
+                      {...register(`annexDocuments.${index}.description`, {
+                        maxLength: { value: 1_000, message: "Máximo 1.000 caracteres" },
+                      })}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 4 }}>
+                    <TextField
+                      label="Observación"
+                      fullWidth
+                      disabled={!canEdit}
+                      {...register(`annexDocuments.${index}.observation`, {
+                        maxLength: { value: 1_000, message: "Máximo 1.000 caracteres" },
+                      })}
+                    />
+                  </Grid>
+                </Grid>
+              </FlatSurface>
+            ))}
+          </Stack>
+        )}
+      </Stack>
+
+      <Stack spacing={webTokens.spacing.control}>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          justifyContent="space-between"
+          alignItems={{ xs: "flex-start", sm: "center" }}
+          gap={1}
+        >
+          <Box>
+            <Typography variant="subtitle1">Responsables de la ficha</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Estos contactos son administrativos y no se muestran en la ficha pública.
+            </Typography>
+          </Box>
+          <Button
+            type="button"
+            size="small"
+            variant="outlined"
+            startIcon={<AddRounded />}
+            disabled={!canEdit}
+            onClick={() =>
+              appendResponsible({
+                name: "",
+                role: "",
+                institution: "",
+                phone: "",
+                email: "",
+                observation: "",
+              })
+            }
+          >
+            Añadir responsable
+          </Button>
+        </Stack>
+        {responsibleFields.length === 0 ? (
+          <Typography variant="body2" color="text.secondary">
+            No hay responsables registrados.
+          </Typography>
+        ) : (
+          <Stack spacing={1.5}>
+            {responsibleFields.map((field, index) => (
+              <FlatSurface key={field.id} padding="compact" tone="subtle">
+                <Grid
+                  container
+                  spacing={webTokens.spacing.control}
+                  alignItems="flex-start"
+                >
+                  <Grid size={{ xs: 12, sm: 4, md: 3 }}>
+                    <TextField
+                      label="Nombre"
+                      fullWidth
+                      disabled={!canEdit}
+                      {...register(`annexResponsibles.${index}.name`, {
+                        required: "Indica el nombre",
+                        maxLength: { value: 180, message: "Máximo 180 caracteres" },
+                      })}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 4, md: 2 }}>
+                    <TextField
+                      label="Cargo"
+                      fullWidth
+                      disabled={!canEdit}
+                      {...register(`annexResponsibles.${index}.role`, {
+                        maxLength: { value: 180, message: "Máximo 180 caracteres" },
+                      })}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 4, md: 3 }}>
+                    <TextField
+                      label="Institución"
+                      fullWidth
+                      disabled={!canEdit}
+                      {...register(`annexResponsibles.${index}.institution`, {
+                        maxLength: { value: 180, message: "Máximo 180 caracteres" },
+                      })}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 5, md: 2 }}>
+                    <TextField
+                      label="Teléfono"
+                      fullWidth
+                      disabled={!canEdit}
+                      {...register(`annexResponsibles.${index}.phone`, {
+                        maxLength: { value: 180, message: "Máximo 180 caracteres" },
+                      })}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 10, sm: 6, md: 1.5 }}>
+                    <TextField
+                      label="Correo"
+                      type="email"
+                      fullWidth
+                      disabled={!canEdit}
+                      {...register(`annexResponsibles.${index}.email`, {
+                        maxLength: { value: 254, message: "Máximo 254 caracteres" },
+                      })}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 2, sm: 1, md: 0.5 }}>
+                    <Tooltip title="Eliminar responsable">
+                      <IconButton
+                        type="button"
+                        aria-label={`Eliminar responsable ${index + 1}`}
+                        disabled={!canEdit}
+                        onClick={() => removeResponsible(index)}
+                        sx={{ mt: { md: 1 } }}
+                      >
+                        <DeleteOutlineRounded />
+                      </IconButton>
+                    </Tooltip>
+                  </Grid>
+                  <Grid size={12}>
+                    <TextField
+                      label="Observación"
+                      fullWidth
+                      disabled={!canEdit}
+                      {...register(`annexResponsibles.${index}.observation`, {
+                        maxLength: { value: 1_000, message: "Máximo 1.000 caracteres" },
+                      })}
+                    />
+                  </Grid>
+                </Grid>
+              </FlatSurface>
+            ))}
+          </Stack>
+        )}
+      </Stack>
+
+      <FlatSurface padding="compact" tone="subtle">
+        <Stack spacing={webTokens.spacing.control}>
+          <Typography variant="subtitle1">Levantamiento de accesibilidad</Typography>
+          <Grid container spacing={webTokens.spacing.control}>
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <TextField
+                label="Fecha"
+                type="date"
+                fullWidth
+                disabled={!canEdit}
+                InputLabelProps={{ shrink: true }}
+                {...register("accessibilitySurvey.date")}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <TextField
+                label="Responsable del levantamiento"
+                fullWidth
+                disabled={!canEdit}
+                {...register("accessibilitySurvey.responsible", {
+                  maxLength: { value: 250, message: "Máximo 250 caracteres" },
+                })}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <TextField
+                label="Ámbito"
+                fullWidth
+                disabled={!canEdit}
+                {...register("accessibilitySurvey.scope", {
+                  maxLength: { value: 250, message: "Máximo 250 caracteres" },
+                })}
+              />
+            </Grid>
+            <Grid size={12}>
+              <TextField
+                label="Observación"
+                fullWidth
+                disabled={!canEdit}
+                {...register("accessibilitySurvey.observation", {
+                  maxLength: { value: 1_000, message: "Máximo 1.000 caracteres" },
+                })}
+              />
+            </Grid>
+          </Grid>
+        </Stack>
+      </FlatSurface>
+
+      <FlatSurface padding="compact" tone="subtle">
+        <Stack spacing={webTokens.spacing.control}>
+          <Typography variant="subtitle1">Validación del GAD</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Esta validación es institucional y permanece administrativa hasta una
+            publicación aprobada.
+          </Typography>
+          <Grid container spacing={webTokens.spacing.control}>
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <FormControl fullWidth disabled={!canEdit}>
+                <InputLabel id="gad-acceptance">¿Acepta publicación?</InputLabel>
+                <Select
+                  labelId="gad-acceptance"
+                  label="¿Acepta publicación?"
+                  defaultValue={EMPTY_RESPONSE}
+                  {...register("gadValidation.acceptance")}
+                >
+                  {SECTION_RESPONSE_OPTIONS.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <TextField
+                label="Nombre del validador"
+                fullWidth
+                disabled={!canEdit}
+                {...register("gadValidation.name", {
+                  maxLength: { value: 180, message: "Máximo 180 caracteres" },
+                })}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <TextField
+                label="Institución"
+                fullWidth
+                disabled={!canEdit}
+                {...register("gadValidation.institution", {
+                  maxLength: { value: 180, message: "Máximo 180 caracteres" },
+                })}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <TextField
+                label="Cargo"
+                fullWidth
+                disabled={!canEdit}
+                {...register("gadValidation.position", {
+                  maxLength: { value: 180, message: "Máximo 180 caracteres" },
+                })}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <TextField
+                label="Teléfono"
+                fullWidth
+                disabled={!canEdit}
+                {...register("gadValidation.phone", {
+                  maxLength: { value: 180, message: "Máximo 180 caracteres" },
+                })}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <TextField
+                label="Correo"
+                type="email"
+                fullWidth
+                disabled={!canEdit}
+                {...register("gadValidation.email", {
+                  maxLength: { value: 254, message: "Máximo 254 caracteres" },
+                })}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <TextField
+                label="Fecha"
+                type="date"
+                fullWidth
+                disabled={!canEdit}
+                InputLabelProps={{ shrink: true }}
+                {...register("gadValidation.date")}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 8 }}>
+              <TextField
+                label="Observación"
+                fullWidth
+                disabled={!canEdit}
+                {...register("gadValidation.observation", {
+                  maxLength: { value: 1_000, message: "Máximo 1.000 caracteres" },
+                })}
+              />
+            </Grid>
+          </Grid>
+        </Stack>
+      </FlatSurface>
+    </Stack>
+  );
+}
+
 function CharacteristicsSectionFields({
   catalogs,
   canEdit,
@@ -2965,6 +3465,10 @@ function createSectionValues(
     visitorInflux: readVisitorInflux(record?.visitors),
     humanResourceSummary: readHumanResourceSummary(record?.humanResources),
     humanResourceTraining: readHumanResourceTraining(record?.humanResources),
+    annexDocuments: readAnnexDocuments(record?.annexes),
+    annexResponsibles: readAnnexResponsibles(record?.annexes),
+    accessibilitySurvey: readAccessibilitySurvey(record?.annexes),
+    gadValidation: readGadValidation(record?.annexes),
   };
 }
 
@@ -3144,6 +3648,44 @@ function toSectionContent(
               detailOther: training.detailOther.trim(),
               observation: training.observation.trim(),
             })),
+          },
+        }
+      : {}),
+    ...(sectionCode === "anexos"
+      ? {
+          annexes: {
+            documents: values.annexDocuments.map((document) => ({
+              type: document.type.trim(),
+              source: document.source.trim(),
+              author: document.author.trim(),
+              description: document.description.trim(),
+              visibility: document.visibility,
+              observation: document.observation.trim(),
+            })),
+            responsibles: values.annexResponsibles.map((responsible) => ({
+              name: responsible.name.trim(),
+              role: responsible.role.trim(),
+              institution: responsible.institution.trim(),
+              phone: responsible.phone.trim(),
+              email: responsible.email.trim(),
+              observation: responsible.observation.trim(),
+            })),
+            accessibilitySurvey: {
+              date: values.accessibilitySurvey.date.trim() || null,
+              responsible: values.accessibilitySurvey.responsible.trim(),
+              scope: values.accessibilitySurvey.scope.trim(),
+              observation: values.accessibilitySurvey.observation.trim(),
+            },
+            gadValidation: {
+              acceptance: values.gadValidation.acceptance,
+              name: values.gadValidation.name.trim(),
+              institution: values.gadValidation.institution.trim(),
+              position: values.gadValidation.position.trim(),
+              phone: values.gadValidation.phone.trim(),
+              email: values.gadValidation.email.trim(),
+              date: values.gadValidation.date.trim() || null,
+              observation: values.gadValidation.observation.trim(),
+            },
           },
         }
       : {}),
@@ -3401,6 +3943,71 @@ function readHumanResourceTraining(value: unknown): HumanResourceTrainingForm[] 
       observation: typeof item.observation === "string" ? item.observation : "",
     };
   });
+}
+
+function readAnnexDocuments(value: unknown): AnnexDocumentForm[] {
+  if (!isRecord(value) || !Array.isArray(value.documents)) return [];
+  return value.documents.map((document) => {
+    const item = isRecord(document) ? document : {};
+    const visibility = new Set(["PUBLICA", "ADMINISTRATIVA", "RESTRINGIDA"]);
+    return {
+      type: typeof item.type === "string" ? item.type : "",
+      source: typeof item.source === "string" ? item.source : "",
+      author: typeof item.author === "string" ? item.author : "",
+      description: typeof item.description === "string" ? item.description : "",
+      visibility: visibility.has(String(item.visibility))
+        ? (item.visibility as AnnexDocumentForm["visibility"])
+        : "ADMINISTRATIVA",
+      observation: typeof item.observation === "string" ? item.observation : "",
+    };
+  });
+}
+
+function readAnnexResponsibles(value: unknown): AnnexResponsibleForm[] {
+  if (!isRecord(value) || !Array.isArray(value.responsibles)) return [];
+  return value.responsibles.map((responsible) => {
+    const item = isRecord(responsible) ? responsible : {};
+    return {
+      name: typeof item.name === "string" ? item.name : "",
+      role: typeof item.role === "string" ? item.role : "",
+      institution: typeof item.institution === "string" ? item.institution : "",
+      phone: typeof item.phone === "string" ? item.phone : "",
+      email: typeof item.email === "string" ? item.email : "",
+      observation: typeof item.observation === "string" ? item.observation : "",
+    };
+  });
+}
+
+function readAccessibilitySurvey(
+  value: unknown,
+): SectionFormValues["accessibilitySurvey"] {
+  const survey =
+    isRecord(value) && isRecord(value.accessibilitySurvey)
+      ? value.accessibilitySurvey
+      : {};
+  return {
+    date: typeof survey.date === "string" ? survey.date : "",
+    responsible: typeof survey.responsible === "string" ? survey.responsible : "",
+    scope: typeof survey.scope === "string" ? survey.scope : "",
+    observation: typeof survey.observation === "string" ? survey.observation : "",
+  };
+}
+
+function readGadValidation(value: unknown): SectionFormValues["gadValidation"] {
+  const validation =
+    isRecord(value) && isRecord(value.gadValidation) ? value.gadValidation : {};
+  return {
+    acceptance: isSectionResponse(validation.acceptance)
+      ? validation.acceptance
+      : EMPTY_RESPONSE,
+    name: typeof validation.name === "string" ? validation.name : "",
+    institution: typeof validation.institution === "string" ? validation.institution : "",
+    position: typeof validation.position === "string" ? validation.position : "",
+    phone: typeof validation.phone === "string" ? validation.phone : "",
+    email: typeof validation.email === "string" ? validation.email : "",
+    date: typeof validation.date === "string" ? validation.date : "",
+    observation: typeof validation.observation === "string" ? validation.observation : "",
+  };
 }
 
 function parseMonths(value: string): number[] {
