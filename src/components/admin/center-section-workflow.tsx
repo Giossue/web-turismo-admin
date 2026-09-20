@@ -194,6 +194,27 @@ type SectionRowForm = {
   observation: string;
 };
 
+type ConservationComponentForm = {
+  state: string;
+  observation: string;
+};
+
+type ConservationFactorForm = {
+  origin: "NATURAL" | "ANTROPICO";
+  name: string;
+  response: SectionResponse;
+  detailOther: string;
+  observation: string;
+};
+
+type ConservationDeclarationForm = {
+  entity: string;
+  denomination: string;
+  date: string;
+  scope: string;
+  observation: string;
+};
+
 type SectionFormValues = {
   response: SectionResponse;
   observation: string;
@@ -205,6 +226,12 @@ type SectionFormValues = {
   minRainfall: string;
   maxRainfall: string;
   rows: SectionRowForm[];
+  conservation: {
+    attraction: ConservationComponentForm;
+    environment: ConservationComponentForm;
+  };
+  conservationFactors: ConservationFactorForm[];
+  declarations: ConservationDeclarationForm[];
 };
 
 type SectionProgress =
@@ -280,6 +307,16 @@ export function CenterSectionWorkflow({
   });
   const { control, register, reset, handleSubmit, getValues, formState } = form;
   const { fields, append, remove } = useFieldArray({ control, name: "rows" });
+  const {
+    fields: conservationFactorFields,
+    append: appendConservationFactor,
+    remove: removeConservationFactor,
+  } = useFieldArray({ control, name: "conservationFactors" });
+  const {
+    fields: declarationFields,
+    append: appendDeclaration,
+    remove: removeDeclaration,
+  } = useFieldArray({ control, name: "declarations" });
   const activeLocalDraft = localDrafts[definition.code];
 
   useEffect(() => {
@@ -499,6 +536,18 @@ export function CenterSectionWorkflow({
                   catalogs={catalogs}
                   canEdit={canEdit}
                   register={register}
+                />
+              ) : null}
+              {definition.code === "conservacion" ? (
+                <ConservationSectionFields
+                  canEdit={canEdit}
+                  register={register}
+                  factorFields={conservationFactorFields}
+                  declarationFields={declarationFields}
+                  appendFactor={appendConservationFactor}
+                  removeFactor={removeConservationFactor}
+                  appendDeclaration={appendDeclaration}
+                  removeDeclaration={removeDeclaration}
                 />
               ) : null}
               <Divider />
@@ -808,6 +857,336 @@ function AccessibilitySectionFields({
   );
 }
 
+const CONSERVATION_STATE_OPTIONS = [
+  { value: "CONSERVADO", label: "Conservado" },
+  { value: "ALTERADO", label: "Alterado" },
+  { value: "EN_PROCESO_DE_DETERIORO", label: "En proceso de deterioro" },
+  { value: "DETERIORADO", label: "Deteriorado" },
+] as const;
+
+function ConservationSectionFields({
+  canEdit,
+  register,
+  factorFields,
+  declarationFields,
+  appendFactor,
+  removeFactor,
+  appendDeclaration,
+  removeDeclaration,
+}: {
+  canEdit: boolean;
+  register: UseFormRegister<SectionFormValues>;
+  factorFields: Array<{ id: string }>;
+  declarationFields: Array<{ id: string }>;
+  appendFactor: (value: ConservationFactorForm) => void;
+  removeFactor: (index: number) => void;
+  appendDeclaration: (value: ConservationDeclarationForm) => void;
+  removeDeclaration: (index: number) => void;
+}) {
+  return (
+    <Stack spacing={webTokens.spacing.section}>
+      <Box>
+        <Typography variant="subtitle1">Estado por componente</Typography>
+        <Typography variant="body2" color="text.secondary">
+          La ficha distingue el estado del atractivo y de su entorno antes de registrar
+          factores de alteración o declaratorias.
+        </Typography>
+      </Box>
+      <Grid container spacing={webTokens.spacing.control}>
+        {(
+          [
+            ["attraction", "Atractivo"],
+            ["environment", "Entorno"],
+          ] as const
+        ).map(([component, label]) => (
+          <Grid key={component} size={{ xs: 12, md: 6 }}>
+            <FlatSurface padding="compact" tone="subtle">
+              <Stack spacing={webTokens.spacing.control}>
+                <Typography variant="subtitle2">{label}</Typography>
+                <FormControl fullWidth disabled={!canEdit}>
+                  <InputLabel id={`conservation-state-${component}`}>
+                    Estado de conservación
+                  </InputLabel>
+                  <Select
+                    labelId={`conservation-state-${component}`}
+                    label="Estado de conservación"
+                    defaultValue=""
+                    {...register(`conservation.${component}.state`)}
+                  >
+                    <MenuItem value="">Sin seleccionar</MenuItem>
+                    {CONSERVATION_STATE_OPTIONS.map((option) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <TextField
+                  label={`Observación del ${label.toLowerCase()}`}
+                  multiline
+                  minRows={2}
+                  fullWidth
+                  disabled={!canEdit}
+                  {...register(`conservation.${component}.observation`, {
+                    maxLength: { value: 2_000, message: "Máximo 2.000 caracteres" },
+                  })}
+                />
+              </Stack>
+            </FlatSurface>
+          </Grid>
+        ))}
+      </Grid>
+
+      <Stack spacing={webTokens.spacing.control}>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          justifyContent="space-between"
+          alignItems={{ xs: "flex-start", sm: "center" }}
+          gap={1}
+        >
+          <Box>
+            <Typography variant="subtitle1">Factores de alteración</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Registra factores naturales o antrópicos con respuesta explícita y
+              observación.
+            </Typography>
+          </Box>
+          <Button
+            type="button"
+            size="small"
+            variant="outlined"
+            startIcon={<AddRounded />}
+            disabled={!canEdit}
+            onClick={() =>
+              appendFactor({
+                origin: "NATURAL",
+                name: "",
+                response: EMPTY_RESPONSE,
+                detailOther: "",
+                observation: "",
+              })
+            }
+          >
+            Añadir factor
+          </Button>
+        </Stack>
+        {factorFields.length === 0 ? (
+          <Typography variant="body2" color="text.secondary">
+            No hay factores registrados.
+          </Typography>
+        ) : (
+          <Stack spacing={1.5}>
+            {factorFields.map((field, index) => (
+              <FlatSurface key={field.id} padding="compact" tone="subtle">
+                <Grid
+                  container
+                  spacing={webTokens.spacing.control}
+                  alignItems="flex-start"
+                >
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <FormControl fullWidth disabled={!canEdit}>
+                      <InputLabel id={`factor-origin-${index}`}>Origen</InputLabel>
+                      <Select
+                        labelId={`factor-origin-${index}`}
+                        label="Origen"
+                        defaultValue="NATURAL"
+                        {...register(`conservationFactors.${index}.origin`)}
+                      >
+                        <MenuItem value="NATURAL">Natural</MenuItem>
+                        <MenuItem value="ANTROPICO">Antrópico</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                    <TextField
+                      label="Factor"
+                      fullWidth
+                      disabled={!canEdit}
+                      {...register(`conservationFactors.${index}.name`, {
+                        required: "Indica el factor",
+                        maxLength: { value: 180, message: "Máximo 180 caracteres" },
+                      })}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <FormControl fullWidth disabled={!canEdit}>
+                      <InputLabel id={`factor-response-${index}`}>Presente</InputLabel>
+                      <Select
+                        labelId={`factor-response-${index}`}
+                        label="Presente"
+                        defaultValue={EMPTY_RESPONSE}
+                        {...register(`conservationFactors.${index}.response`)}
+                      >
+                        {SECTION_RESPONSE_OPTIONS.map((option) => (
+                          <MenuItem key={option.value} value={option.value}>
+                            {option.label}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                    <Tooltip title="Eliminar factor">
+                      <IconButton
+                        type="button"
+                        aria-label={`Eliminar factor ${index + 1}`}
+                        disabled={!canEdit}
+                        onClick={() => removeFactor(index)}
+                        sx={{ mt: { md: 1 } }}
+                      >
+                        <DeleteOutlineRounded />
+                      </IconButton>
+                    </Tooltip>
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <TextField
+                      label="Detalle adicional"
+                      fullWidth
+                      disabled={!canEdit}
+                      {...register(`conservationFactors.${index}.detailOther`, {
+                        maxLength: { value: 180, message: "Máximo 180 caracteres" },
+                      })}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <TextField
+                      label="Observación del factor"
+                      fullWidth
+                      disabled={!canEdit}
+                      {...register(`conservationFactors.${index}.observation`, {
+                        maxLength: { value: 1_000, message: "Máximo 1.000 caracteres" },
+                      })}
+                    />
+                  </Grid>
+                </Grid>
+              </FlatSurface>
+            ))}
+          </Stack>
+        )}
+      </Stack>
+
+      <Stack spacing={webTokens.spacing.control}>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          justifyContent="space-between"
+          alignItems={{ xs: "flex-start", sm: "center" }}
+          gap={1}
+        >
+          <Box>
+            <Typography variant="subtitle1">
+              Declaratorias del espacio turístico
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Conserva entidad, denominación, fecha y ámbito de cada declaratoria.
+            </Typography>
+          </Box>
+          <Button
+            type="button"
+            size="small"
+            variant="outlined"
+            startIcon={<AddRounded />}
+            disabled={!canEdit}
+            onClick={() =>
+              appendDeclaration({
+                entity: "",
+                denomination: "",
+                date: "",
+                scope: "",
+                observation: "",
+              })
+            }
+          >
+            Añadir declaratoria
+          </Button>
+        </Stack>
+        {declarationFields.length === 0 ? (
+          <Typography variant="body2" color="text.secondary">
+            No hay declaratorias registradas.
+          </Typography>
+        ) : (
+          <Stack spacing={1.5}>
+            {declarationFields.map((field, index) => (
+              <FlatSurface key={field.id} padding="compact" tone="subtle">
+                <Grid
+                  container
+                  spacing={webTokens.spacing.control}
+                  alignItems="flex-start"
+                >
+                  <Grid size={{ xs: 12, md: 4 }}>
+                    <TextField
+                      label="Entidad declarante"
+                      fullWidth
+                      disabled={!canEdit}
+                      {...register(`declarations.${index}.entity`, {
+                        required: "Indica la entidad declarante",
+                        maxLength: { value: 180, message: "Máximo 180 caracteres" },
+                      })}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 4 }}>
+                    <TextField
+                      label="Denominación"
+                      fullWidth
+                      disabled={!canEdit}
+                      {...register(`declarations.${index}.denomination`, {
+                        required: "Indica la denominación",
+                        maxLength: { value: 250, message: "Máximo 250 caracteres" },
+                      })}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 10, sm: 5, md: 3 }}>
+                    <TextField
+                      label="Fecha"
+                      type="date"
+                      fullWidth
+                      disabled={!canEdit}
+                      InputLabelProps={{ shrink: true }}
+                      {...register(`declarations.${index}.date`)}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 2, sm: 1, md: 1 }}>
+                    <Tooltip title="Eliminar declaratoria">
+                      <IconButton
+                        type="button"
+                        aria-label={`Eliminar declaratoria ${index + 1}`}
+                        disabled={!canEdit}
+                        onClick={() => removeDeclaration(index)}
+                        sx={{ mt: { md: 1 } }}
+                      >
+                        <DeleteOutlineRounded />
+                      </IconButton>
+                    </Tooltip>
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <TextField
+                      label="Ámbito"
+                      fullWidth
+                      disabled={!canEdit}
+                      {...register(`declarations.${index}.scope`, {
+                        maxLength: { value: 120, message: "Máximo 120 caracteres" },
+                      })}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <TextField
+                      label="Observación"
+                      fullWidth
+                      disabled={!canEdit}
+                      {...register(`declarations.${index}.observation`, {
+                        maxLength: { value: 1_000, message: "Máximo 1.000 caracteres" },
+                      })}
+                    />
+                  </Grid>
+                </Grid>
+              </FlatSurface>
+            ))}
+          </Stack>
+        )}
+      </Stack>
+    </Stack>
+  );
+}
+
 function CharacteristicsSectionFields({
   catalogs,
   canEdit,
@@ -955,6 +1334,12 @@ function createSectionValues(
     minRainfall: readNestedValue(record?.climate, "minRainfall"),
     maxRainfall: readNestedValue(record?.climate, "maxRainfall"),
     rows,
+    conservation: {
+      attraction: readConservationComponent(record?.conservation, "attraction"),
+      environment: readConservationComponent(record?.conservation, "environment"),
+    },
+    conservationFactors: readConservationFactors(record?.conservation),
+    declarations: readDeclarations(record?.declarations),
   };
 }
 
@@ -983,6 +1368,34 @@ function toSectionContent(
           },
         }
       : {}),
+    ...(sectionCode === "conservacion"
+      ? {
+          conservation: {
+            attraction: {
+              state: values.conservation.attraction.state.trim() || null,
+              observation: values.conservation.attraction.observation.trim(),
+            },
+            environment: {
+              state: values.conservation.environment.state.trim() || null,
+              observation: values.conservation.environment.observation.trim(),
+            },
+            factors: values.conservationFactors.map((factor) => ({
+              origin: factor.origin,
+              name: factor.name.trim(),
+              response: factor.response,
+              detailOther: factor.detailOther.trim(),
+              observation: factor.observation.trim(),
+            })),
+          },
+          declarations: values.declarations.map((declaration) => ({
+            entity: declaration.entity.trim(),
+            denomination: declaration.denomination.trim(),
+            date: declaration.date.trim() || null,
+            scope: declaration.scope.trim(),
+            observation: declaration.observation.trim(),
+          })),
+        }
+      : {}),
     rows: values.rows.map((row) => ({
       label: row.label.trim(),
       response: row.response,
@@ -996,6 +1409,51 @@ function readNestedValue(value: unknown, key: string): string {
   if (!isRecord(value)) return "";
   const nested = value[key];
   return typeof nested === "number" || typeof nested === "string" ? String(nested) : "";
+}
+
+function readConservationComponent(
+  value: unknown,
+  key: "attraction" | "environment",
+): ConservationComponentForm {
+  const component = isRecord(value) && isRecord(value[key]) ? value[key] : null;
+  return {
+    state: typeof component?.state === "string" ? component.state : "",
+    observation: typeof component?.observation === "string" ? component.observation : "",
+  };
+}
+
+function readConservationFactors(value: unknown): ConservationFactorForm[] {
+  if (!isRecord(value) || !Array.isArray(value.factors)) return [];
+  return value.factors.map((factor) => toConservationFactorForm(factor));
+}
+
+function readDeclarations(value: unknown): ConservationDeclarationForm[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((declaration) => toDeclarationForm(declaration));
+}
+
+function toConservationFactorForm(value: unknown): ConservationFactorForm {
+  const factor = isRecord(value) ? value : {};
+  return {
+    origin: factor.origin === "ANTROPICO" ? "ANTROPICO" : "NATURAL",
+    name: typeof factor.name === "string" ? factor.name : "",
+    response: isSectionResponse(factor.response) ? factor.response : EMPTY_RESPONSE,
+    detailOther: typeof factor.detailOther === "string" ? factor.detailOther : "",
+    observation: typeof factor.observation === "string" ? factor.observation : "",
+  };
+}
+
+function toDeclarationForm(value: unknown): ConservationDeclarationForm {
+  const declaration = isRecord(value) ? value : {};
+  return {
+    entity: typeof declaration.entity === "string" ? declaration.entity : "",
+    denomination:
+      typeof declaration.denomination === "string" ? declaration.denomination : "",
+    date: typeof declaration.date === "string" ? declaration.date : "",
+    scope: typeof declaration.scope === "string" ? declaration.scope : "",
+    observation:
+      typeof declaration.observation === "string" ? declaration.observation : "",
+  };
 }
 
 function toNullableNumber(value: string): number | null {
