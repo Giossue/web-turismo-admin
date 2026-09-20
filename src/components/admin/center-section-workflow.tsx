@@ -255,6 +255,15 @@ type PolicyForm = {
   observation: string;
 };
 
+type PromotionMediaForm = {
+  response: SectionResponse;
+  name: string;
+  url: string;
+  periodicity: string;
+  detailOther: string;
+  observation: string;
+};
+
 type SectionFormValues = {
   response: SectionResponse;
   observation: string;
@@ -276,6 +285,15 @@ type SectionFormValues = {
   hygieneRadios: HygieneRadiosForm;
   hygieneContingency: HygieneContingencyForm;
   policies: PolicyForm[];
+  promotion: {
+    hasPlan: SectionResponse;
+    planName: string;
+    includedInPlan: SectionResponse;
+    partOfPackage: SectionResponse;
+    packageDetail: string;
+    observation: string;
+  };
+  promotionMedia: PromotionMediaForm[];
 };
 
 type SectionProgress =
@@ -367,6 +385,11 @@ export function CenterSectionWorkflow({
     remove: removeHygieneEntry,
   } = useFieldArray({ control, name: "hygieneEntries" });
   const { fields: policyFields } = useFieldArray({ control, name: "policies" });
+  const {
+    fields: promotionMediaFields,
+    append: appendPromotionMedia,
+    remove: removePromotionMedia,
+  } = useFieldArray({ control, name: "promotionMedia" });
   const activeLocalDraft = localDrafts[definition.code];
 
   useEffect(() => {
@@ -614,6 +637,15 @@ export function CenterSectionWorkflow({
                   canEdit={canEdit}
                   register={register}
                   fields={policyFields}
+                />
+              ) : null}
+              {definition.code === "promocion" ? (
+                <PromotionSectionFields
+                  canEdit={canEdit}
+                  register={register}
+                  mediaFields={promotionMediaFields}
+                  appendMedia={appendPromotionMedia}
+                  removeMedia={removePromotionMedia}
                 />
               ) : null}
               <Divider />
@@ -1720,6 +1752,259 @@ function PoliciesSectionFields({
   );
 }
 
+function PromotionSectionFields({
+  canEdit,
+  register,
+  mediaFields,
+  appendMedia,
+  removeMedia,
+}: {
+  canEdit: boolean;
+  register: UseFormRegister<SectionFormValues>;
+  mediaFields: Array<{ id: string }>;
+  appendMedia: (value: PromotionMediaForm) => void;
+  removeMedia: (index: number) => void;
+}) {
+  return (
+    <Stack spacing={webTokens.spacing.section}>
+      <Box>
+        <Typography variant="subtitle1">Promoción y comercialización</Typography>
+        <Typography variant="body2" color="text.secondary">
+          Separa la existencia del plan, su inclusión institucional, los paquetes y los
+          medios de promoción utilizados.
+        </Typography>
+      </Box>
+      <FlatSurface padding="compact" tone="subtle">
+        <Grid container spacing={webTokens.spacing.control}>
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <FormControl fullWidth disabled={!canEdit}>
+              <InputLabel id="promotion-has-plan">¿Tiene plan?</InputLabel>
+              <Select
+                labelId="promotion-has-plan"
+                label="¿Tiene plan?"
+                defaultValue={EMPTY_RESPONSE}
+                {...register("promotion.hasPlan")}
+              >
+                {SECTION_RESPONSE_OPTIONS.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 8 }}>
+            <TextField
+              label="Nombre del plan"
+              fullWidth
+              disabled={!canEdit}
+              {...register("promotion.planName", {
+                maxLength: { value: 250, message: "Máximo 250 caracteres" },
+              })}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <FormControl fullWidth disabled={!canEdit}>
+              <InputLabel id="promotion-included">¿Está incluido en un plan?</InputLabel>
+              <Select
+                labelId="promotion-included"
+                label="¿Está incluido en un plan?"
+                defaultValue={EMPTY_RESPONSE}
+                {...register("promotion.includedInPlan")}
+              >
+                {SECTION_RESPONSE_OPTIONS.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <FormControl fullWidth disabled={!canEdit}>
+              <InputLabel id="promotion-package">¿Forma parte de un paquete?</InputLabel>
+              <Select
+                labelId="promotion-package"
+                label="¿Forma parte de un paquete?"
+                defaultValue={EMPTY_RESPONSE}
+                {...register("promotion.partOfPackage")}
+              >
+                {SECTION_RESPONSE_OPTIONS.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid size={12}>
+            <TextField
+              label="Detalle del paquete"
+              fullWidth
+              multiline
+              minRows={2}
+              disabled={!canEdit}
+              {...register("promotion.packageDetail", {
+                maxLength: { value: 1_000, message: "Máximo 1.000 caracteres" },
+              })}
+            />
+          </Grid>
+          <Grid size={12}>
+            <TextField
+              label="Observación de promoción"
+              fullWidth
+              multiline
+              minRows={2}
+              disabled={!canEdit}
+              {...register("promotion.observation", {
+                maxLength: { value: 1_000, message: "Máximo 1.000 caracteres" },
+              })}
+            />
+          </Grid>
+        </Grid>
+      </FlatSurface>
+
+      <Stack spacing={webTokens.spacing.control}>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          justifyContent="space-between"
+          alignItems={{ xs: "flex-start", sm: "center" }}
+          gap={1}
+        >
+          <Box>
+            <Typography variant="subtitle1">Medios de promoción</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Registra página, red social, feria u otro medio con nombre, URL y
+              periodicidad.
+            </Typography>
+          </Box>
+          <Button
+            type="button"
+            size="small"
+            variant="outlined"
+            startIcon={<AddRounded />}
+            disabled={!canEdit}
+            onClick={() =>
+              appendMedia({
+                response: EMPTY_RESPONSE,
+                name: "",
+                url: "",
+                periodicity: "",
+                detailOther: "",
+                observation: "",
+              })
+            }
+          >
+            Añadir medio
+          </Button>
+        </Stack>
+        {mediaFields.length === 0 ? (
+          <Typography variant="body2" color="text.secondary">
+            No hay medios registrados.
+          </Typography>
+        ) : (
+          <Stack spacing={1.5}>
+            {mediaFields.map((field, index) => (
+              <FlatSurface key={field.id} padding="compact" tone="subtle">
+                <Grid
+                  container
+                  spacing={webTokens.spacing.control}
+                  alignItems="flex-start"
+                >
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <FormControl fullWidth disabled={!canEdit}>
+                      <InputLabel id={`promotion-media-response-${index}`}>
+                        Utilizado
+                      </InputLabel>
+                      <Select
+                        labelId={`promotion-media-response-${index}`}
+                        label="Utilizado"
+                        defaultValue={EMPTY_RESPONSE}
+                        {...register(`promotionMedia.${index}.response`)}
+                      >
+                        {SECTION_RESPONSE_OPTIONS.map((option) => (
+                          <MenuItem key={option.value} value={option.value}>
+                            {option.label}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                    <TextField
+                      label="Tipo o nombre del medio"
+                      fullWidth
+                      disabled={!canEdit}
+                      {...register(`promotionMedia.${index}.name`, {
+                        required: "Indica el medio",
+                        maxLength: { value: 180, message: "Máximo 180 caracteres" },
+                      })}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                    <TextField
+                      label="URL"
+                      type="url"
+                      fullWidth
+                      disabled={!canEdit}
+                      {...register(`promotionMedia.${index}.url`, {
+                        maxLength: { value: 500, message: "Máximo 500 caracteres" },
+                      })}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, md: 1 }}>
+                    <Tooltip title="Eliminar medio">
+                      <IconButton
+                        type="button"
+                        aria-label={`Eliminar medio ${index + 1}`}
+                        disabled={!canEdit}
+                        onClick={() => removeMedia(index)}
+                        sx={{ mt: { md: 1 } }}
+                      >
+                        <DeleteOutlineRounded />
+                      </IconButton>
+                    </Tooltip>
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField
+                      label="Periodicidad"
+                      fullWidth
+                      disabled={!canEdit}
+                      {...register(`promotionMedia.${index}.periodicity`, {
+                        maxLength: { value: 100, message: "Máximo 100 caracteres" },
+                      })}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField
+                      label="Detalle de otro medio"
+                      fullWidth
+                      disabled={!canEdit}
+                      {...register(`promotionMedia.${index}.detailOther`, {
+                        maxLength: { value: 180, message: "Máximo 180 caracteres" },
+                      })}
+                    />
+                  </Grid>
+                  <Grid size={12}>
+                    <TextField
+                      label="Observación del medio"
+                      fullWidth
+                      disabled={!canEdit}
+                      {...register(`promotionMedia.${index}.observation`, {
+                        maxLength: { value: 1_000, message: "Máximo 1.000 caracteres" },
+                      })}
+                    />
+                  </Grid>
+                </Grid>
+              </FlatSurface>
+            ))}
+          </Stack>
+        )}
+      </Stack>
+    </Stack>
+  );
+}
+
 function CharacteristicsSectionFields({
   catalogs,
   canEdit,
@@ -1877,6 +2162,8 @@ function createSectionValues(
     hygieneRadios: readHygieneRadios(record?.hygieneSafety),
     hygieneContingency: readHygieneContingency(record?.hygieneSafety),
     policies: readPolicies(record?.policies),
+    promotion: readPromotion(record?.promotion),
+    promotionMedia: readPromotionMedia(record?.promotion),
   };
 }
 
@@ -1974,6 +2261,26 @@ function toSectionContent(
             specification: policy.specification.trim(),
             observation: policy.observation.trim(),
           })),
+        }
+      : {}),
+    ...(sectionCode === "promocion"
+      ? {
+          promotion: {
+            hasPlan: values.promotion.hasPlan,
+            planName: values.promotion.planName.trim(),
+            includedInPlan: values.promotion.includedInPlan,
+            partOfPackage: values.promotion.partOfPackage,
+            packageDetail: values.promotion.packageDetail.trim(),
+            observation: values.promotion.observation.trim(),
+            media: values.promotionMedia.map((media) => ({
+              response: media.response,
+              name: media.name.trim(),
+              url: media.url.trim(),
+              periodicity: media.periodicity.trim(),
+              detailOther: media.detailOther.trim(),
+              observation: media.observation.trim(),
+            })),
+          },
         }
       : {}),
     rows: values.rows.map((row) => ({
@@ -2097,6 +2404,38 @@ function readPolicies(value: unknown): PolicyForm[] {
           ? String(item.year)
           : "",
       specification: typeof item.specification === "string" ? item.specification : "",
+      observation: typeof item.observation === "string" ? item.observation : "",
+    };
+  });
+}
+
+function readPromotion(value: unknown): SectionFormValues["promotion"] {
+  const promotion = isRecord(value) ? value : {};
+  return {
+    hasPlan: isSectionResponse(promotion.hasPlan) ? promotion.hasPlan : EMPTY_RESPONSE,
+    planName: typeof promotion.planName === "string" ? promotion.planName : "",
+    includedInPlan: isSectionResponse(promotion.includedInPlan)
+      ? promotion.includedInPlan
+      : EMPTY_RESPONSE,
+    partOfPackage: isSectionResponse(promotion.partOfPackage)
+      ? promotion.partOfPackage
+      : EMPTY_RESPONSE,
+    packageDetail:
+      typeof promotion.packageDetail === "string" ? promotion.packageDetail : "",
+    observation: typeof promotion.observation === "string" ? promotion.observation : "",
+  };
+}
+
+function readPromotionMedia(value: unknown): PromotionMediaForm[] {
+  if (!isRecord(value) || !Array.isArray(value.media)) return [];
+  return value.media.map((media) => {
+    const item = isRecord(media) ? media : {};
+    return {
+      response: isSectionResponse(item.response) ? item.response : EMPTY_RESPONSE,
+      name: typeof item.name === "string" ? item.name : "",
+      url: typeof item.url === "string" ? item.url : "",
+      periodicity: typeof item.periodicity === "string" ? item.periodicity : "",
+      detailOther: typeof item.detailOther === "string" ? item.detailOther : "",
       observation: typeof item.observation === "string" ? item.observation : "",
     };
   });
