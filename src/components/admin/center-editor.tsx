@@ -474,13 +474,15 @@ export function CenterEditor({
             </Grid>
             <Grid size={{ xs: 12, md: 4 }}>
               <CatalogSelect
-                label="Jerarquía"
+                label="Jerarquía calculada"
                 name="hierarchyId"
                 options={catalogs?.hierarchies ?? []}
                 register={register}
-                disabled={!canEdit}
-                required
+                disabled
               />
+              <Typography variant="caption" color="text.secondary">
+                Se determina con la valoración de la ficha; no se edita manualmente.
+              </Typography>
             </Grid>
           </Grid>
         </Stack>

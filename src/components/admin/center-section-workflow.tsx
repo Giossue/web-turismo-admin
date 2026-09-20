@@ -361,6 +361,7 @@ export function CenterSectionWorkflow({
           title="Ficha integral por secciones"
           description="Registra cada apartado de la ficha sin crear centros derivados. Las secciones se guardan como un borrador versionado."
         />
+        <InstitutionalCodeCard code={detail?.code ?? null} />
         {!code ? (
           <Alert severity="info">
             Completa y guarda primero los datos generales. Después podrás capturar las 14
@@ -665,6 +666,57 @@ export function CenterSectionWorkflow({
             </Stack>
           </Grid>
         </Grid>
+      </Stack>
+    </FlatSurface>
+  );
+}
+
+function InstitutionalCodeCard({ code }: { code: string | null }) {
+  const normalized = code?.replace(/\s/g, "") ?? "";
+  const parts =
+    normalized.length === 17
+      ? [
+          ["PP", normalized.slice(0, 2)],
+          ["CC", normalized.slice(2, 4)],
+          ["QQ", normalized.slice(4, 6)],
+          ["CA", normalized.slice(6, 8)],
+          ["TI", normalized.slice(8, 10)],
+          ["ST", normalized.slice(10, 12)],
+          ["JE", normalized.slice(12, 14)],
+          ["NNN", normalized.slice(14)],
+        ]
+      : [];
+  return (
+    <FlatSurface padding="compact" tone="subtle">
+      <Stack spacing={1}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" gap={2}>
+          <Box>
+            <Typography variant="subtitle1">Código institucional</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Lo genera el servidor a partir del territorio, clasificación, valoración y
+              secuencial.
+            </Typography>
+          </Box>
+          <Typography variant="h6" component="code" sx={{ letterSpacing: 1 }}>
+            {normalized || "Pendiente"}
+          </Typography>
+        </Stack>
+        {parts.length > 0 ? (
+          <Grid container spacing={1} aria-label="Partes del código institucional">
+            {parts.map(([label, value]) => (
+              <Grid key={label} size={{ xs: 6, sm: 3, md: 1.5 }}>
+                <Box sx={{ border: 1, borderColor: "divider", borderRadius: 1, p: 1 }}>
+                  <Typography variant="caption" color="text.secondary" display="block">
+                    {label}
+                  </Typography>
+                  <Typography variant="body2" fontWeight={700} component="code">
+                    {value}
+                  </Typography>
+                </Box>
+              </Grid>
+            ))}
+          </Grid>
+        ) : null}
       </Stack>
     </FlatSurface>
   );
