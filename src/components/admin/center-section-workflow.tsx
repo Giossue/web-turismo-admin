@@ -215,6 +215,37 @@ type ConservationDeclarationForm = {
   observation: string;
 };
 
+type HygieneEntryKind =
+  "BASIC_SERVICE" | "SIGNAGE" | "HEALTH" | "SECURITY" | "COMMUNICATION" | "THREAT";
+
+type HygieneEntryForm = {
+  kind: HygieneEntryKind;
+  scope: "EN_ATRACTIVO" | "EN_POBLADO_CERCANO" | "";
+  name: string;
+  secondary: string;
+  response: SectionResponse;
+  quantity: string;
+  condition: "BUENO" | "REGULAR" | "MALO" | "";
+  observation: string;
+};
+
+type HygieneRadiosForm = {
+  available: SectionResponse;
+  visitorUse: SectionResponse;
+  internalUse: SectionResponse;
+  emergencyUse: SectionResponse;
+  quantity: string;
+  observation: string;
+};
+
+type HygieneContingencyForm = {
+  exists: SectionResponse;
+  institution: string;
+  document: string;
+  year: string;
+  observation: string;
+};
+
 type SectionFormValues = {
   response: SectionResponse;
   observation: string;
@@ -232,6 +263,9 @@ type SectionFormValues = {
   };
   conservationFactors: ConservationFactorForm[];
   declarations: ConservationDeclarationForm[];
+  hygieneEntries: HygieneEntryForm[];
+  hygieneRadios: HygieneRadiosForm;
+  hygieneContingency: HygieneContingencyForm;
 };
 
 type SectionProgress =
@@ -317,6 +351,11 @@ export function CenterSectionWorkflow({
     append: appendDeclaration,
     remove: removeDeclaration,
   } = useFieldArray({ control, name: "declarations" });
+  const {
+    fields: hygieneEntryFields,
+    append: appendHygieneEntry,
+    remove: removeHygieneEntry,
+  } = useFieldArray({ control, name: "hygieneEntries" });
   const activeLocalDraft = localDrafts[definition.code];
 
   useEffect(() => {
@@ -548,6 +587,15 @@ export function CenterSectionWorkflow({
                   removeFactor={removeConservationFactor}
                   appendDeclaration={appendDeclaration}
                   removeDeclaration={removeDeclaration}
+                />
+              ) : null}
+              {definition.code === "higiene-seguridad" ? (
+                <HygieneSafetySectionFields
+                  canEdit={canEdit}
+                  register={register}
+                  entryFields={hygieneEntryFields}
+                  appendEntry={appendHygieneEntry}
+                  removeEntry={removeHygieneEntry}
                 />
               ) : null}
               <Divider />
@@ -1187,6 +1235,364 @@ function ConservationSectionFields({
   );
 }
 
+const HYGIENE_ENTRY_OPTIONS: Array<{ value: HygieneEntryKind; label: string }> = [
+  { value: "BASIC_SERVICE", label: "Servicio básico" },
+  { value: "SIGNAGE", label: "Señalética" },
+  { value: "HEALTH", label: "Servicio de salud" },
+  { value: "SECURITY", label: "Servicio de seguridad" },
+  { value: "COMMUNICATION", label: "Comunicación" },
+  { value: "THREAT", label: "Amenaza" },
+];
+
+function HygieneSafetySectionFields({
+  canEdit,
+  register,
+  entryFields,
+  appendEntry,
+  removeEntry,
+}: {
+  canEdit: boolean;
+  register: UseFormRegister<SectionFormValues>;
+  entryFields: Array<{ id: string }>;
+  appendEntry: (value: HygieneEntryForm) => void;
+  removeEntry: (index: number) => void;
+}) {
+  return (
+    <Stack spacing={webTokens.spacing.section}>
+      <Box>
+        <Typography variant="subtitle1">Higiene, seguridad y amenazas</Typography>
+        <Typography variant="body2" color="text.secondary">
+          Cada registro conserva su ámbito, respuesta, cantidad y observación. Las radios
+          y el plan de contingencia se capturan como controles separados.
+        </Typography>
+      </Box>
+
+      <Stack spacing={webTokens.spacing.control}>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          justifyContent="space-between"
+          alignItems={{ xs: "flex-start", sm: "center" }}
+          gap={1}
+        >
+          <Box>
+            <Typography variant="subtitle1">Servicios y amenazas</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Usa el tipo de registro para separar servicios básicos, señalética, salud,
+              seguridad, comunicación y multiamenazas.
+            </Typography>
+          </Box>
+          <Button
+            type="button"
+            size="small"
+            variant="outlined"
+            startIcon={<AddRounded />}
+            disabled={!canEdit}
+            onClick={() =>
+              appendEntry({
+                kind: "BASIC_SERVICE",
+                scope: "EN_ATRACTIVO",
+                name: "",
+                secondary: "",
+                response: EMPTY_RESPONSE,
+                quantity: "",
+                condition: "",
+                observation: "",
+              })
+            }
+          >
+            Añadir registro
+          </Button>
+        </Stack>
+        {entryFields.length === 0 ? (
+          <Typography variant="body2" color="text.secondary">
+            No hay registros de higiene y seguridad.
+          </Typography>
+        ) : (
+          <Stack spacing={1.5}>
+            {entryFields.map((field, index) => (
+              <FlatSurface key={field.id} padding="compact" tone="subtle">
+                <Grid
+                  container
+                  spacing={webTokens.spacing.control}
+                  alignItems="flex-start"
+                >
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <FormControl fullWidth disabled={!canEdit}>
+                      <InputLabel id={`hygiene-kind-${index}`}>
+                        Tipo de registro
+                      </InputLabel>
+                      <Select
+                        labelId={`hygiene-kind-${index}`}
+                        label="Tipo de registro"
+                        defaultValue="BASIC_SERVICE"
+                        {...register(`hygieneEntries.${index}.kind`)}
+                      >
+                        {HYGIENE_ENTRY_OPTIONS.map((option) => (
+                          <MenuItem key={option.value} value={option.value}>
+                            {option.label}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <FormControl fullWidth disabled={!canEdit}>
+                      <InputLabel id={`hygiene-scope-${index}`}>Ámbito</InputLabel>
+                      <Select
+                        labelId={`hygiene-scope-${index}`}
+                        label="Ámbito"
+                        defaultValue="EN_ATRACTIVO"
+                        {...register(`hygieneEntries.${index}.scope`)}
+                      >
+                        <MenuItem value="">No aplica</MenuItem>
+                        <MenuItem value="EN_ATRACTIVO">En el atractivo</MenuItem>
+                        <MenuItem value="EN_POBLADO_CERCANO">En poblado cercano</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                    <TextField
+                      label="Servicio, señal o amenaza"
+                      fullWidth
+                      disabled={!canEdit}
+                      {...register(`hygieneEntries.${index}.name`, {
+                        required: "Indica el registro",
+                        maxLength: { value: 180, message: "Máximo 180 caracteres" },
+                      })}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                    <Tooltip title="Eliminar registro">
+                      <IconButton
+                        type="button"
+                        aria-label={`Eliminar registro ${index + 1}`}
+                        disabled={!canEdit}
+                        onClick={() => removeEntry(index)}
+                        sx={{ mt: { md: 1 } }}
+                      >
+                        <DeleteOutlineRounded />
+                      </IconButton>
+                    </Tooltip>
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <TextField
+                      label="Proveedor, material o detalle"
+                      fullWidth
+                      disabled={!canEdit}
+                      {...register(`hygieneEntries.${index}.secondary`, {
+                        maxLength: { value: 250, message: "Máximo 250 caracteres" },
+                      })}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <FormControl fullWidth disabled={!canEdit}>
+                      <InputLabel id={`hygiene-response-${index}`}>Respuesta</InputLabel>
+                      <Select
+                        labelId={`hygiene-response-${index}`}
+                        label="Respuesta"
+                        defaultValue={EMPTY_RESPONSE}
+                        {...register(`hygieneEntries.${index}.response`)}
+                      >
+                        {SECTION_RESPONSE_OPTIONS.map((option) => (
+                          <MenuItem key={option.value} value={option.value}>
+                            {option.label}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                    <TextField
+                      label="Cantidad"
+                      type="number"
+                      fullWidth
+                      disabled={!canEdit}
+                      slotProps={{ htmlInput: { min: 0, step: 1 } }}
+                      {...register(`hygieneEntries.${index}.quantity`, {
+                        validate: (value) =>
+                          !value.trim() ||
+                          (Number.isInteger(Number(value)) && Number(value) >= 0)
+                            ? true
+                            : "Usa un entero no negativo",
+                      })}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                    <FormControl fullWidth disabled={!canEdit}>
+                      <InputLabel id={`hygiene-condition-${index}`}>Condición</InputLabel>
+                      <Select
+                        labelId={`hygiene-condition-${index}`}
+                        label="Condición"
+                        defaultValue=""
+                        {...register(`hygieneEntries.${index}.condition`)}
+                      >
+                        <MenuItem value="">Sin registrar</MenuItem>
+                        <MenuItem value="BUENO">Bueno</MenuItem>
+                        <MenuItem value="REGULAR">Regular</MenuItem>
+                        <MenuItem value="MALO">Malo</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid size={12}>
+                    <TextField
+                      label="Observación"
+                      fullWidth
+                      disabled={!canEdit}
+                      {...register(`hygieneEntries.${index}.observation`, {
+                        maxLength: { value: 1_000, message: "Máximo 1.000 caracteres" },
+                      })}
+                    />
+                  </Grid>
+                </Grid>
+              </FlatSurface>
+            ))}
+          </Stack>
+        )}
+      </Stack>
+
+      <FlatSurface padding="compact" tone="subtle">
+        <Stack spacing={webTokens.spacing.control}>
+          <Typography variant="subtitle1">Radios portátiles</Typography>
+          <Grid container spacing={webTokens.spacing.control}>
+            {(
+              [
+                ["available", "¿Hay radios disponibles?"],
+                ["visitorUse", "Uso para visitantes"],
+                ["internalUse", "Uso interno"],
+                ["emergencyUse", "Uso en emergencias"],
+              ] as const
+            ).map(([key, label]) => (
+              <Grid key={key} size={{ xs: 12, sm: 6, md: 3 }}>
+                <FormControl fullWidth disabled={!canEdit}>
+                  <InputLabel id={`radios-${key}`}>{label}</InputLabel>
+                  <Select
+                    labelId={`radios-${key}`}
+                    label={label}
+                    defaultValue={EMPTY_RESPONSE}
+                    {...register(`hygieneRadios.${key}`)}
+                  >
+                    {SECTION_RESPONSE_OPTIONS.map((option) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+            ))}
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <TextField
+                label="Cantidad de radios"
+                type="number"
+                fullWidth
+                disabled={!canEdit}
+                slotProps={{ htmlInput: { min: 0, step: 1 } }}
+                {...register("hygieneRadios.quantity", {
+                  validate: (value) =>
+                    !value.trim() ||
+                    (Number.isInteger(Number(value)) && Number(value) >= 0)
+                      ? true
+                      : "Usa un entero no negativo",
+                })}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 8 }}>
+              <TextField
+                label="Observación de radios"
+                fullWidth
+                disabled={!canEdit}
+                {...register("hygieneRadios.observation", {
+                  maxLength: { value: 1_000, message: "Máximo 1.000 caracteres" },
+                })}
+              />
+            </Grid>
+          </Grid>
+        </Stack>
+      </FlatSurface>
+
+      <FlatSurface padding="compact" tone="subtle">
+        <Stack spacing={webTokens.spacing.control}>
+          <Typography variant="subtitle1">Plan de contingencia</Typography>
+          <Grid container spacing={webTokens.spacing.control}>
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <FormControl fullWidth disabled={!canEdit}>
+                <InputLabel id="contingency-exists">¿Existe un plan?</InputLabel>
+                <Select
+                  labelId="contingency-exists"
+                  label="¿Existe un plan?"
+                  defaultValue={EMPTY_RESPONSE}
+                  {...register("hygieneContingency.exists")}
+                >
+                  {SECTION_RESPONSE_OPTIONS.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <TextField
+                label="Institución responsable"
+                fullWidth
+                disabled={!canEdit}
+                {...register("hygieneContingency.institution", {
+                  maxLength: { value: 180, message: "Máximo 180 caracteres" },
+                })}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 3 }}>
+              <TextField
+                label="Año"
+                type="number"
+                fullWidth
+                disabled={!canEdit}
+                slotProps={{ htmlInput: { min: 1900, max: 2200, step: 1 } }}
+                {...register("hygieneContingency.year", {
+                  validate: (value) =>
+                    !value.trim() ||
+                    (Number.isInteger(Number(value)) &&
+                      Number(value) >= 1900 &&
+                      Number(value) <= 2200)
+                      ? true
+                      : "Usa un año entre 1900 y 2200",
+                })}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 1 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                Año
+              </Typography>
+            </Grid>
+            <Grid size={12}>
+              <TextField
+                label="Nombre del documento u observación"
+                fullWidth
+                disabled={!canEdit}
+                {...register("hygieneContingency.document", {
+                  maxLength: { value: 250, message: "Máximo 250 caracteres" },
+                })}
+              />
+            </Grid>
+            <Grid size={12}>
+              <TextField
+                label="Observación del plan"
+                fullWidth
+                multiline
+                minRows={2}
+                disabled={!canEdit}
+                {...register("hygieneContingency.observation", {
+                  maxLength: { value: 1_000, message: "Máximo 1.000 caracteres" },
+                })}
+              />
+            </Grid>
+          </Grid>
+        </Stack>
+      </FlatSurface>
+    </Stack>
+  );
+}
+
 function CharacteristicsSectionFields({
   catalogs,
   canEdit,
@@ -1340,6 +1746,9 @@ function createSectionValues(
     },
     conservationFactors: readConservationFactors(record?.conservation),
     declarations: readDeclarations(record?.declarations),
+    hygieneEntries: readHygieneEntries(record?.hygieneSafety),
+    hygieneRadios: readHygieneRadios(record?.hygieneSafety),
+    hygieneContingency: readHygieneContingency(record?.hygieneSafety),
   };
 }
 
@@ -1396,6 +1805,37 @@ function toSectionContent(
           })),
         }
       : {}),
+    ...(sectionCode === "higiene-seguridad"
+      ? {
+          hygieneSafety: {
+            entries: values.hygieneEntries.map((entry) => ({
+              kind: entry.kind,
+              scope: entry.scope || null,
+              name: entry.name.trim(),
+              secondary: entry.secondary.trim(),
+              response: entry.response,
+              quantity: entry.quantity.trim() === "" ? null : Number(entry.quantity),
+              condition: entry.condition || null,
+              observation: entry.observation.trim(),
+            })),
+            radios: {
+              available: values.hygieneRadios.available,
+              visitorUse: values.hygieneRadios.visitorUse,
+              internalUse: values.hygieneRadios.internalUse,
+              emergencyUse: values.hygieneRadios.emergencyUse,
+              quantity: toNullableInteger(values.hygieneRadios.quantity),
+              observation: values.hygieneRadios.observation.trim(),
+            },
+            contingency: {
+              exists: values.hygieneContingency.exists,
+              institution: values.hygieneContingency.institution.trim(),
+              document: values.hygieneContingency.document.trim(),
+              year: toNullableInteger(values.hygieneContingency.year),
+              observation: values.hygieneContingency.observation.trim(),
+            },
+          },
+        }
+      : {}),
     rows: values.rows.map((row) => ({
       label: row.label.trim(),
       response: row.response,
@@ -1432,6 +1872,75 @@ function readDeclarations(value: unknown): ConservationDeclarationForm[] {
   return value.map((declaration) => toDeclarationForm(declaration));
 }
 
+function readHygieneEntries(value: unknown): HygieneEntryForm[] {
+  if (!isRecord(value) || !Array.isArray(value.entries)) return [];
+  return value.entries.map((entry) => {
+    const item = isRecord(entry) ? entry : {};
+    const kind = HYGIENE_ENTRY_OPTIONS.some((option) => option.value === item.kind)
+      ? (item.kind as HygieneEntryKind)
+      : "BASIC_SERVICE";
+    const scope =
+      item.scope === "EN_POBLADO_CERCANO" || item.scope === "EN_ATRACTIVO"
+        ? item.scope
+        : "";
+    const condition =
+      item.condition === "BUENO" ||
+      item.condition === "REGULAR" ||
+      item.condition === "MALO"
+        ? item.condition
+        : "";
+    return {
+      kind,
+      scope,
+      name: typeof item.name === "string" ? item.name : "",
+      secondary: typeof item.secondary === "string" ? item.secondary : "",
+      response: isSectionResponse(item.response) ? item.response : EMPTY_RESPONSE,
+      quantity:
+        typeof item.quantity === "number" || typeof item.quantity === "string"
+          ? String(item.quantity)
+          : "",
+      condition,
+      observation: typeof item.observation === "string" ? item.observation : "",
+    };
+  });
+}
+
+function readHygieneRadios(value: unknown): HygieneRadiosForm {
+  const radios = isRecord(value) && isRecord(value.radios) ? value.radios : {};
+  return {
+    available: isSectionResponse(radios.available) ? radios.available : EMPTY_RESPONSE,
+    visitorUse: isSectionResponse(radios.visitorUse) ? radios.visitorUse : EMPTY_RESPONSE,
+    internalUse: isSectionResponse(radios.internalUse)
+      ? radios.internalUse
+      : EMPTY_RESPONSE,
+    emergencyUse: isSectionResponse(radios.emergencyUse)
+      ? radios.emergencyUse
+      : EMPTY_RESPONSE,
+    quantity:
+      typeof radios.quantity === "number" || typeof radios.quantity === "string"
+        ? String(radios.quantity)
+        : "",
+    observation: typeof radios.observation === "string" ? radios.observation : "",
+  };
+}
+
+function readHygieneContingency(value: unknown): HygieneContingencyForm {
+  const contingency =
+    isRecord(value) && isRecord(value.contingency) ? value.contingency : {};
+  return {
+    exists: isSectionResponse(contingency.exists) ? contingency.exists : EMPTY_RESPONSE,
+    institution:
+      typeof contingency.institution === "string" ? contingency.institution : "",
+    document: typeof contingency.document === "string" ? contingency.document : "",
+    year:
+      typeof contingency.year === "number" || typeof contingency.year === "string"
+        ? String(contingency.year)
+        : "",
+    observation:
+      typeof contingency.observation === "string" ? contingency.observation : "",
+  };
+}
+
 function toConservationFactorForm(value: unknown): ConservationFactorForm {
   const factor = isRecord(value) ? value : {};
   return {
@@ -1457,6 +1966,10 @@ function toDeclarationForm(value: unknown): ConservationDeclarationForm {
 }
 
 function toNullableNumber(value: string): number | null {
+  return value.trim() === "" ? null : Number(value);
+}
+
+function toNullableInteger(value: string): number | null {
   return value.trim() === "" ? null : Number(value);
 }
 
