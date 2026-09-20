@@ -295,6 +295,8 @@ type ConservationComponentForm = {
 };
 
 type ConservationFactorForm = {
+  component: "ATRACTIVO" | "ENTORNO";
+  factorId: string;
   origin: "NATURAL" | "ANTROPICO";
   name: string;
   response: SectionResponse;
@@ -867,6 +869,7 @@ export function CenterSectionWorkflow({
               ) : null}
               {definition.code === "conservacion" ? (
                 <ConservationSectionFields
+                  catalogs={catalogs}
                   canEdit={canEdit}
                   register={register}
                   factorFields={conservationFactorFields}
@@ -2598,6 +2601,7 @@ const CONSERVATION_STATE_OPTIONS = [
 ] as const;
 
 function ConservationSectionFields({
+  catalogs,
   canEdit,
   register,
   factorFields,
@@ -2607,6 +2611,7 @@ function ConservationSectionFields({
   appendDeclaration,
   removeDeclaration,
 }: {
+  catalogs: AdminCatalogs | null;
   canEdit: boolean;
   register: UseFormRegister<SectionFormValues>;
   factorFields: Array<{ id: string }>;
@@ -2616,6 +2621,7 @@ function ConservationSectionFields({
   appendDeclaration: (value: ConservationDeclarationForm) => void;
   removeDeclaration: (index: number) => void;
 }) {
+  const conservationFactors = catalogs?.conservationFactors ?? [];
   return (
     <Stack spacing={webTokens.spacing.section}>
       <Box>
@@ -2692,6 +2698,8 @@ function ConservationSectionFields({
             disabled={!canEdit}
             onClick={() =>
               appendFactor({
+                component: "ATRACTIVO",
+                factorId: "",
                 origin: "NATURAL",
                 name: "",
                 response: EMPTY_RESPONSE,
@@ -2716,7 +2724,21 @@ function ConservationSectionFields({
                   spacing={webTokens.spacing.control}
                   alignItems="flex-start"
                 >
-                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                  <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                    <FormControl fullWidth disabled={!canEdit}>
+                      <InputLabel id={`factor-component-${index}`}>Componente</InputLabel>
+                      <Select
+                        labelId={`factor-component-${index}`}
+                        label="Componente"
+                        defaultValue="ATRACTIVO"
+                        {...register(`conservationFactors.${index}.component`)}
+                      >
+                        <MenuItem value="ATRACTIVO">Atractivo</MenuItem>
+                        <MenuItem value="ENTORNO">Entorno</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                     <FormControl fullWidth disabled={!canEdit}>
                       <InputLabel id={`factor-origin-${index}`}>Origen</InputLabel>
                       <Select
@@ -2731,17 +2753,29 @@ function ConservationSectionFields({
                     </FormControl>
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-                    <TextField
-                      label="Factor"
+                    <FormControl
                       fullWidth
-                      disabled={!canEdit}
-                      {...register(`conservationFactors.${index}.name`, {
-                        required: "Indica el factor",
-                        maxLength: { value: 180, message: "Máximo 180 caracteres" },
-                      })}
-                    />
+                      disabled={!canEdit || conservationFactors.length === 0}
+                    >
+                      <InputLabel id={`factor-catalog-${index}`}>
+                        Factor catalogado
+                      </InputLabel>
+                      <Select
+                        labelId={`factor-catalog-${index}`}
+                        label="Factor catalogado"
+                        defaultValue=""
+                        {...register(`conservationFactors.${index}.factorId`)}
+                      >
+                        <MenuItem value="">Sin seleccionar</MenuItem>
+                        {conservationFactors.map((factor) => (
+                          <MenuItem key={factor.id} value={String(factor.id)}>
+                            {factor.name}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
                   </Grid>
-                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                  <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                     <FormControl fullWidth disabled={!canEdit}>
                       <InputLabel id={`factor-response-${index}`}>Presente</InputLabel>
                       <Select
@@ -2770,6 +2804,16 @@ function ConservationSectionFields({
                         <DeleteOutlineRounded />
                       </IconButton>
                     </Tooltip>
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 4 }}>
+                    <TextField
+                      label="Nombre alternativo (otro)"
+                      fullWidth
+                      disabled={!canEdit}
+                      {...register(`conservationFactors.${index}.name`, {
+                        maxLength: { value: 180, message: "Máximo 180 caracteres" },
+                      })}
+                    />
                   </Grid>
                   <Grid size={{ xs: 12, md: 6 }}>
                     <TextField
@@ -5258,6 +5302,8 @@ function toSectionContent(
               observation: values.conservation.environment.observation.trim(),
             },
             factors: values.conservationFactors.map((factor) => ({
+              component: factor.component,
+              factorId: toNullableInteger(factor.factorId),
               origin: factor.origin,
               name: factor.name.trim(),
               response: factor.response,
@@ -5958,6 +6004,8 @@ function toFormNumber(value: unknown): string {
 function toConservationFactorForm(value: unknown): ConservationFactorForm {
   const factor = isRecord(value) ? value : {};
   return {
+    component: factor.component === "ENTORNO" ? "ENTORNO" : "ATRACTIVO",
+    factorId: toFormNumber(factor.factorId),
     origin: factor.origin === "ANTROPICO" ? "ANTROPICO" : "NATURAL",
     name: typeof factor.name === "string" ? factor.name : "",
     response: isSectionResponse(factor.response) ? factor.response : EMPTY_RESPONSE,
