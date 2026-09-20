@@ -3,12 +3,10 @@
 import AddRounded from "@mui/icons-material/AddRounded";
 import DeleteOutlineRounded from "@mui/icons-material/DeleteOutlineRounded";
 import FactCheckRounded from "@mui/icons-material/FactCheckRounded";
-import SaveRounded from "@mui/icons-material/SaveRounded";
 import {
   Alert,
   Box,
   Button,
-  Chip,
   Divider,
   FormControl,
   Grid,
@@ -23,13 +21,14 @@ import {
   Typography,
 } from "@mui/material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   useFieldArray,
   useForm,
   useWatch,
   type Control,
   type UseFormRegister,
+  type UseFormReturn,
 } from "react-hook-form";
 
 import { ContentState } from "@/components/ui/content-state";
@@ -512,6 +511,133 @@ type SectionProgress =
 
 const EMPTY_RESPONSE: SectionResponse = "SIN_INFORMACION";
 
+type AutosaveStatus = "idle" | "pending" | "saving" | "saved" | "error";
+
+function useSectionAutosave({
+  form,
+  token,
+  code,
+  detail,
+  definition,
+  rawSection,
+  canEdit,
+  onDetailChanged,
+  onError,
+}: {
+  form: UseFormReturn<SectionFormValues>;
+  token: string;
+  code: string | null;
+  detail: AdminCenterDetail | null;
+  definition: SectionDefinition;
+  rawSection: unknown;
+  canEdit: boolean;
+  onDetailChanged: (detail: AdminCenterDetail) => void;
+  onError: (message: string | null) => void;
+}) {
+  const queryClient = useQueryClient();
+  const { control, reset, getValues, handleSubmit, formState } = form;
+  const watchedValues = useWatch({ control });
+  const watchedSignature = useMemo(() => JSON.stringify(watchedValues), [watchedValues]);
+  const [status, setStatus] = useState<AutosaveStatus>("idle");
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const skipNextAutosaveRef = useRef(false);
+
+  const saveSection = useCallback(
+    async (values: SectionFormValues) => {
+      if (!code) {
+        onError("Guarda primero los campos núcleo para obtener el código de la ficha.");
+        return;
+      }
+      const submittedSignature = JSON.stringify(values);
+      setStatus("saving");
+      onError(null);
+      try {
+        const content = toSectionContent(definition.code, values);
+        const saved = await saveAdminCenterSection(
+          token,
+          code,
+          definition.code,
+          content,
+          detail?.version,
+        );
+        const latestSignature = JSON.stringify(getValues());
+        if (latestSignature === submittedSignature) {
+          skipNextAutosaveRef.current = true;
+          reset(
+            createSectionValues(definition, saved.draft?.sections?.[definition.code]),
+          );
+          setStatus("saved");
+        } else {
+          setStatus("pending");
+        }
+        onDetailChanged(saved);
+        await queryClient.invalidateQueries({
+          queryKey: ["admin", "center", code, "sections"],
+        });
+      } catch (cause) {
+        setStatus("error");
+        onError(
+          cause instanceof Error
+            ? cause.message
+            : "No se pudo actualizar la información de esta sección.",
+        );
+      }
+    },
+    [
+      code,
+      definition,
+      detail,
+      getValues,
+      onDetailChanged,
+      onError,
+      queryClient,
+      reset,
+      token,
+    ],
+  );
+
+  useEffect(() => {
+    if (formState.isDirty) return;
+    skipNextAutosaveRef.current = true;
+    reset(createSectionValues(definition, rawSection));
+  }, [definition, formState.isDirty, rawSection, reset]);
+
+  useEffect(() => {
+    if (!code || !canEdit || !formState.isDirty || skipNextAutosaveRef.current) {
+      skipNextAutosaveRef.current = false;
+      return;
+    }
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setStatus("pending");
+    timerRef.current = setTimeout(() => {
+      void handleSubmit(saveSection, () => {
+        setStatus("error");
+        onError("Corrige los campos marcados.");
+      })();
+    }, 2_000);
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [
+    canEdit,
+    code,
+    formState.isDirty,
+    handleSubmit,
+    onError,
+    saveSection,
+    watchedSignature,
+  ]);
+
+  useEffect(
+    () => () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    },
+    [],
+  );
+
+  return { status };
+}
+
 export function CenterSectionWorkflow({
   token,
   code,
@@ -519,7 +645,6 @@ export function CenterSectionWorkflow({
   catalogs,
   canEdit,
   onDetailChanged,
-  onNotice,
   onError,
   onOpenCoreSection,
 }: {
@@ -529,18 +654,15 @@ export function CenterSectionWorkflow({
   catalogs: AdminCatalogs | null;
   canEdit: boolean;
   onDetailChanged: (detail: AdminCenterDetail) => void;
-  onNotice: (message: string) => void;
   onError: (message: string | null) => void;
   onOpenCoreSection: (anchor: string) => void;
 }) {
   const [activeCode, setActiveCode] = useState<AdminCenterSectionCode>(
     centerSectionDefinitions[0].code,
   );
-  const [working, setWorking] = useState(false);
   const [localDrafts, setLocalDrafts] = useState<
     Partial<Record<AdminCenterSectionCode, SectionFormValues>>
   >({});
-  const queryClient = useQueryClient();
   const sectionsQuery = useQuery({
     queryKey: ["admin", "center", code, "sections"],
     queryFn: () => getAdminCenterSections(token, code as string),
@@ -591,7 +713,7 @@ export function CenterSectionWorkflow({
     defaultValues: createSectionValues(definition),
     mode: "onBlur",
   });
-  const { control, register, reset, handleSubmit, getValues, formState } = form;
+  const { control, register, getValues, formState } = form;
   const { fields, append, remove } = useFieldArray({ control, name: "rows" });
   const {
     fields: conservationFactorFields,
@@ -645,49 +767,22 @@ export function CenterSectionWorkflow({
     remove: removeAnnexResponsible,
   } = useFieldArray({ control, name: "annexResponsibles" });
   const activeLocalDraft = localDrafts[definition.code];
-
-  useEffect(() => {
-    reset(activeLocalDraft ?? createSectionValues(definition, sections[definition.code]));
-    onError(null);
-  }, [activeLocalDraft, definition, onError, reset, sections]);
+  useSectionAutosave({
+    form,
+    token,
+    code,
+    detail,
+    definition,
+    rawSection: activeLocalDraft ?? sections[definition.code],
+    canEdit,
+    onDetailChanged,
+    onError,
+  });
 
   function selectSection(nextCode: AdminCenterSectionCode) {
     if (nextCode === activeCode) return;
     setLocalDrafts((current) => ({ ...current, [activeCode]: getValues() }));
     setActiveCode(nextCode);
-  }
-
-  async function saveSection(values: SectionFormValues) {
-    if (!code) {
-      onError("Guarda primero los campos núcleo para obtener el código de la ficha.");
-      return;
-    }
-    setWorking(true);
-    onError(null);
-    try {
-      const content = toSectionContent(definition.code, values);
-      const saved = await saveAdminCenterSection(
-        token,
-        code,
-        definition.code,
-        content,
-        detail?.version,
-      );
-      await queryClient.invalidateQueries({
-        queryKey: ["admin", "center", code, "sections"],
-      });
-      setLocalDrafts((current) => {
-        const next = { ...current };
-        delete next[definition.code];
-        return next;
-      });
-      onDetailChanged(saved);
-      onNotice(`Sección «${definition.title}» guardada.`);
-    } catch (cause) {
-      onError(cause instanceof Error ? cause.message : "No se pudo guardar la sección.");
-    } finally {
-      setWorking(false);
-    }
   }
 
   if (code && sectionsQuery.isLoading) {
@@ -741,8 +836,8 @@ export function CenterSectionWorkflow({
         />
         {!code ? (
           <Alert severity="info">
-            Completa y guarda primero los datos generales. Después podrás capturar las 14
-            secciones y conservar el avance aunque la ficha todavía no se publique.
+            Completa los campos obligatorios de los datos generales. La ficha se creará
+            automáticamente y entonces podrás capturar las 14 secciones.
           </Alert>
         ) : null}
         <Stack spacing={1}>
@@ -774,12 +869,6 @@ export function CenterSectionWorkflow({
               spacing={0.5}
             >
               {centerSectionDefinitions.map((item, index) => {
-                const status = getProgress(
-                  item,
-                  sections[item.code],
-                  coreCompletion[item.code],
-                  serverProgress.get(item.code),
-                );
                 const selected = item.code === activeCode;
                 return (
                   <Button
@@ -802,7 +891,6 @@ export function CenterSectionWorkflow({
                         {index + 1}. {item.title}
                       </Typography>
                     </Box>
-                    <SectionStatusChip status={status} />
                   </Button>
                 );
               })}
@@ -822,19 +910,6 @@ export function CenterSectionWorkflow({
                     {definition.description}
                   </Typography>
                 </Box>
-                <Stack alignItems="flex-end" spacing={0.5}>
-                  <SectionStatusChip
-                    status={getProgress(
-                      definition,
-                      sections[definition.code],
-                      coreCompletion[definition.code],
-                      serverProgress.get(definition.code),
-                    )}
-                  />
-                  {formState.isDirty || activeLocalDraft ? (
-                    <Chip size="small" color="warning" label="Cambios sin guardar" />
-                  ) : null}
-                </Stack>
               </Stack>
               {definition.coreAnchor ? (
                 <Alert
@@ -1131,17 +1206,6 @@ export function CenterSectionWorkflow({
                     </Stack>
                   )}
                 </Stack>
-                <Stack direction="row" justifyContent="flex-end">
-                  <Button
-                    type="button"
-                    variant="contained"
-                    startIcon={<SaveRounded />}
-                    disabled={!code || !canEdit || working}
-                    onClick={() => void handleSubmit(saveSection)()}
-                  >
-                    {working ? "Guardando…" : "Guardar sección"}
-                  </Button>
-                </Stack>
               </Stack>
             </Stack>
           </Grid>
@@ -1219,17 +1283,6 @@ function InstitutionalCodeCard({
       </Stack>
     </FlatSurface>
   );
-}
-
-function SectionStatusChip({ status }: { status: SectionProgress }) {
-  if (status === "COMPLETA")
-    return <Chip size="small" color="success" label="Completa" />;
-  if (status === "NO_APLICA") return <Chip size="small" color="info" label="No aplica" />;
-  if (status === "INCOMPLETA")
-    return <Chip size="small" color="warning" label="Incompleta" />;
-  if (status === "CON_ERRORES")
-    return <Chip size="small" color="error" label="Con errores" />;
-  return <Chip size="small" variant="outlined" label="Sin iniciar" />;
 }
 
 function AccessibilitySectionFields({
@@ -6112,7 +6165,6 @@ export function ContinuousCenterSectionWorkflow({
   catalogs,
   canEdit,
   onDetailChanged,
-  onNotice,
   onError,
 }: {
   token: string;
@@ -6121,7 +6173,6 @@ export function ContinuousCenterSectionWorkflow({
   catalogs: AdminCatalogs | null;
   canEdit: boolean;
   onDetailChanged: (detail: AdminCenterDetail) => void;
-  onNotice: (message: string) => void;
   onError: (message: string | null) => void;
 }) {
   const sectionsQuery = useQuery({
@@ -6217,8 +6268,8 @@ export function ContinuousCenterSectionWorkflow({
           />
           {!code ? (
             <Alert severity="info">
-              Guarda primero los datos generales. Después podrás registrar el detalle de
-              cada sección sin perder el avance.
+              Completa los datos generales obligatorios. La ficha se creará
+              automáticamente y después podrás registrar el detalle de cada sección.
             </Alert>
           ) : null}
           <Stack spacing={1}>
@@ -6256,15 +6307,8 @@ export function ContinuousCenterSectionWorkflow({
           catalogs={catalogs}
           canEdit={canEdit}
           rawSection={sections[definition.code]}
-          status={getProgress(
-            definition,
-            sections[definition.code],
-            coreCompletion[definition.code],
-            serverProgress.get(definition.code),
-          )}
           mediaItems={mediaQuery.data?.items ?? []}
           onDetailChanged={onDetailChanged}
-          onNotice={onNotice}
           onError={onError}
         />
       ))}
@@ -6281,10 +6325,8 @@ function ContinuousSectionCard({
   catalogs,
   canEdit,
   rawSection,
-  status,
   mediaItems,
   onDetailChanged,
-  onNotice,
   onError,
 }: {
   index: number;
@@ -6295,19 +6337,15 @@ function ContinuousSectionCard({
   catalogs: AdminCatalogs | null;
   canEdit: boolean;
   rawSection: unknown;
-  status: SectionProgress;
   mediaItems: AdminMediaItem[];
   onDetailChanged: (detail: AdminCenterDetail) => void;
-  onNotice: (message: string) => void;
   onError: (message: string | null) => void;
 }) {
-  const [working, setWorking] = useState(false);
-  const queryClient = useQueryClient();
   const form = useForm<SectionFormValues>({
     defaultValues: createSectionValues(definition, rawSection),
     mode: "onBlur",
   });
-  const { control, register, reset, handleSubmit, formState } = form;
+  const { control, register, formState } = form;
   const { fields, append, remove } = useFieldArray({ control, name: "rows" });
   const {
     fields: conservationFactorFields,
@@ -6360,38 +6398,17 @@ function ContinuousSectionCard({
     append: appendAnnexResponsible,
     remove: removeAnnexResponsible,
   } = useFieldArray({ control, name: "annexResponsibles" });
-
-  useEffect(() => {
-    reset(createSectionValues(definition, rawSection));
-  }, [definition, rawSection, reset]);
-
-  async function saveSection(values: SectionFormValues) {
-    if (!code) {
-      onError("Guarda primero los campos núcleo para obtener el código de la ficha.");
-      return;
-    }
-    setWorking(true);
-    onError(null);
-    try {
-      const content = toSectionContent(definition.code, values);
-      const saved = await saveAdminCenterSection(
-        token,
-        code,
-        definition.code,
-        content,
-        detail?.version,
-      );
-      await queryClient.invalidateQueries({
-        queryKey: ["admin", "center", code, "sections"],
-      });
-      onDetailChanged(saved);
-      onNotice(`Sección «${definition.title}» guardada.`);
-    } catch (cause) {
-      onError(cause instanceof Error ? cause.message : "No se pudo guardar la sección.");
-    } finally {
-      setWorking(false);
-    }
-  }
+  useSectionAutosave({
+    form,
+    token,
+    code,
+    detail,
+    definition,
+    rawSection,
+    canEdit,
+    onDetailChanged,
+    onError,
+  });
 
   const responseLabelId = `section-response-label-${definition.code}`;
 
@@ -6411,17 +6428,6 @@ function ContinuousSectionCard({
               description={definition.description}
             />
           </Box>
-          <Stack
-            direction="row"
-            alignItems="center"
-            gap={1}
-            sx={{ flexShrink: 0, pt: { sm: 0.5 } }}
-          >
-            <SectionStatusChip status={status} />
-            {formState.isDirty ? (
-              <Chip size="small" color="warning" label="Cambios sin guardar" />
-            ) : null}
-          </Stack>
         </Stack>
         {definition.coreAnchor ? (
           <Alert severity="info">
@@ -6695,17 +6701,6 @@ function ContinuousSectionCard({
                 ))}
               </Stack>
             )}
-          </Stack>
-          <Stack direction="row" justifyContent="flex-end">
-            <Button
-              type="button"
-              variant="contained"
-              startIcon={<SaveRounded />}
-              disabled={!code || !canEdit || working}
-              onClick={() => void handleSubmit(saveSection)()}
-            >
-              {working ? "Guardando…" : "Guardar sección"}
-            </Button>
           </Stack>
         </Stack>
       </Stack>

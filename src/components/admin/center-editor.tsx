@@ -10,7 +10,6 @@ import DirectionsWalkRounded from "@mui/icons-material/DirectionsWalkRounded";
 import MapRounded from "@mui/icons-material/MapRounded";
 import MiscellaneousServicesRounded from "@mui/icons-material/MiscellaneousServicesRounded";
 import PublishRounded from "@mui/icons-material/PublishRounded";
-import SaveRounded from "@mui/icons-material/SaveRounded";
 import {
   Alert,
   Button,
@@ -26,7 +25,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 
 import { FlatSurface } from "@/components/ui/flat-surface";
@@ -158,14 +157,15 @@ export function CenterEditor({
 }) {
   const [detailOverride, setDetailOverride] = useState<AdminCenterDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [working, setWorking] = useState<"save" | "review" | "publish" | null>(null);
+  const [working, setWorking] = useState<"auto" | "review" | "publish" | null>(null);
   const {
     control,
     register,
     reset,
     handleSubmit,
+    getValues,
     setValue,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<FormValues>({
     defaultValues: emptyValues,
   });
@@ -183,14 +183,14 @@ export function CenterEditor({
   const catalogs = catalogsQuery.data ?? null;
   const detail = detailOverride ?? centerQuery.data ?? null;
   const loading = catalogsQuery.isLoading || centerQuery.isLoading;
+  const isNew = code === null;
 
   useEffect(() => {
-    if (centerQuery.data && catalogs) {
+    if (centerQuery.data && catalogs && !isDirty) {
       reset(toFormValues(centerQuery.data.draft ?? centerQuery.data.published, catalogs));
     }
-  }, [centerQuery.data, catalogs, reset]);
+  }, [centerQuery.data, catalogs, isDirty, reset]);
 
-  const isNew = code === null;
   const queryError = catalogsQuery.error ?? centerQuery.error;
   const displayError =
     error ??
@@ -202,7 +202,6 @@ export function CenterEditor({
   const state = detail?.status.code ?? "BORRADOR";
   const canEdit =
     isNew || state === "BORRADOR" || state === "RECHAZADO" || state === "PUBLICADO";
-  const selectedDraft = detail?.draft ?? detail?.published;
   const categoryId = useWatch({ control, name: "categoryId" });
   const typeId = useWatch({ control, name: "typeId" });
   const provinceId = useWatch({ control, name: "provinceId" });
@@ -223,29 +222,92 @@ export function CenterEditor({
   const zoneOptions = catalogs?.zones ?? [];
   const canReview = state === "BORRADOR" || state === "RECHAZADO";
   const canPublish = state === "APROBADO";
+  const watchedValues = useWatch({ control });
+  const watchedSignature = useMemo(() => JSON.stringify(watchedValues), [watchedValues]);
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const skipNextAutoSaveRef = useRef(false);
+  const lastAttemptedSignatureRef = useRef<string | null>(null);
 
-  async function save(values: FormValues, submitForReview = false) {
-    setWorking(submitForReview ? "review" : "save");
-    setError(null);
-    try {
-      const input = toPayload(values, detail?.version);
-      let saved = isNew
-        ? await createAdminCenter(token, input)
-        : await saveAdminCenter(token, code, input);
-      if (submitForReview) saved = await submitAdminCenterReview(token, saved.code);
-      setDetailOverride(saved);
-      queryClient.setQueryData(["admin", "center", saved.code], saved);
-      if (catalogs) reset(toFormValues(saved.draft ?? saved.published, catalogs));
-      onSaved(saved);
-      onNotice(
-        submitForReview ? "La ficha fue enviada a revisión." : "Borrador guardado.",
-      );
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "No se pudo guardar la ficha.");
-    } finally {
-      setWorking(null);
+  const save = useCallback(
+    async (values: FormValues, submitForReview = false, silent = false) => {
+      const submittedSignature = JSON.stringify(values);
+      setWorking(submitForReview ? "review" : "auto");
+      setError(null);
+      try {
+        const input = toPayload(values, detail?.version);
+        let saved = isNew
+          ? await createAdminCenter(token, input)
+          : await saveAdminCenter(token, code, input);
+        if (submitForReview) saved = await submitAdminCenterReview(token, saved.code);
+        const latestSignature = JSON.stringify(getValues());
+        setDetailOverride(saved);
+        queryClient.setQueryData(["admin", "center", saved.code], saved);
+        if (catalogs && latestSignature === submittedSignature) {
+          skipNextAutoSaveRef.current = true;
+          reset(toFormValues(saved.draft ?? saved.published, catalogs));
+        }
+        onSaved(saved);
+        if (!silent) {
+          onNotice(
+            submitForReview
+              ? "La ficha fue enviada a revisión."
+              : "La ficha fue actualizada.",
+          );
+        }
+      } catch (cause) {
+        setError(
+          cause instanceof Error ? cause.message : "No se pudo actualizar la ficha.",
+        );
+      } finally {
+        setWorking(null);
+      }
+    },
+    [
+      catalogs,
+      code,
+      detail,
+      getValues,
+      isNew,
+      onNotice,
+      onSaved,
+      queryClient,
+      reset,
+      token,
+    ],
+  );
+
+  useEffect(() => {
+    if (
+      !canEdit ||
+      !isDirty ||
+      working !== null ||
+      skipNextAutoSaveRef.current ||
+      lastAttemptedSignatureRef.current === watchedSignature
+    ) {
+      if (!isDirty) skipNextAutoSaveRef.current = false;
+      return;
     }
-  }
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(() => {
+      lastAttemptedSignatureRef.current = watchedSignature;
+      void handleSubmit(
+        (values) => save(values, false, true),
+        () => {
+          setError(null);
+        },
+      )();
+    }, 2_000);
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    };
+  }, [canEdit, handleSubmit, isDirty, save, watchedSignature, working]);
+
+  useEffect(
+    () => () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    },
+    [],
+  );
 
   async function publish() {
     if (!detail) return;
@@ -270,11 +332,7 @@ export function CenterEditor({
   }
 
   return (
-    <Stack
-      spacing={webTokens.spacing.control}
-      component="form"
-      onSubmit={handleSubmit((values) => save(values))}
-    >
+    <Stack spacing={webTokens.spacing.control}>
       <PageHeader
         title={isNew ? "Nueva ficha turística" : `Editar ficha ${detail?.code ?? code}`}
         description="Completa la información institucional y adjunta fotos verificadas antes de publicar."
@@ -286,15 +344,6 @@ export function CenterEditor({
           </Button>
         }
         actions={[
-          <Button
-            key="save"
-            type="submit"
-            variant="outlined"
-            startIcon={<SaveRounded />}
-            disabled={!canEdit || working !== null}
-          >
-            {working === "save" ? "Guardando…" : "Guardar borrador"}
-          </Button>,
           canReview && !isNew ? (
             <Button
               key="review"
@@ -350,7 +399,6 @@ export function CenterEditor({
           queryClient.setQueryData(["admin", "center", saved.code], saved);
           onSaved(saved);
         }}
-        onNotice={onNotice}
         onError={setError}
       />
 
@@ -787,11 +835,6 @@ export function CenterEditor({
         canEdit={canEdit || state === "APROBADO"}
         onNotice={onNotice}
       />
-      <Typography variant="caption" color="text.secondary">
-        {selectedDraft
-          ? `Versión de borrador ${detail?.version ?? 0}`
-          : "Nueva ficha sin guardar"}
-      </Typography>
     </Stack>
   );
 }
