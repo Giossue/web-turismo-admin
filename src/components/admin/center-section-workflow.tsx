@@ -1044,13 +1044,6 @@ export function CenterSectionWorkflow({
                     alignItems="center"
                     gap={2}
                   >
-                    <Box>
-                      <Typography variant="subtitle1">Filas repetibles</Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Conserva el resultado, la cantidad y la observación de cada
-                        elemento. Cero y dato desconocido no significan lo mismo.
-                      </Typography>
-                    </Box>
                     <Button
                       type="button"
                       size="small"
@@ -1069,11 +1062,7 @@ export function CenterSectionWorkflow({
                       Añadir fila
                     </Button>
                   </Stack>
-                  {fields.length === 0 ? (
-                    <Typography variant="body2" color="text.secondary">
-                      No hay filas añadidas. Usa «Añadir fila» para registrar un detalle.
-                    </Typography>
-                  ) : (
+                  {fields.length > 0 ? (
                     <Stack spacing={1.5}>
                       {fields.map((field, index) => (
                         <FlatSurface key={field.id} padding="compact" tone="subtle">
@@ -1178,7 +1167,7 @@ export function CenterSectionWorkflow({
                         </FlatSurface>
                       ))}
                     </Stack>
-                  )}
+                  ) : null}
                 </Stack>
               </Stack>
             </Stack>
@@ -6557,13 +6546,6 @@ function ContinuousSectionCard({
               alignItems={{ sm: "center" }}
               gap={2}
             >
-              <Box>
-                <Typography variant="subtitle1">Filas repetibles</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Conserva el resultado, la cantidad y la observación de cada elemento.
-                  Cero y dato desconocido no significan lo mismo.
-                </Typography>
-              </Box>
               <Button
                 type="button"
                 size="small"
@@ -6582,11 +6564,7 @@ function ContinuousSectionCard({
                 Añadir fila
               </Button>
             </Stack>
-            {fields.length === 0 ? (
-              <Typography variant="body2" color="text.secondary">
-                No hay filas añadidas. Usa «Añadir fila» para registrar un detalle.
-              </Typography>
-            ) : (
+            {fields.length > 0 ? (
               <Stack spacing={1.5}>
                 {fields.map((field, rowIndex) => (
                   <FlatSurface key={field.id} padding="compact" tone="subtle">
@@ -6683,7 +6661,7 @@ function ContinuousSectionCard({
                   </FlatSurface>
                 ))}
               </Stack>
-            )}
+            ) : null}
           </Stack>
         </Stack>
       </Stack>

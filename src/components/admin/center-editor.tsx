@@ -594,9 +594,6 @@ export function CenterEditor({
                   register={register}
                   disabled
                 />
-                <Typography variant="caption" color="text.secondary">
-                  Se determina con la valoración de la ficha; no se edita manualmente.
-                </Typography>
               </Grid>
             </Grid>
           </Stack>
