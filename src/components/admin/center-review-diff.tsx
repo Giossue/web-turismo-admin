@@ -202,6 +202,18 @@ const FIELD_LABELS: Record<string, string> = {
   aerial: "Accesos aéreos",
   criteria: "Criterios de accesibilidad",
   signage: "Señalización de aproximación",
+  plant: "Planta turística",
+  facilityDetails: "Facilidades en el entorno",
+  complementaryServices: "Servicios complementarios",
+  plantTypes: "Tipos de planta",
+  typeLabel: "Descripción manual",
+  quantity1: "Cantidad 1",
+  quantity2: "Cantidad 2",
+  quantity3: "Cantidad 3",
+  categoryId: "Categoría",
+  administrator: "Administrador",
+  universalAccessibility: "Accesibilidad universal",
+  specification: "Especificación",
 };
 
 const SECTION_STATUS_LABELS: Record<DiffStatus, string> = {
@@ -496,6 +508,18 @@ function findCatalogOption(
   }
   if (key === "frequencyId") {
     return catalogs.serviceFrequencies.find((item) => item.id === value);
+  }
+  if (key === "typeId" && path.includes("plant")) {
+    return catalogs.plantTypes.find((item) => item.id === value);
+  }
+  if (key === "typeId" && path.includes("complementaryServices")) {
+    return catalogs.complementaryServiceTypes.find((item) => item.id === value);
+  }
+  if (key === "categoryId" && path.includes("facilityDetails")) {
+    return catalogs.facilityCategories.find((item) => item.id === value);
+  }
+  if (key === "typeId" && path.includes("facilityDetails")) {
+    return catalogs.facilities.find((item) => item.id === value);
   }
   if (key === "typeId" && path.includes("transportTypes")) {
     return catalogs.transportTypes.find((item) => item.id === value);

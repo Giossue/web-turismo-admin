@@ -123,6 +123,10 @@ export type CatalogOption = {
   cantonId?: number;
   localityId?: number;
   groupId?: number;
+  group?: string;
+  unit1?: string;
+  unit2?: string;
+  unit3?: string;
 };
 export type AdminCatalogKey = "ACCESSIBILITY" | "ACTIVITY" | "FACILITY";
 export type AdminCatalogs = {
@@ -149,6 +153,9 @@ export type AdminCatalogs = {
   aerialAccessCoverages: CatalogOption[];
   transportTypes: CatalogOption[];
   serviceFrequencies: CatalogOption[];
+  serviceScopes: CatalogOption[];
+  plantTypes: CatalogOption[];
+  complementaryServiceTypes: CatalogOption[];
   activityGroups: CatalogOption[];
   activities: CatalogOption[];
   facilityCategories: CatalogOption[];

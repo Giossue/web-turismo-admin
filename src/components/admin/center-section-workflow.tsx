@@ -253,6 +253,39 @@ type AccessibilitySignageForm = {
   observation: string;
 };
 
+type PlantForm = {
+  scope: "EN_ATRACTIVO" | "EN_POBLADO_CERCANO";
+  typeId: string;
+  typeLabel: string;
+  group: string;
+  quantity1: string;
+  quantity2: string;
+  quantity3: string;
+  observation: string;
+};
+
+type FacilityDetailForm = {
+  categoryId: string;
+  typeId: string;
+  typeLabel: string;
+  quantity: string;
+  latitude: string;
+  longitude: string;
+  administrator: string;
+  universalAccessibility: SectionResponse;
+  conditionId: string;
+  detailOther: string;
+  observation: string;
+};
+
+type ComplementaryServiceForm = {
+  scope: "EN_ATRACTIVO" | "EN_POBLADO_CERCANO";
+  typeId: string;
+  typeLabel: string;
+  specification: string;
+  observation: string;
+};
+
 type ConservationComponentForm = {
   state: string;
   observation: string;
@@ -401,6 +434,9 @@ type SectionFormValues = {
   accessibilityTransportDetails: AccessibilityTransportDetailForm[];
   accessibilityCriteria: AccessibilityCriterionForm[];
   accessibilitySignage: AccessibilitySignageForm;
+  plant: PlantForm[];
+  facilityDetails: FacilityDetailForm[];
+  complementaryServices: ComplementaryServiceForm[];
   climateId: string;
   minTemperature: string;
   maxTemperature: string;
@@ -800,6 +836,14 @@ export function CenterSectionWorkflow({
                 <CharacteristicsSectionFields
                   catalogs={catalogs}
                   canEdit={canEdit}
+                  register={register}
+                />
+              ) : null}
+              {definition.code === "planta" ? (
+                <PlantSectionFields
+                  catalogs={catalogs}
+                  canEdit={canEdit}
+                  control={control}
                   register={register}
                 />
               ) : null}
@@ -2007,6 +2051,499 @@ function AccessibilitySubsectionHeader({
       >
         {actionLabel}
       </Button>
+    </Stack>
+  );
+}
+
+function PlantSectionFields({
+  catalogs,
+  canEdit,
+  control,
+  register,
+}: {
+  catalogs: AdminCatalogs | null;
+  canEdit: boolean;
+  control: Control<SectionFormValues>;
+  register: UseFormRegister<SectionFormValues>;
+}) {
+  const {
+    fields: plantFields,
+    append: appendPlant,
+    remove: removePlant,
+  } = useFieldArray({ control, name: "plant" });
+  const {
+    fields: facilityFields,
+    append: appendFacility,
+    remove: removeFacility,
+  } = useFieldArray({ control, name: "facilityDetails" });
+  const {
+    fields: complementaryFields,
+    append: appendComplementary,
+    remove: removeComplementary,
+  } = useFieldArray({ control, name: "complementaryServices" });
+
+  const scopeOptions = catalogs?.serviceScopes ?? [];
+  const plantOptions = catalogs?.plantTypes ?? [];
+  const facilityCategoryOptions = catalogs?.facilityCategories ?? [];
+  const facilityOptions = catalogs?.facilities ?? [];
+  const conditionOptions = catalogs?.conditionStates ?? [];
+  const complementaryOptions = catalogs?.complementaryServiceTypes ?? [];
+
+  const appendEmptyPlant = () =>
+    appendPlant({
+      scope: "EN_ATRACTIVO",
+      typeId: "",
+      typeLabel: "",
+      group: "",
+      quantity1: "",
+      quantity2: "",
+      quantity3: "",
+      observation: "",
+    });
+  const appendEmptyFacility = () =>
+    appendFacility({
+      categoryId: "",
+      typeId: "",
+      typeLabel: "",
+      quantity: "0",
+      latitude: "",
+      longitude: "",
+      administrator: "",
+      universalAccessibility: EMPTY_RESPONSE,
+      conditionId: "",
+      detailOther: "",
+      observation: "",
+    });
+  const appendEmptyComplementary = () =>
+    appendComplementary({
+      scope: "EN_ATRACTIVO",
+      typeId: "",
+      typeLabel: "",
+      specification: "",
+      observation: "",
+    });
+
+  const scopeSelect = (name: string, label: string) => (
+    <FormControl fullWidth disabled={!canEdit}>
+      <InputLabel id={`${name}-label`}>{label}</InputLabel>
+      <Select
+        labelId={`${name}-label`}
+        label={label}
+        defaultValue="EN_ATRACTIVO"
+        {...register(name as never)}
+      >
+        {scopeOptions.length > 0 ? (
+          scopeOptions.map((option) => (
+            <MenuItem key={option.id} value={option.code ?? option.name}>
+              {option.name}
+            </MenuItem>
+          ))
+        ) : (
+          <>
+            <MenuItem value="EN_ATRACTIVO">En el atractivo</MenuItem>
+            <MenuItem value="EN_POBLADO_CERCANO">En el poblado cercano</MenuItem>
+          </>
+        )}
+      </Select>
+    </FormControl>
+  );
+
+  const conditionSelect = (name: string) => (
+    <FormControl fullWidth disabled={!canEdit}>
+      <InputLabel id={`${name}-label`}>Estado</InputLabel>
+      <Select
+        labelId={`${name}-label`}
+        label="Estado"
+        defaultValue=""
+        {...register(name as never)}
+      >
+        <MenuItem value="">Sin seleccionar</MenuItem>
+        {conditionOptions.map((option) => (
+          <MenuItem key={option.id} value={String(option.id)}>
+            {option.name}
+          </MenuItem>
+        ))}
+      </Select>
+    </FormControl>
+  );
+
+  return (
+    <Stack spacing={webTokens.spacing.control}>
+      <Alert severity="info">
+        Esta sección conserva la planta en el atractivo y en el poblado cercano, las
+        facilidades con ubicación y responsable, y los servicios complementarios. No crea
+        centros turísticos derivados ni reemplaza el módulo independiente de catastro.
+      </Alert>
+
+      <Divider />
+      <AccessibilitySubsectionHeader
+        title="Planta turística"
+        description="Alojamiento, alimentos y bebidas, agencias y guías por ámbito de ubicación."
+        actionLabel="Añadir registro"
+        canEdit={canEdit}
+        onAdd={appendEmptyPlant}
+      />
+      {plantFields.length === 0 ? (
+        <Stack direction="row" justifyContent="space-between" alignItems="center" gap={2}>
+          <Typography variant="body2" color="text.secondary">
+            No hay registros de planta turística.
+          </Typography>
+          <Button
+            type="button"
+            size="small"
+            variant="outlined"
+            disabled={!canEdit}
+            onClick={appendEmptyPlant}
+          >
+            Añadir registro
+          </Button>
+        </Stack>
+      ) : (
+        plantFields.map((field, index) => (
+          <FlatSurface key={field.id} padding="compact" tone="subtle">
+            <Grid container spacing={webTokens.spacing.control}>
+              <Grid size={{ xs: 12, md: 3 }}>
+                {scopeSelect(`plant.${index}.scope`, "Ámbito")}
+              </Grid>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <FormControl fullWidth disabled={!canEdit}>
+                  <InputLabel id={`plant-type-${index}-label`}>
+                    Tipo catalogado
+                  </InputLabel>
+                  <Select
+                    labelId={`plant-type-${index}-label`}
+                    label="Tipo catalogado"
+                    defaultValue=""
+                    {...register(`plant.${index}.typeId`)}
+                  >
+                    <MenuItem value="">Usar descripción manual</MenuItem>
+                    {plantOptions.map((option) => (
+                      <MenuItem key={option.id} value={String(option.id)}>
+                        {option.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <TextField
+                  label="Tipo de planta (si no está catalogado)"
+                  fullWidth
+                  disabled={!canEdit}
+                  {...register(`plant.${index}.typeLabel`)}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 1 }}>
+                <IconButton
+                  type="button"
+                  aria-label={`Eliminar registro de planta ${index + 1}`}
+                  disabled={!canEdit}
+                  onClick={() => removePlant(index)}
+                >
+                  <DeleteOutlineRounded />
+                </IconButton>
+              </Grid>
+              <Grid size={{ xs: 12, md: 3 }}>
+                <TextField
+                  label="Grupo"
+                  fullWidth
+                  disabled={!canEdit}
+                  {...register(`plant.${index}.group`)}
+                />
+              </Grid>
+              {(["quantity1", "quantity2", "quantity3"] as const).map(
+                (key, quantityIndex) => (
+                  <Grid size={{ xs: 12, sm: 4, md: 2 }} key={key}>
+                    <TextField
+                      label={`Cantidad ${quantityIndex + 1}`}
+                      type="number"
+                      fullWidth
+                      disabled={!canEdit}
+                      slotProps={{ htmlInput: { min: 0, step: 1 } }}
+                      {...register(`plant.${index}.${key}`, {
+                        validate: (value) =>
+                          !value.trim() ||
+                          (Number.isInteger(Number(value)) && Number(value) >= 0)
+                            ? true
+                            : "Usa un entero igual o mayor que cero",
+                      })}
+                    />
+                  </Grid>
+                ),
+              )}
+              <Grid size={12}>
+                <TextField
+                  label="Observación de planta turística"
+                  fullWidth
+                  multiline
+                  minRows={2}
+                  disabled={!canEdit}
+                  {...register(`plant.${index}.observation`)}
+                />
+              </Grid>
+            </Grid>
+          </FlatSurface>
+        ))
+      )}
+
+      <Divider />
+      <AccessibilitySubsectionHeader
+        title="Facilidades en el entorno"
+        description="Registra cantidad, coordenadas, administrador, accesibilidad universal y estado."
+        actionLabel="Añadir facilidad"
+        canEdit={canEdit}
+        onAdd={appendEmptyFacility}
+      />
+      {facilityFields.length === 0 ? (
+        <Stack direction="row" justifyContent="space-between" alignItems="center" gap={2}>
+          <Typography variant="body2" color="text.secondary">
+            No hay facilidades detalladas. Las facilidades del núcleo se mantienen
+            separadas.
+          </Typography>
+          <Button
+            type="button"
+            size="small"
+            variant="outlined"
+            disabled={!canEdit}
+            onClick={appendEmptyFacility}
+          >
+            Añadir facilidad
+          </Button>
+        </Stack>
+      ) : (
+        facilityFields.map((field, index) => (
+          <FlatSurface key={field.id} padding="compact" tone="subtle">
+            <Grid container spacing={webTokens.spacing.control}>
+              <Grid size={{ xs: 12, md: 3 }}>
+                <FormControl fullWidth disabled={!canEdit}>
+                  <InputLabel id={`facility-category-${index}-label`}>
+                    Categoría
+                  </InputLabel>
+                  <Select
+                    labelId={`facility-category-${index}-label`}
+                    label="Categoría"
+                    defaultValue=""
+                    {...register(`facilityDetails.${index}.categoryId`)}
+                  >
+                    <MenuItem value="">Sin seleccionar</MenuItem>
+                    {facilityCategoryOptions.map((option) => (
+                      <MenuItem key={option.id} value={String(option.id)}>
+                        {option.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid size={{ xs: 12, md: 3 }}>
+                <FormControl fullWidth disabled={!canEdit}>
+                  <InputLabel id={`facility-type-${index}-label`}>
+                    Tipo catalogado
+                  </InputLabel>
+                  <Select
+                    labelId={`facility-type-${index}-label`}
+                    label="Tipo catalogado"
+                    defaultValue=""
+                    {...register(`facilityDetails.${index}.typeId`)}
+                  >
+                    <MenuItem value="">Usar descripción manual</MenuItem>
+                    {facilityOptions.map((option) => (
+                      <MenuItem key={option.id} value={String(option.id)}>
+                        {option.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <TextField
+                  label="Tipo de facilidad (si no está catalogado)"
+                  fullWidth
+                  disabled={!canEdit}
+                  {...register(`facilityDetails.${index}.typeLabel`)}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 1 }}>
+                <IconButton
+                  type="button"
+                  aria-label={`Eliminar facilidad ${index + 1}`}
+                  disabled={!canEdit}
+                  onClick={() => removeFacility(index)}
+                >
+                  <DeleteOutlineRounded />
+                </IconButton>
+              </Grid>
+              <Grid size={{ xs: 12, sm: 4, md: 2 }}>
+                <TextField
+                  label="Cantidad"
+                  type="number"
+                  fullWidth
+                  disabled={!canEdit}
+                  slotProps={{ htmlInput: { min: 0, step: 1 } }}
+                  {...register(`facilityDetails.${index}.quantity`, {
+                    validate: (value) =>
+                      Number.isInteger(Number(value)) && Number(value) >= 0
+                        ? true
+                        : "Usa un entero igual o mayor que cero",
+                  })}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 4, md: 2 }}>
+                <TextField
+                  label="Latitud"
+                  type="number"
+                  fullWidth
+                  disabled={!canEdit}
+                  {...register(`facilityDetails.${index}.latitude`)}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 4, md: 2 }}>
+                <TextField
+                  label="Longitud"
+                  type="number"
+                  fullWidth
+                  disabled={!canEdit}
+                  {...register(`facilityDetails.${index}.longitude`)}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <TextField
+                  label="Administrador"
+                  fullWidth
+                  disabled={!canEdit}
+                  {...register(`facilityDetails.${index}.administrator`)}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                <FormControl fullWidth disabled={!canEdit}>
+                  <InputLabel id={`facility-accessibility-${index}-label`}>
+                    Accesibilidad universal
+                  </InputLabel>
+                  <Select
+                    labelId={`facility-accessibility-${index}-label`}
+                    label="Accesibilidad universal"
+                    defaultValue={EMPTY_RESPONSE}
+                    {...register(`facilityDetails.${index}.universalAccessibility`)}
+                  >
+                    {SECTION_RESPONSE_OPTIONS.map((option) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                {conditionSelect(`facilityDetails.${index}.conditionId`)}
+              </Grid>
+              <Grid size={{ xs: 12, md: 3 }}>
+                <TextField
+                  label="Detalle de otro tipo"
+                  fullWidth
+                  disabled={!canEdit}
+                  {...register(`facilityDetails.${index}.detailOther`)}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 3 }}>
+                <TextField
+                  label="Observación"
+                  fullWidth
+                  disabled={!canEdit}
+                  {...register(`facilityDetails.${index}.observation`)}
+                />
+              </Grid>
+            </Grid>
+          </FlatSurface>
+        ))
+      )}
+
+      <Divider />
+      <AccessibilitySubsectionHeader
+        title="Servicios complementarios"
+        description="Registra servicios disponibles en el atractivo o en el poblado cercano."
+        actionLabel="Añadir servicio"
+        canEdit={canEdit}
+        onAdd={appendEmptyComplementary}
+      />
+      {complementaryFields.length === 0 ? (
+        <Stack direction="row" justifyContent="space-between" alignItems="center" gap={2}>
+          <Typography variant="body2" color="text.secondary">
+            No hay servicios complementarios registrados.
+          </Typography>
+          <Button
+            type="button"
+            size="small"
+            variant="outlined"
+            disabled={!canEdit}
+            onClick={appendEmptyComplementary}
+          >
+            Añadir servicio
+          </Button>
+        </Stack>
+      ) : (
+        complementaryFields.map((field, index) => (
+          <FlatSurface key={field.id} padding="compact" tone="subtle">
+            <Grid container spacing={webTokens.spacing.control}>
+              <Grid size={{ xs: 12, md: 3 }}>
+                {scopeSelect(`complementaryServices.${index}.scope`, "Ámbito")}
+              </Grid>
+              <Grid size={{ xs: 12, md: 3 }}>
+                <FormControl fullWidth disabled={!canEdit}>
+                  <InputLabel id={`complementary-type-${index}-label`}>
+                    Tipo catalogado
+                  </InputLabel>
+                  <Select
+                    labelId={`complementary-type-${index}-label`}
+                    label="Tipo catalogado"
+                    defaultValue=""
+                    {...register(`complementaryServices.${index}.typeId`)}
+                  >
+                    <MenuItem value="">Usar descripción manual</MenuItem>
+                    {complementaryOptions.map((option) => (
+                      <MenuItem key={option.id} value={String(option.id)}>
+                        {option.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <TextField
+                  label="Tipo de servicio (si no está catalogado)"
+                  fullWidth
+                  disabled={!canEdit}
+                  {...register(`complementaryServices.${index}.typeLabel`)}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 1 }}>
+                <IconButton
+                  type="button"
+                  aria-label={`Eliminar servicio complementario ${index + 1}`}
+                  disabled={!canEdit}
+                  onClick={() => removeComplementary(index)}
+                >
+                  <DeleteOutlineRounded />
+                </IconButton>
+              </Grid>
+              <Grid size={{ xs: 12, md: 5 }}>
+                <TextField
+                  label="Especificación"
+                  fullWidth
+                  disabled={!canEdit}
+                  {...register(`complementaryServices.${index}.specification`)}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 7 }}>
+                <TextField
+                  label="Observación"
+                  fullWidth
+                  disabled={!canEdit}
+                  {...register(`complementaryServices.${index}.observation`)}
+                />
+              </Grid>
+            </Grid>
+          </FlatSurface>
+        ))
+      )}
     </Stack>
   );
 }
@@ -4346,6 +4883,9 @@ function createSectionValues(
     ),
     accessibilityCriteria: readAccessibilityCriteria(record?.accessibilityDetails),
     accessibilitySignage: readAccessibilitySignage(record?.accessibilityDetails),
+    plant: readPlant(record?.plant),
+    facilityDetails: readFacilityDetails(record?.facilitiesDetails),
+    complementaryServices: readComplementaryServices(record?.complementaryServices),
     climateId: readNestedValue(record?.climate, "climateId"),
     minTemperature: readNestedValue(record?.climate, "minTemperature"),
     maxTemperature: readNestedValue(record?.climate, "maxTemperature"),
@@ -4457,6 +4997,40 @@ function toSectionContent(
             minRainfall: toNullableNumber(values.minRainfall),
             maxRainfall: toNullableNumber(values.maxRainfall),
           },
+        }
+      : {}),
+    ...(sectionCode === "planta"
+      ? {
+          plant: values.plant.map((item) => ({
+            scope: item.scope,
+            typeId: toNullableInteger(item.typeId),
+            typeLabel: item.typeLabel.trim(),
+            group: item.group.trim(),
+            quantity1: toNullableInteger(item.quantity1),
+            quantity2: toNullableInteger(item.quantity2),
+            quantity3: toNullableInteger(item.quantity3),
+            observation: item.observation.trim(),
+          })),
+          facilitiesDetails: values.facilityDetails.map((item) => ({
+            categoryId: toNullableInteger(item.categoryId),
+            typeId: toNullableInteger(item.typeId),
+            typeLabel: item.typeLabel.trim(),
+            quantity: toNullableInteger(item.quantity),
+            latitude: toNullableNumber(item.latitude),
+            longitude: toNullableNumber(item.longitude),
+            administrator: item.administrator.trim(),
+            universalAccessibility: item.universalAccessibility,
+            conditionId: toNullableInteger(item.conditionId),
+            detailOther: item.detailOther.trim(),
+            observation: item.observation.trim(),
+          })),
+          complementaryServices: values.complementaryServices.map((item) => ({
+            scope: item.scope,
+            typeId: toNullableInteger(item.typeId),
+            typeLabel: item.typeLabel.trim(),
+            specification: item.specification.trim(),
+            observation: item.observation.trim(),
+          })),
         }
       : {}),
     ...(sectionCode === "conservacion"
@@ -4781,6 +5355,61 @@ function readAccessibilitySignage(value: unknown): AccessibilitySignageForm {
     conditionId: toFormNumber(signage.conditionId),
     observation: typeof signage.observation === "string" ? signage.observation : "",
   };
+}
+
+function readPlant(value: unknown): PlantForm[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => {
+    const record = isRecord(item) ? item : {};
+    return {
+      scope:
+        record.scope === "EN_POBLADO_CERCANO" ? "EN_POBLADO_CERCANO" : "EN_ATRACTIVO",
+      typeId: toFormNumber(record.typeId),
+      typeLabel: typeof record.typeLabel === "string" ? record.typeLabel : "",
+      group: typeof record.group === "string" ? record.group : "",
+      quantity1: toFormNumber(record.quantity1),
+      quantity2: toFormNumber(record.quantity2),
+      quantity3: toFormNumber(record.quantity3),
+      observation: typeof record.observation === "string" ? record.observation : "",
+    };
+  });
+}
+
+function readFacilityDetails(value: unknown): FacilityDetailForm[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => {
+    const record = isRecord(item) ? item : {};
+    return {
+      categoryId: toFormNumber(record.categoryId),
+      typeId: toFormNumber(record.typeId),
+      typeLabel: typeof record.typeLabel === "string" ? record.typeLabel : "",
+      quantity: toFormNumber(record.quantity) || "0",
+      latitude: toFormNumber(record.latitude),
+      longitude: toFormNumber(record.longitude),
+      administrator: typeof record.administrator === "string" ? record.administrator : "",
+      universalAccessibility: isSectionResponse(record.universalAccessibility)
+        ? record.universalAccessibility
+        : EMPTY_RESPONSE,
+      conditionId: toFormNumber(record.conditionId),
+      detailOther: typeof record.detailOther === "string" ? record.detailOther : "",
+      observation: typeof record.observation === "string" ? record.observation : "",
+    };
+  });
+}
+
+function readComplementaryServices(value: unknown): ComplementaryServiceForm[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => {
+    const record = isRecord(item) ? item : {};
+    return {
+      scope:
+        record.scope === "EN_POBLADO_CERCANO" ? "EN_POBLADO_CERCANO" : "EN_ATRACTIVO",
+      typeId: toFormNumber(record.typeId),
+      typeLabel: typeof record.typeLabel === "string" ? record.typeLabel : "",
+      specification: typeof record.specification === "string" ? record.specification : "",
+      observation: typeof record.observation === "string" ? record.observation : "",
+    };
+  });
 }
 
 function readConservationComponent(
