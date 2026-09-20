@@ -199,6 +199,11 @@ type SectionFormValues = {
   observation: string;
   localityId: string;
   distanceKm: string;
+  climateId: string;
+  minTemperature: string;
+  maxTemperature: string;
+  minRainfall: string;
+  maxRainfall: string;
   rows: SectionRowForm[];
 };
 
@@ -484,6 +489,13 @@ export function CenterSectionWorkflow({
               ) : null}
               {definition.code === "accesibilidad" ? (
                 <AccessibilitySectionFields
+                  catalogs={catalogs}
+                  canEdit={canEdit}
+                  register={register}
+                />
+              ) : null}
+              {definition.code === "caracteristicas" ? (
+                <CharacteristicsSectionFields
                   catalogs={catalogs}
                   canEdit={canEdit}
                   register={register}
@@ -796,6 +808,82 @@ function AccessibilitySectionFields({
   );
 }
 
+function CharacteristicsSectionFields({
+  catalogs,
+  canEdit,
+  register,
+}: {
+  catalogs: AdminCatalogs | null;
+  canEdit: boolean;
+  register: UseFormRegister<SectionFormValues>;
+}) {
+  return (
+    <Stack spacing={webTokens.spacing.control}>
+      <Typography variant="subtitle1">Clima y rangos observados</Typography>
+      <Grid container spacing={webTokens.spacing.control}>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <FormControl fullWidth disabled={!canEdit}>
+            <InputLabel id="section-climate-label">Tipo de clima</InputLabel>
+            <Select
+              labelId="section-climate-label"
+              label="Tipo de clima"
+              defaultValue=""
+              {...register("climateId")}
+            >
+              <MenuItem value="">Sin seleccionar</MenuItem>
+              {(catalogs?.climates ?? []).map((climate) => (
+                <MenuItem key={climate.id} value={String(climate.id)}>
+                  {climate.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <TextField
+            label="Temperatura mínima (°C)"
+            type="number"
+            fullWidth
+            disabled={!canEdit}
+            slotProps={{ htmlInput: { step: 0.1 } }}
+            {...register("minTemperature", { valueAsNumber: false })}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <TextField
+            label="Temperatura máxima (°C)"
+            type="number"
+            fullWidth
+            disabled={!canEdit}
+            slotProps={{ htmlInput: { step: 0.1 } }}
+            {...register("maxTemperature", { valueAsNumber: false })}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField
+            label="Precipitación mínima (mm)"
+            type="number"
+            fullWidth
+            disabled={!canEdit}
+            slotProps={{ htmlInput: { min: 0, step: 0.1 } }}
+            {...register("minRainfall", { valueAsNumber: false })}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField
+            label="Precipitación máxima (mm)"
+            type="number"
+            fullWidth
+            disabled={!canEdit}
+            slotProps={{ htmlInput: { min: 0, step: 0.1 } }}
+            {...register("maxRainfall", { valueAsNumber: false })}
+          />
+        </Grid>
+      </Grid>
+    </Stack>
+  );
+}
+
 function getProgress(
   definition: SectionDefinition,
   raw: unknown,
@@ -861,6 +949,11 @@ function createSectionValues(
       typeof record?.distanceKm === "number" || typeof record?.distanceKm === "string"
         ? String(record.distanceKm)
         : "",
+    climateId: readNestedValue(record?.climate, "climateId"),
+    minTemperature: readNestedValue(record?.climate, "minTemperature"),
+    maxTemperature: readNestedValue(record?.climate, "maxTemperature"),
+    minRainfall: readNestedValue(record?.climate, "minRainfall"),
+    maxRainfall: readNestedValue(record?.climate, "maxRainfall"),
     rows,
   };
 }
@@ -879,6 +972,17 @@ function toSectionContent(
           distanceKm: values.distanceKm.trim() ? Number(values.distanceKm) : null,
         }
       : {}),
+    ...(sectionCode === "caracteristicas"
+      ? {
+          climate: {
+            climateId: values.climateId.trim() ? Number(values.climateId) : null,
+            minTemperature: toNullableNumber(values.minTemperature),
+            maxTemperature: toNullableNumber(values.maxTemperature),
+            minRainfall: toNullableNumber(values.minRainfall),
+            maxRainfall: toNullableNumber(values.maxRainfall),
+          },
+        }
+      : {}),
     rows: values.rows.map((row) => ({
       label: row.label.trim(),
       response: row.response,
@@ -886,6 +990,16 @@ function toSectionContent(
       observation: row.observation.trim(),
     })),
   };
+}
+
+function readNestedValue(value: unknown, key: string): string {
+  if (!isRecord(value)) return "";
+  const nested = value[key];
+  return typeof nested === "number" || typeof nested === "string" ? String(nested) : "";
+}
+
+function toNullableNumber(value: string): number | null {
+  return value.trim() === "" ? null : Number(value);
 }
 
 function toRowForm(raw: unknown): SectionRowForm {
