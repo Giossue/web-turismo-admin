@@ -32,6 +32,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { FlatSurface } from "@/components/ui/flat-surface";
 import { ContentState } from "@/components/ui/content-state";
 import { MediaManager } from "@/components/admin/media-manager";
+import { CenterSectionWorkflow } from "@/components/admin/center-section-workflow";
 import { PageHeader } from "@/components/ui/page-header";
 import { SectionHeader } from "@/components/ui/section-header";
 import {
@@ -330,7 +331,26 @@ export function CenterEditor({
         </Alert>
       ) : null}
 
-      <FlatSurface padding="default">
+      <CenterSectionWorkflow
+        token={token}
+        code={detail?.code ?? code}
+        detail={detail}
+        canEdit={canEdit}
+        onDetailChanged={(saved) => {
+          setDetailOverride(saved);
+          queryClient.setQueryData(["admin", "center", saved.code], saved);
+          onSaved(saved);
+        }}
+        onNotice={onNotice}
+        onError={setError}
+        onOpenCoreSection={(anchor) => {
+          document
+            .getElementById(anchor)
+            ?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }}
+      />
+
+      <FlatSurface id="center-section-identificacion" padding="default">
         <Stack spacing={webTokens.spacing.section}>
           <SectionHeader
             icon={<CategoryRounded />}
@@ -466,7 +486,7 @@ export function CenterEditor({
         </Stack>
       </FlatSurface>
 
-      <FlatSurface padding="default">
+      <FlatSurface id="center-section-ubicacion-admin" padding="default">
         <Stack spacing={webTokens.spacing.section}>
           <SectionHeader
             icon={<MapRounded />}
@@ -535,7 +555,7 @@ export function CenterEditor({
                 {...register("address.crossStreet")}
               />
             </Grid>
-            <Grid size={12}>
+            <Grid id="center-section-descripcion" size={12}>
               <TextField
                 label="Descripción"
                 fullWidth
@@ -624,7 +644,7 @@ export function CenterEditor({
         </Stack>
       </FlatSurface>
 
-      <FlatSurface padding="default">
+      <FlatSurface id="center-section-caracteristicas" padding="default">
         <Stack spacing={webTokens.spacing.section}>
           <SectionHeader
             icon={<AccessTimeRounded />}
@@ -709,7 +729,7 @@ export function CenterEditor({
           </Grid>
         </Stack>
       </FlatSurface>
-      <FlatSurface padding="default">
+      <FlatSurface id="center-section-actividades" padding="default">
         <Stack spacing={webTokens.spacing.section}>
           <SectionHeader
             icon={<DirectionsWalkRounded />}
@@ -724,7 +744,7 @@ export function CenterEditor({
           />
         </Stack>
       </FlatSurface>
-      <FlatSurface padding="default">
+      <FlatSurface id="center-section-accesibilidad" padding="default">
         <Stack spacing={webTokens.spacing.section}>
           <SectionHeader
             icon={<AccessibleRounded />}
@@ -739,7 +759,7 @@ export function CenterEditor({
           />
         </Stack>
       </FlatSurface>
-      <FlatSurface padding="default">
+      <FlatSurface id="center-section-planta" padding="default">
         <Stack spacing={webTokens.spacing.section}>
           <SectionHeader
             icon={<MiscellaneousServicesRounded />}
