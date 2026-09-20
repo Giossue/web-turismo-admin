@@ -94,6 +94,8 @@ type FormValues = {
   activityIds: string[];
   accessibilityIds: string[];
   facilityIds: string[];
+  facilityQuantities: Record<string, string>;
+  facilityObservations: Record<string, string>;
 };
 
 const emptyValues: FormValues = {
@@ -136,6 +138,8 @@ const emptyValues: FormValues = {
   activityIds: [],
   accessibilityIds: [],
   facilityIds: [],
+  facilityQuantities: {},
+  facilityObservations: {},
 };
 
 export function CenterEditor({
@@ -202,6 +206,7 @@ export function CenterEditor({
   const typeId = useWatch({ control, name: "typeId" });
   const provinceId = useWatch({ control, name: "provinceId" });
   const cantonId = useWatch({ control, name: "cantonId" });
+  const selectedFacilityIds = useWatch({ control, name: "facilityIds" }) ?? [];
   const typeOptions = (catalogs?.types ?? []).filter(
     (option) => !categoryId || Number(option.categoryId) === Number(categoryId),
   );
@@ -774,6 +779,7 @@ export function CenterEditor({
             selectedName="facilityIds"
             register={register}
             disabled={!canEdit}
+            selectedIds={selectedFacilityIds}
           />
         </Stack>
       </FlatSurface>
@@ -840,11 +846,13 @@ function OptionGrid({
   selectedName,
   register,
   disabled,
+  selectedIds = [],
 }: {
   options: Array<{ id: number; name: string; categoryId?: number; groupId?: number }>;
   selectedName: "activityIds" | "accessibilityIds" | "facilityIds";
   register: ReturnType<typeof useForm<FormValues>>["register"];
   disabled: boolean;
+  selectedIds?: string[];
 }) {
   if (options.length === 0) {
     return <Typography color="text.secondary">No hay opciones configuradas.</Typography>;
@@ -863,6 +871,26 @@ function OptionGrid({
             }
             label={option.name}
           />
+          {selectedName === "facilityIds" && selectedIds.includes(String(option.id)) ? (
+            <Stack spacing={1} sx={{ pl: 4, pr: 1, pb: 1 }}>
+              <TextField
+                label="Cantidad"
+                type="number"
+                size="small"
+                fullWidth
+                disabled={disabled}
+                slotProps={{ htmlInput: { min: 0, step: 1 } }}
+                {...register(`facilityQuantities.${option.id}` as never)}
+              />
+              <TextField
+                label="Observación de la facilidad"
+                size="small"
+                fullWidth
+                disabled={disabled}
+                {...register(`facilityObservations.${option.id}` as never)}
+              />
+            </Stack>
+          ) : null}
         </Grid>
       ))}
     </Grid>
@@ -936,6 +964,18 @@ function toFormValues(
       .filter((item) => item.applies)
       .map((item) => String(item.typeId)),
     facilityIds: (data.facilities ?? []).map((item) => String(item.typeId)),
+    facilityQuantities: Object.fromEntries(
+      (data.facilities ?? []).map((item) => [
+        String(item.typeId),
+        item.quantity == null ? "" : String(item.quantity),
+      ]),
+    ),
+    facilityObservations: Object.fromEntries(
+      (data.facilities ?? []).map((item) => [
+        String(item.typeId),
+        item.observation ?? "",
+      ]),
+    ),
   };
 }
 
@@ -996,7 +1036,8 @@ function toPayload(values: FormValues, version?: number): SaveCenterInput {
     })),
     facilities: values.facilityIds.map((id) => ({
       typeId: Number(id),
-      quantity: 1,
+      quantity: numberOrUndefined(values.facilityQuantities[id]) ?? 1,
+      observation: (values.facilityObservations[id] ?? "").trim() || undefined,
     })),
     version,
   };
