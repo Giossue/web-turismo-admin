@@ -545,7 +545,7 @@ function useSectionAutosave({
   const saveSection = useCallback(
     async (values: SectionFormValues) => {
       if (!code) {
-        onError("Completa primero los datos núcleo para obtener el código de la ficha.");
+        onError("Completa los datos obligatorios de la ficha para continuar.");
         return;
       }
       const submittedSignature = JSON.stringify(values);
@@ -646,7 +646,6 @@ export function CenterSectionWorkflow({
   canEdit,
   onDetailChanged,
   onError,
-  onOpenCoreSection,
 }: {
   token: string;
   code: string | null;
@@ -655,7 +654,6 @@ export function CenterSectionWorkflow({
   canEdit: boolean;
   onDetailChanged: (detail: AdminCenterDetail) => void;
   onError: (message: string | null) => void;
-  onOpenCoreSection: (anchor: string) => void;
 }) {
   const [activeCode, setActiveCode] = useState<AdminCenterSectionCode>(
     centerSectionDefinitions[0].code,
@@ -828,18 +826,12 @@ export function CenterSectionWorkflow({
         <SectionHeader
           icon={<FactCheckRounded />}
           title="Ficha integral por secciones"
-          description="Registra cada apartado de la ficha sin crear centros derivados. El avance queda asociado a la ficha para su revisión."
+          description="Completa cada apartado de la ficha para su revisión."
         />
         <InstitutionalCodeCard
           code={detail?.code ?? null}
           valuation={valuationQuery.data ?? null}
         />
-        {!code ? (
-          <Alert severity="info">
-            Completa los campos obligatorios de los datos generales. La ficha se creará
-            automáticamente y entonces podrás capturar las 14 secciones.
-          </Alert>
-        ) : null}
         <Stack spacing={1}>
           <Stack
             direction="row"
@@ -911,25 +903,6 @@ export function CenterSectionWorkflow({
                   </Typography>
                 </Box>
               </Stack>
-              {definition.coreAnchor ? (
-                <Alert
-                  severity="info"
-                  action={
-                    <Button
-                      type="button"
-                      color="inherit"
-                      size="small"
-                      onClick={() => onOpenCoreSection(definition.coreAnchor as string)}
-                    >
-                      Ir al formulario núcleo
-                    </Button>
-                  }
-                >
-                  Esta sección reutiliza campos normalizados del formulario principal. Sus
-                  respuestas detalladas y observaciones adicionales forman parte de esta
-                  ficha.
-                </Alert>
-              ) : null}
               {definition.code === "accesibilidad" ? (
                 <AccessibilitySectionFields
                   catalogs={catalogs}
@@ -2407,8 +2380,8 @@ function PlantSectionFields({
       {facilityFields.length === 0 ? (
         <Stack direction="row" justifyContent="space-between" alignItems="center" gap={2}>
           <Typography variant="body2" color="text.secondary">
-            No hay facilidades detalladas. Las facilidades del núcleo se mantienen
-            separadas.
+            No hay facilidades detalladas registradas. Añade una para completar este
+            apartado.
           </Typography>
           <Button
             type="button"
@@ -6280,12 +6253,6 @@ export function ContinuousCenterSectionWorkflow({
               code={detail?.code ?? null}
               valuation={valuationQuery.data ?? null}
             />
-            {!code ? (
-              <Alert severity="info">
-                Completa los datos generales obligatorios. La ficha se creará
-                automáticamente y después podrás registrar el detalle de cada sección.
-              </Alert>
-            ) : null}
             <Stack spacing={1}>
               <Stack
                 direction="row"
@@ -6451,12 +6418,6 @@ function ContinuousSectionCard({
             />
           </Box>
         </Stack>
-        {definition.coreAnchor ? (
-          <Alert severity="info">
-            Esta sección reutiliza campos del formulario principal. Sus respuestas
-            detalladas y observaciones forman parte de la misma ficha.
-          </Alert>
-        ) : null}
         {definition.code === "accesibilidad" ? (
           <AccessibilitySectionFields
             catalogs={catalogs}
