@@ -335,6 +335,7 @@ export function CenterEditor({
         token={token}
         code={detail?.code ?? code}
         detail={detail}
+        catalogs={catalogs}
         canEdit={canEdit}
         onDetailChanged={(saved) => {
           setDetailOverride(saved);

@@ -24,7 +24,7 @@ import {
 } from "@mui/material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { useFieldArray, useForm } from "react-hook-form";
+import { useFieldArray, useForm, type UseFormRegister } from "react-hook-form";
 
 import { ContentState } from "@/components/ui/content-state";
 import { FlatSurface } from "@/components/ui/flat-surface";
@@ -34,6 +34,7 @@ import {
   saveAdminCenterSection,
   type AdminCenterDetail,
   type AdminCenterSectionCode,
+  type AdminCatalogs,
 } from "@/lib/admin-api";
 import { webTokens } from "@/theme/tokens";
 
@@ -196,6 +197,8 @@ type SectionRowForm = {
 type SectionFormValues = {
   response: SectionResponse;
   observation: string;
+  localityId: string;
+  distanceKm: string;
   rows: SectionRowForm[];
 };
 
@@ -208,6 +211,7 @@ export function CenterSectionWorkflow({
   token,
   code,
   detail,
+  catalogs,
   canEdit,
   onDetailChanged,
   onNotice,
@@ -217,6 +221,7 @@ export function CenterSectionWorkflow({
   token: string;
   code: string | null;
   detail: AdminCenterDetail | null;
+  catalogs: AdminCatalogs | null;
   canEdit: boolean;
   onDetailChanged: (detail: AdminCenterDetail) => void;
   onNotice: (message: string) => void;
@@ -291,7 +296,7 @@ export function CenterSectionWorkflow({
     setWorking(true);
     onError(null);
     try {
-      const content = toSectionContent(values);
+      const content = toSectionContent(definition.code, values);
       const saved = await saveAdminCenterSection(
         token,
         code,
@@ -476,6 +481,13 @@ export function CenterSectionWorkflow({
                   Esta sección reutiliza campos normalizados del formulario principal. Sus
                   respuestas detalladas y observaciones adicionales se guardan aquí.
                 </Alert>
+              ) : null}
+              {definition.code === "accesibilidad" ? (
+                <AccessibilitySectionFields
+                  catalogs={catalogs}
+                  canEdit={canEdit}
+                  register={register}
+                />
               ) : null}
               <Divider />
               <Stack spacing={webTokens.spacing.control}>
@@ -733,6 +745,57 @@ function SectionStatusChip({ status }: { status: SectionProgress }) {
   return <Chip size="small" variant="outlined" label="Sin iniciar" />;
 }
 
+function AccessibilitySectionFields({
+  catalogs,
+  canEdit,
+  register,
+}: {
+  catalogs: AdminCatalogs | null;
+  canEdit: boolean;
+  register: UseFormRegister<SectionFormValues>;
+}) {
+  return (
+    <Stack spacing={webTokens.spacing.control}>
+      <Typography variant="subtitle1">Referencia territorial y conectividad</Typography>
+      <Grid container spacing={webTokens.spacing.control}>
+        <Grid size={{ xs: 12, sm: 8 }}>
+          <FormControl fullWidth disabled={!canEdit}>
+            <InputLabel id="section-nearby-locality-label">Localidad cercana</InputLabel>
+            <Select
+              labelId="section-nearby-locality-label"
+              label="Localidad cercana"
+              defaultValue=""
+              {...register("localityId")}
+            >
+              <MenuItem value="">Sin seleccionar</MenuItem>
+              {(catalogs?.localities ?? []).map((locality) => (
+                <MenuItem key={locality.id} value={String(locality.id)}>
+                  {locality.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <TextField
+            label="Distancia aproximada (km)"
+            type="number"
+            fullWidth
+            disabled={!canEdit}
+            slotProps={{ htmlInput: { min: 0, step: 0.1 } }}
+            {...register("distanceKm", {
+              validate: (value) =>
+                !value.trim() || (Number.isFinite(Number(value)) && Number(value) >= 0)
+                  ? true
+                  : "Usa una distancia igual o mayor que cero",
+            })}
+          />
+        </Grid>
+      </Grid>
+    </Stack>
+  );
+}
+
 function getProgress(
   definition: SectionDefinition,
   raw: unknown,
@@ -790,15 +853,32 @@ function createSectionValues(
     response:
       record && isSectionResponse(record.response) ? record.response : EMPTY_RESPONSE,
     observation: typeof record?.observation === "string" ? record.observation : "",
+    localityId:
+      typeof record?.localityId === "number" || typeof record?.localityId === "string"
+        ? String(record.localityId)
+        : "",
+    distanceKm:
+      typeof record?.distanceKm === "number" || typeof record?.distanceKm === "string"
+        ? String(record.distanceKm)
+        : "",
     rows,
   };
 }
 
-function toSectionContent(values: SectionFormValues) {
+function toSectionContent(
+  sectionCode: AdminCenterSectionCode,
+  values: SectionFormValues,
+) {
   return {
     schemaVersion: 1,
     response: values.response,
     observation: values.observation.trim(),
+    ...(sectionCode === "accesibilidad"
+      ? {
+          localityId: values.localityId.trim() ? Number(values.localityId) : null,
+          distanceKm: values.distanceKm.trim() ? Number(values.distanceKm) : null,
+        }
+      : {}),
     rows: values.rows.map((row) => ({
       label: row.label.trim(),
       response: row.response,
