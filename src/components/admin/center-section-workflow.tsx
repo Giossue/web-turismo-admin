@@ -27,6 +27,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   useFieldArray,
   useForm,
+  useWatch,
   type Control,
   type UseFormRegister,
 } from "react-hook-form";
@@ -315,7 +316,10 @@ type HygieneEntryKind =
 type HygieneEntryForm = {
   kind: HygieneEntryKind;
   scope: "EN_ATRACTIVO" | "EN_POBLADO_CERCANO" | "";
+  typeId: string;
   name: string;
+  provider: string;
+  secondaryId: string;
   secondary: string;
   response: SectionResponse;
   quantity: string;
@@ -875,7 +879,9 @@ export function CenterSectionWorkflow({
               ) : null}
               {definition.code === "higiene-seguridad" ? (
                 <HygieneSafetySectionFields
+                  catalogs={catalogs}
                   canEdit={canEdit}
+                  control={control}
                   register={register}
                   entryFields={hygieneEntryFields}
                   appendEntry={appendHygieneEntry}
@@ -2924,18 +2930,40 @@ const HYGIENE_ENTRY_OPTIONS: Array<{ value: HygieneEntryKind; label: string }> =
 ];
 
 function HygieneSafetySectionFields({
+  catalogs,
   canEdit,
+  control,
   register,
   entryFields,
   appendEntry,
   removeEntry,
 }: {
+  catalogs: AdminCatalogs | null;
   canEdit: boolean;
+  control: Control<SectionFormValues>;
   register: UseFormRegister<SectionFormValues>;
   entryFields: Array<{ id: string }>;
   appendEntry: (value: HygieneEntryForm) => void;
   removeEntry: (index: number) => void;
 }) {
+  const watchedEntries = useWatch({ control, name: "hygieneEntries" });
+  const typeOptions = (kind: HygieneEntryKind) => {
+    if (!catalogs) return [];
+    switch (kind) {
+      case "BASIC_SERVICE":
+        return catalogs.basicServiceTypes;
+      case "SIGNAGE":
+        return catalogs.signageTypes;
+      case "HEALTH":
+        return catalogs.healthServiceTypes;
+      case "SECURITY":
+        return catalogs.securityServiceTypes;
+      case "COMMUNICATION":
+        return catalogs.communicationTypes;
+      case "THREAT":
+        return catalogs.threatTypes;
+    }
+  };
   return (
     <Stack spacing={webTokens.spacing.section}>
       <Box>
@@ -2970,7 +2998,10 @@ function HygieneSafetySectionFields({
               appendEntry({
                 kind: "BASIC_SERVICE",
                 scope: "EN_ATRACTIVO",
+                typeId: "",
                 name: "",
+                provider: "",
+                secondaryId: "",
                 secondary: "",
                 response: EMPTY_RESPONSE,
                 quantity: "",
@@ -2995,7 +3026,7 @@ function HygieneSafetySectionFields({
                   spacing={webTokens.spacing.control}
                   alignItems="flex-start"
                 >
-                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                  <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                     <FormControl fullWidth disabled={!canEdit}>
                       <InputLabel id={`hygiene-kind-${index}`}>
                         Tipo de registro
@@ -3014,7 +3045,7 @@ function HygieneSafetySectionFields({
                       </Select>
                     </FormControl>
                   </Grid>
-                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                  <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                     <FormControl fullWidth disabled={!canEdit}>
                       <InputLabel id={`hygiene-scope-${index}`}>Ámbito</InputLabel>
                       <Select
@@ -3029,16 +3060,37 @@ function HygieneSafetySectionFields({
                       </Select>
                     </FormControl>
                   </Grid>
-                  <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-                    <TextField
-                      label="Servicio, señal o amenaza"
+                  <Grid size={{ xs: 12, sm: 6, md: 6 }}>
+                    <FormControl
                       fullWidth
-                      disabled={!canEdit}
-                      {...register(`hygieneEntries.${index}.name`, {
-                        required: "Indica el registro",
-                        maxLength: { value: 180, message: "Máximo 180 caracteres" },
-                      })}
-                    />
+                      disabled={
+                        !canEdit ||
+                        typeOptions(
+                          (watchedEntries?.[index]?.kind as HygieneEntryKind) ||
+                            "BASIC_SERVICE",
+                        ).length === 0
+                      }
+                    >
+                      <InputLabel id={`hygiene-type-${index}`}>
+                        Tipo catalogado
+                      </InputLabel>
+                      <Select
+                        labelId={`hygiene-type-${index}`}
+                        label="Tipo catalogado"
+                        defaultValue=""
+                        {...register(`hygieneEntries.${index}.typeId`)}
+                      >
+                        <MenuItem value="">Sin seleccionar</MenuItem>
+                        {typeOptions(
+                          (watchedEntries?.[index]?.kind as HygieneEntryKind) ||
+                            "BASIC_SERVICE",
+                        ).map((option) => (
+                          <MenuItem key={option.id} value={String(option.id)}>
+                            {option.name}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                     <Tooltip title="Eliminar registro">
@@ -3055,7 +3107,27 @@ function HygieneSafetySectionFields({
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <TextField
-                      label="Proveedor, material o detalle"
+                      label="Nombre alternativo (otro)"
+                      fullWidth
+                      disabled={!canEdit}
+                      {...register(`hygieneEntries.${index}.name`, {
+                        maxLength: { value: 180, message: "Máximo 180 caracteres" },
+                      })}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <TextField
+                      label="Proveedor"
+                      fullWidth
+                      disabled={!canEdit}
+                      {...register(`hygieneEntries.${index}.provider`, {
+                        maxLength: { value: 180, message: "Máximo 180 caracteres" },
+                      })}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <TextField
+                      label="Especificación o detalle"
                       fullWidth
                       disabled={!canEdit}
                       {...register(`hygieneEntries.${index}.secondary`, {
@@ -3096,6 +3168,34 @@ function HygieneSafetySectionFields({
                       })}
                     />
                   </Grid>
+                  {((watchedEntries?.[index]?.kind as HygieneEntryKind) ||
+                    "BASIC_SERVICE") === "SIGNAGE" ? (
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                      <FormControl
+                        fullWidth
+                        disabled={
+                          !canEdit || (catalogs?.signageMaterials.length ?? 0) === 0
+                        }
+                      >
+                        <InputLabel id={`hygiene-material-${index}`}>
+                          Material de señalética
+                        </InputLabel>
+                        <Select
+                          labelId={`hygiene-material-${index}`}
+                          label="Material de señalética"
+                          defaultValue=""
+                          {...register(`hygieneEntries.${index}.secondaryId`)}
+                        >
+                          <MenuItem value="">Sin seleccionar</MenuItem>
+                          {(catalogs?.signageMaterials ?? []).map((option) => (
+                            <MenuItem key={option.id} value={String(option.id)}>
+                              {option.name}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                  ) : null}
                   <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                     <FormControl fullWidth disabled={!canEdit}>
                       <InputLabel id={`hygiene-condition-${index}`}>Condición</InputLabel>
@@ -5180,7 +5280,10 @@ function toSectionContent(
             entries: values.hygieneEntries.map((entry) => ({
               kind: entry.kind,
               scope: entry.scope || null,
+              typeId: toNullableInteger(entry.typeId),
               name: entry.name.trim(),
+              provider: entry.provider.trim(),
+              secondaryId: toNullableInteger(entry.secondaryId),
               secondary: entry.secondary.trim(),
               response: entry.response,
               quantity: entry.quantity.trim() === "" ? null : Number(entry.quantity),
@@ -5569,7 +5672,10 @@ function readHygieneEntries(value: unknown): HygieneEntryForm[] {
     return {
       kind,
       scope,
+      typeId: toFormNumber(item.typeId),
       name: typeof item.name === "string" ? item.name : "",
+      provider: typeof item.provider === "string" ? item.provider : "",
+      secondaryId: toFormNumber(item.secondaryId),
       secondary: typeof item.secondary === "string" ? item.secondary : "",
       response: isSectionResponse(item.response) ? item.response : EMPTY_RESPONSE,
       quantity:
