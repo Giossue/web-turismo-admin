@@ -264,6 +264,46 @@ type PromotionMediaForm = {
   observation: string;
 };
 
+type VisitorRegistryForm = {
+  exists: SectionResponse;
+  type: "DIGITAL" | "PAPEL" | "";
+  years: string;
+  reports: SectionResponse;
+  frequency: string;
+  observation: string;
+};
+
+type VisitorSeasonForm = {
+  type: "ALTA" | "BAJA";
+  quantity: string;
+  year: string;
+  months: string;
+  observation: string;
+};
+
+type VisitorOriginForm = {
+  type: "NACIONAL" | "EXTRANJERA";
+  place: string;
+  month: string;
+  year: string;
+  quantity: string;
+  observation: string;
+};
+
+type VisitorInformantForm = {
+  name: string;
+  contact: string;
+  observation: string;
+};
+
+type VisitorInfluxForm = {
+  weekday: string;
+  weekend: string;
+  holidays: string;
+  frequency: "PERMANENTE" | "ESTACIONAL" | "ESPORADICA" | "INEXISTENTE" | "";
+  observation: string;
+};
+
 type SectionFormValues = {
   response: SectionResponse;
   observation: string;
@@ -294,6 +334,11 @@ type SectionFormValues = {
     observation: string;
   };
   promotionMedia: PromotionMediaForm[];
+  visitorRegistry: VisitorRegistryForm;
+  visitorSeasons: VisitorSeasonForm[];
+  visitorOrigins: VisitorOriginForm[];
+  visitorInformants: VisitorInformantForm[];
+  visitorInflux: VisitorInfluxForm;
 };
 
 type SectionProgress =
@@ -390,6 +435,21 @@ export function CenterSectionWorkflow({
     append: appendPromotionMedia,
     remove: removePromotionMedia,
   } = useFieldArray({ control, name: "promotionMedia" });
+  const {
+    fields: visitorSeasonFields,
+    append: appendVisitorSeason,
+    remove: removeVisitorSeason,
+  } = useFieldArray({ control, name: "visitorSeasons" });
+  const {
+    fields: visitorOriginFields,
+    append: appendVisitorOrigin,
+    remove: removeVisitorOrigin,
+  } = useFieldArray({ control, name: "visitorOrigins" });
+  const {
+    fields: visitorInformantFields,
+    append: appendVisitorInformant,
+    remove: removeVisitorInformant,
+  } = useFieldArray({ control, name: "visitorInformants" });
   const activeLocalDraft = localDrafts[definition.code];
 
   useEffect(() => {
@@ -646,6 +706,21 @@ export function CenterSectionWorkflow({
                   mediaFields={promotionMediaFields}
                   appendMedia={appendPromotionMedia}
                   removeMedia={removePromotionMedia}
+                />
+              ) : null}
+              {definition.code === "visitantes" ? (
+                <VisitorsSectionFields
+                  canEdit={canEdit}
+                  register={register}
+                  seasonFields={visitorSeasonFields}
+                  originFields={visitorOriginFields}
+                  informantFields={visitorInformantFields}
+                  appendSeason={appendVisitorSeason}
+                  removeSeason={removeVisitorSeason}
+                  appendOrigin={appendVisitorOrigin}
+                  removeOrigin={removeVisitorOrigin}
+                  appendInformant={appendVisitorInformant}
+                  removeInformant={removeVisitorInformant}
                 />
               ) : null}
               <Divider />
@@ -2005,6 +2080,495 @@ function PromotionSectionFields({
   );
 }
 
+function VisitorsSectionFields({
+  canEdit,
+  register,
+  seasonFields,
+  originFields,
+  informantFields,
+  appendSeason,
+  removeSeason,
+  appendOrigin,
+  removeOrigin,
+  appendInformant,
+  removeInformant,
+}: {
+  canEdit: boolean;
+  register: UseFormRegister<SectionFormValues>;
+  seasonFields: Array<{ id: string }>;
+  originFields: Array<{ id: string }>;
+  informantFields: Array<{ id: string }>;
+  appendSeason: (value: VisitorSeasonForm) => void;
+  removeSeason: (index: number) => void;
+  appendOrigin: (value: VisitorOriginForm) => void;
+  removeOrigin: (index: number) => void;
+  appendInformant: (value: VisitorInformantForm) => void;
+  removeInformant: (index: number) => void;
+}) {
+  return (
+    <Stack spacing={webTokens.spacing.section}>
+      <Box>
+        <Typography variant="subtitle1">Visitantes y afluencia</Typography>
+        <Typography variant="body2" color="text.secondary">
+          Conserva registro, temporadas, procedencias, informantes y afluencia como datos
+          separados; una cantidad cero no se confunde con ausencia de información.
+        </Typography>
+      </Box>
+
+      <FlatSurface padding="compact" tone="subtle">
+        <Stack spacing={webTokens.spacing.control}>
+          <Typography variant="subtitle1">Registro de visitantes</Typography>
+          <Grid container spacing={webTokens.spacing.control}>
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <FormControl fullWidth disabled={!canEdit}>
+                <InputLabel id="visitor-registry-exists">¿Existe registro?</InputLabel>
+                <Select
+                  labelId="visitor-registry-exists"
+                  label="¿Existe registro?"
+                  defaultValue={EMPTY_RESPONSE}
+                  {...register("visitorRegistry.exists")}
+                >
+                  {SECTION_RESPONSE_OPTIONS.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <FormControl fullWidth disabled={!canEdit}>
+                <InputLabel id="visitor-registry-type">Tipo de registro</InputLabel>
+                <Select
+                  labelId="visitor-registry-type"
+                  label="Tipo de registro"
+                  defaultValue=""
+                  {...register("visitorRegistry.type")}
+                >
+                  <MenuItem value="">Sin seleccionar</MenuItem>
+                  <MenuItem value="DIGITAL">Digital</MenuItem>
+                  <MenuItem value="PAPEL">Papel</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <TextField
+                label="Años de registro"
+                type="number"
+                fullWidth
+                disabled={!canEdit}
+                slotProps={{ htmlInput: { min: 0, max: 200, step: 1 } }}
+                {...register("visitorRegistry.years", {
+                  validate: (value) =>
+                    !value.trim() ||
+                    (Number.isInteger(Number(value)) &&
+                      Number(value) >= 0 &&
+                      Number(value) <= 200)
+                      ? true
+                      : "Usa un entero entre 0 y 200",
+                })}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <FormControl fullWidth disabled={!canEdit}>
+                <InputLabel id="visitor-registry-reports">¿Genera reportes?</InputLabel>
+                <Select
+                  labelId="visitor-registry-reports"
+                  label="¿Genera reportes?"
+                  defaultValue={EMPTY_RESPONSE}
+                  {...register("visitorRegistry.reports")}
+                >
+                  {SECTION_RESPONSE_OPTIONS.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 8 }}>
+              <TextField
+                label="Frecuencia de reportes"
+                fullWidth
+                disabled={!canEdit}
+                {...register("visitorRegistry.frequency", {
+                  maxLength: { value: 80, message: "Máximo 80 caracteres" },
+                })}
+              />
+            </Grid>
+            <Grid size={12}>
+              <TextField
+                label="Observación del registro"
+                fullWidth
+                disabled={!canEdit}
+                {...register("visitorRegistry.observation", {
+                  maxLength: { value: 1_000, message: "Máximo 1.000 caracteres" },
+                })}
+              />
+            </Grid>
+          </Grid>
+        </Stack>
+      </FlatSurface>
+
+      <VisitorRepeatableBlock
+        title="Temporadas de visitación"
+        description="Registra temporadas altas o bajas, cantidad, año y meses separados por coma."
+        emptyLabel="No hay temporadas registradas."
+        addLabel="Añadir temporada"
+        canEdit={canEdit}
+        fields={seasonFields}
+        onAdd={() =>
+          appendSeason({
+            type: "ALTA",
+            quantity: "",
+            year: "",
+            months: "",
+            observation: "",
+          })
+        }
+        render={(index, field) => (
+          <FlatSurface key={field.id} padding="compact" tone="subtle">
+            <Grid container spacing={webTokens.spacing.control} alignItems="flex-start">
+              <Grid size={{ xs: 12, sm: 3 }}>
+                <FormControl fullWidth disabled={!canEdit}>
+                  <InputLabel id={`season-type-${index}`}>Temporada</InputLabel>
+                  <Select
+                    labelId={`season-type-${index}`}
+                    label="Temporada"
+                    defaultValue="ALTA"
+                    {...register(`visitorSeasons.${index}.type`)}
+                  >
+                    <MenuItem value="ALTA">Alta</MenuItem>
+                    <MenuItem value="BAJA">Baja</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid size={{ xs: 12, sm: 3 }}>
+                <TextField
+                  label="Cantidad"
+                  type="number"
+                  fullWidth
+                  disabled={!canEdit}
+                  slotProps={{ htmlInput: { min: 0, step: 1 } }}
+                  {...register(`visitorSeasons.${index}.quantity`)}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 2 }}>
+                <TextField
+                  label="Año"
+                  type="number"
+                  fullWidth
+                  disabled={!canEdit}
+                  slotProps={{ htmlInput: { min: 1900, max: 2200, step: 1 } }}
+                  {...register(`visitorSeasons.${index}.year`)}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 3 }}>
+                <TextField
+                  label="Meses (1,2,…)"
+                  fullWidth
+                  disabled={!canEdit}
+                  {...register(`visitorSeasons.${index}.months`)}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 1 }}>
+                <Tooltip title="Eliminar temporada">
+                  <IconButton
+                    type="button"
+                    aria-label={`Eliminar temporada ${index + 1}`}
+                    disabled={!canEdit}
+                    onClick={() => removeSeason(index)}
+                    sx={{ mt: { md: 1 } }}
+                  >
+                    <DeleteOutlineRounded />
+                  </IconButton>
+                </Tooltip>
+              </Grid>
+              <Grid size={12}>
+                <TextField
+                  label="Observación"
+                  fullWidth
+                  disabled={!canEdit}
+                  {...register(`visitorSeasons.${index}.observation`)}
+                />
+              </Grid>
+            </Grid>
+          </FlatSurface>
+        )}
+      />
+
+      <VisitorRepeatableBlock
+        title="Procedencias"
+        description="Para procedencia nacional indica la ciudad; para extranjera, el país."
+        emptyLabel="No hay procedencias registradas."
+        addLabel="Añadir procedencia"
+        canEdit={canEdit}
+        fields={originFields}
+        onAdd={() =>
+          appendOrigin({
+            type: "NACIONAL",
+            place: "",
+            month: "",
+            year: "",
+            quantity: "",
+            observation: "",
+          })
+        }
+        render={(index, field) => (
+          <FlatSurface key={field.id} padding="compact" tone="subtle">
+            <Grid container spacing={webTokens.spacing.control} alignItems="flex-start">
+              <Grid size={{ xs: 12, sm: 3 }}>
+                <FormControl fullWidth disabled={!canEdit}>
+                  <InputLabel id={`origin-type-${index}`}>Procedencia</InputLabel>
+                  <Select
+                    labelId={`origin-type-${index}`}
+                    label="Procedencia"
+                    defaultValue="NACIONAL"
+                    {...register(`visitorOrigins.${index}.type`)}
+                  >
+                    <MenuItem value="NACIONAL">Nacional</MenuItem>
+                    <MenuItem value="EXTRANJERA">Extranjera</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid size={{ xs: 12, sm: 4 }}>
+                <TextField
+                  label="Ciudad o país"
+                  fullWidth
+                  disabled={!canEdit}
+                  {...register(`visitorOrigins.${index}.place`)}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 1.5 }}>
+                <TextField
+                  label="Mes"
+                  type="number"
+                  fullWidth
+                  disabled={!canEdit}
+                  slotProps={{ htmlInput: { min: 1, max: 12, step: 1 } }}
+                  {...register(`visitorOrigins.${index}.month`)}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 1.5 }}>
+                <TextField
+                  label="Año"
+                  type="number"
+                  fullWidth
+                  disabled={!canEdit}
+                  slotProps={{ htmlInput: { min: 1900, max: 2200, step: 1 } }}
+                  {...register(`visitorOrigins.${index}.year`)}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 1.5 }}>
+                <TextField
+                  label="Cantidad"
+                  type="number"
+                  fullWidth
+                  disabled={!canEdit}
+                  slotProps={{ htmlInput: { min: 0, step: 1 } }}
+                  {...register(`visitorOrigins.${index}.quantity`)}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 0.5 }}>
+                <Tooltip title="Eliminar procedencia">
+                  <IconButton
+                    type="button"
+                    aria-label={`Eliminar procedencia ${index + 1}`}
+                    disabled={!canEdit}
+                    onClick={() => removeOrigin(index)}
+                    sx={{ mt: { md: 1 } }}
+                  >
+                    <DeleteOutlineRounded />
+                  </IconButton>
+                </Tooltip>
+              </Grid>
+              <Grid size={12}>
+                <TextField
+                  label="Observación"
+                  fullWidth
+                  disabled={!canEdit}
+                  {...register(`visitorOrigins.${index}.observation`)}
+                />
+              </Grid>
+            </Grid>
+          </FlatSurface>
+        )}
+      />
+
+      <VisitorRepeatableBlock
+        title="Informantes clave"
+        description="Registra la persona que aportó la información y un contacto opcional."
+        emptyLabel="No hay informantes registrados."
+        addLabel="Añadir informante"
+        canEdit={canEdit}
+        fields={informantFields}
+        onAdd={() => appendInformant({ name: "", contact: "", observation: "" })}
+        render={(index, field) => (
+          <FlatSurface key={field.id} padding="compact" tone="subtle">
+            <Grid container spacing={webTokens.spacing.control} alignItems="flex-start">
+              <Grid size={{ xs: 12, md: 4 }}>
+                <TextField
+                  label="Nombre"
+                  fullWidth
+                  disabled={!canEdit}
+                  {...register(`visitorInformants.${index}.name`)}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <TextField
+                  label="Contacto"
+                  fullWidth
+                  disabled={!canEdit}
+                  {...register(`visitorInformants.${index}.contact`)}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 3 }}>
+                <TextField
+                  label="Observación"
+                  fullWidth
+                  disabled={!canEdit}
+                  {...register(`visitorInformants.${index}.observation`)}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 1 }}>
+                <Tooltip title="Eliminar informante">
+                  <IconButton
+                    type="button"
+                    aria-label={`Eliminar informante ${index + 1}`}
+                    disabled={!canEdit}
+                    onClick={() => removeInformant(index)}
+                    sx={{ mt: { md: 1 } }}
+                  >
+                    <DeleteOutlineRounded />
+                  </IconButton>
+                </Tooltip>
+              </Grid>
+            </Grid>
+          </FlatSurface>
+        )}
+      />
+
+      <FlatSurface padding="compact" tone="subtle">
+        <Stack spacing={webTokens.spacing.control}>
+          <Typography variant="subtitle1">Afluencia habitual</Typography>
+          <Grid container spacing={webTokens.spacing.control}>
+            <Grid size={{ xs: 12, sm: 3 }}>
+              <TextField
+                label="Entre semana"
+                type="number"
+                fullWidth
+                disabled={!canEdit}
+                slotProps={{ htmlInput: { min: 0, step: 1 } }}
+                {...register("visitorInflux.weekday")}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 3 }}>
+              <TextField
+                label="Fin de semana"
+                type="number"
+                fullWidth
+                disabled={!canEdit}
+                slotProps={{ htmlInput: { min: 0, step: 1 } }}
+                {...register("visitorInflux.weekend")}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 3 }}>
+              <TextField
+                label="Feriados"
+                type="number"
+                fullWidth
+                disabled={!canEdit}
+                slotProps={{ htmlInput: { min: 0, step: 1 } }}
+                {...register("visitorInflux.holidays")}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 3 }}>
+              <FormControl fullWidth disabled={!canEdit}>
+                <InputLabel id="visitor-influx-frequency">Frecuencia</InputLabel>
+                <Select
+                  labelId="visitor-influx-frequency"
+                  label="Frecuencia"
+                  defaultValue=""
+                  {...register("visitorInflux.frequency")}
+                >
+                  <MenuItem value="">Sin seleccionar</MenuItem>
+                  <MenuItem value="PERMANENTE">Permanente</MenuItem>
+                  <MenuItem value="ESTACIONAL">Estacional</MenuItem>
+                  <MenuItem value="ESPORADICA">Esporádica</MenuItem>
+                  <MenuItem value="INEXISTENTE">Inexistente</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid size={12}>
+              <TextField
+                label="Observación de afluencia"
+                fullWidth
+                disabled={!canEdit}
+                {...register("visitorInflux.observation")}
+              />
+            </Grid>
+          </Grid>
+        </Stack>
+      </FlatSurface>
+    </Stack>
+  );
+}
+
+function VisitorRepeatableBlock({
+  title,
+  description,
+  emptyLabel,
+  addLabel,
+  canEdit,
+  fields,
+  onAdd,
+  render,
+}: {
+  title: string;
+  description: string;
+  emptyLabel: string;
+  addLabel: string;
+  canEdit: boolean;
+  fields: Array<{ id: string }>;
+  onAdd: () => void;
+  render: (index: number, field: { id: string }) => React.ReactNode;
+}) {
+  return (
+    <Stack spacing={webTokens.spacing.control}>
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        justifyContent="space-between"
+        alignItems={{ xs: "flex-start", sm: "center" }}
+        gap={1}
+      >
+        <Box>
+          <Typography variant="subtitle1">{title}</Typography>
+          <Typography variant="body2" color="text.secondary">
+            {description}
+          </Typography>
+        </Box>
+        <Button
+          type="button"
+          size="small"
+          variant="outlined"
+          startIcon={<AddRounded />}
+          disabled={!canEdit}
+          onClick={onAdd}
+        >
+          {addLabel}
+        </Button>
+      </Stack>
+      {fields.length === 0 ? (
+        <Typography variant="body2" color="text.secondary">
+          {emptyLabel}
+        </Typography>
+      ) : (
+        <Stack spacing={1.5}>{fields.map((field, index) => render(index, field))}</Stack>
+      )}
+    </Stack>
+  );
+}
+
 function CharacteristicsSectionFields({
   catalogs,
   canEdit,
@@ -2164,6 +2728,11 @@ function createSectionValues(
     policies: readPolicies(record?.policies),
     promotion: readPromotion(record?.promotion),
     promotionMedia: readPromotionMedia(record?.promotion),
+    visitorRegistry: readVisitorRegistry(record?.visitors),
+    visitorSeasons: readVisitorSeasons(record?.visitors),
+    visitorOrigins: readVisitorOrigins(record?.visitors),
+    visitorInformants: readVisitorInformants(record?.visitors),
+    visitorInflux: readVisitorInflux(record?.visitors),
   };
 }
 
@@ -2280,6 +2849,47 @@ function toSectionContent(
               detailOther: media.detailOther.trim(),
               observation: media.observation.trim(),
             })),
+          },
+        }
+      : {}),
+    ...(sectionCode === "visitantes"
+      ? {
+          visitors: {
+            registry: {
+              exists: values.visitorRegistry.exists,
+              type: values.visitorRegistry.type || null,
+              years: toNullableInteger(values.visitorRegistry.years),
+              reports: values.visitorRegistry.reports,
+              frequency: values.visitorRegistry.frequency.trim(),
+              observation: values.visitorRegistry.observation.trim(),
+            },
+            seasons: values.visitorSeasons.map((season) => ({
+              type: season.type,
+              quantity: toNullableInteger(season.quantity),
+              year: toNullableInteger(season.year),
+              months: parseMonths(season.months),
+              observation: season.observation.trim(),
+            })),
+            origins: values.visitorOrigins.map((origin) => ({
+              type: origin.type,
+              place: origin.place.trim(),
+              month: toNullableInteger(origin.month),
+              year: toNullableInteger(origin.year),
+              quantity: toNullableInteger(origin.quantity),
+              observation: origin.observation.trim(),
+            })),
+            informants: values.visitorInformants.map((informant) => ({
+              name: informant.name.trim(),
+              contact: informant.contact.trim(),
+              observation: informant.observation.trim(),
+            })),
+            influx: {
+              weekday: toNullableInteger(values.visitorInflux.weekday),
+              weekend: toNullableInteger(values.visitorInflux.weekend),
+              holidays: toNullableInteger(values.visitorInflux.holidays),
+              frequency: values.visitorInflux.frequency || null,
+              observation: values.visitorInflux.observation.trim(),
+            },
           },
         }
       : {}),
@@ -2439,6 +3049,88 @@ function readPromotionMedia(value: unknown): PromotionMediaForm[] {
       observation: typeof item.observation === "string" ? item.observation : "",
     };
   });
+}
+
+function readVisitorRegistry(value: unknown): VisitorRegistryForm {
+  const visitors = isRecord(value) && isRecord(value.registry) ? value.registry : {};
+  return {
+    exists: isSectionResponse(visitors.exists) ? visitors.exists : EMPTY_RESPONSE,
+    type: visitors.type === "DIGITAL" || visitors.type === "PAPEL" ? visitors.type : "",
+    years:
+      typeof visitors.years === "number" || typeof visitors.years === "string"
+        ? String(visitors.years)
+        : "",
+    reports: isSectionResponse(visitors.reports) ? visitors.reports : EMPTY_RESPONSE,
+    frequency: typeof visitors.frequency === "string" ? visitors.frequency : "",
+    observation: typeof visitors.observation === "string" ? visitors.observation : "",
+  };
+}
+
+function readVisitorSeasons(value: unknown): VisitorSeasonForm[] {
+  if (!isRecord(value) || !Array.isArray(value.seasons)) return [];
+  return value.seasons.map((season) => {
+    const item = isRecord(season) ? season : {};
+    return {
+      type: item.type === "BAJA" ? "BAJA" : "ALTA",
+      quantity: toFormNumber(item.quantity),
+      year: toFormNumber(item.year),
+      months: Array.isArray(item.months) ? item.months.join(", ") : "",
+      observation: typeof item.observation === "string" ? item.observation : "",
+    };
+  });
+}
+
+function readVisitorOrigins(value: unknown): VisitorOriginForm[] {
+  if (!isRecord(value) || !Array.isArray(value.origins)) return [];
+  return value.origins.map((origin) => {
+    const item = isRecord(origin) ? origin : {};
+    return {
+      type: item.type === "EXTRANJERA" ? "EXTRANJERA" : "NACIONAL",
+      place: typeof item.place === "string" ? item.place : "",
+      month: toFormNumber(item.month),
+      year: toFormNumber(item.year),
+      quantity: toFormNumber(item.quantity),
+      observation: typeof item.observation === "string" ? item.observation : "",
+    };
+  });
+}
+
+function readVisitorInformants(value: unknown): VisitorInformantForm[] {
+  if (!isRecord(value) || !Array.isArray(value.informants)) return [];
+  return value.informants.map((informant) => {
+    const item = isRecord(informant) ? informant : {};
+    return {
+      name: typeof item.name === "string" ? item.name : "",
+      contact: typeof item.contact === "string" ? item.contact : "",
+      observation: typeof item.observation === "string" ? item.observation : "",
+    };
+  });
+}
+
+function readVisitorInflux(value: unknown): VisitorInfluxForm {
+  const visitors = isRecord(value) && isRecord(value.influx) ? value.influx : {};
+  const frequencies = new Set(["PERMANENTE", "ESTACIONAL", "ESPORADICA", "INEXISTENTE"]);
+  return {
+    weekday: toFormNumber(visitors.weekday),
+    weekend: toFormNumber(visitors.weekend),
+    holidays: toFormNumber(visitors.holidays),
+    frequency: frequencies.has(String(visitors.frequency))
+      ? (visitors.frequency as VisitorInfluxForm["frequency"])
+      : "",
+    observation: typeof visitors.observation === "string" ? visitors.observation : "",
+  };
+}
+
+function parseMonths(value: string): number[] {
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map(Number);
+}
+
+function toFormNumber(value: unknown): string {
+  return typeof value === "number" || typeof value === "string" ? String(value) : "";
 }
 
 function toConservationFactorForm(value: unknown): ConservationFactorForm {
