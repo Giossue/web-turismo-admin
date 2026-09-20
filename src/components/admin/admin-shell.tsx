@@ -14,7 +14,6 @@ import LightModeRounded from "@mui/icons-material/LightModeRounded";
 import LogoutRounded from "@mui/icons-material/LogoutRounded";
 import MenuRounded from "@mui/icons-material/MenuRounded";
 import PlaceRounded from "@mui/icons-material/PlaceRounded";
-import RefreshRounded from "@mui/icons-material/RefreshRounded";
 import SettingsRounded from "@mui/icons-material/SettingsRounded";
 import StorefrontRounded from "@mui/icons-material/StorefrontRounded";
 import {
@@ -413,17 +412,6 @@ export function AdminShell() {
             </IconButton>
           </Tooltip>
           <Box sx={{ flexGrow: 1 }} />
-          <Tooltip title="Actualizar datos">
-            <span>
-              <IconButton
-                onClick={refreshCurrent}
-                disabled={loadingSummary || loadingCenters}
-                aria-label="Actualizar datos"
-              >
-                <RefreshRounded />
-              </IconButton>
-            </span>
-          </Tooltip>
           <ColorModeButton />
         </Toolbar>
       </AppBar>

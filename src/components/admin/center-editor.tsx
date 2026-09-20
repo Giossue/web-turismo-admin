@@ -1,19 +1,23 @@
 "use client";
 
 import ArrowBackRounded from "@mui/icons-material/ArrowBackRounded";
+import ArrowForwardRounded from "@mui/icons-material/ArrowForwardRounded";
 import AccessTimeRounded from "@mui/icons-material/AccessTimeRounded";
 import AccessibleRounded from "@mui/icons-material/AccessibleRounded";
 import BusinessRounded from "@mui/icons-material/BusinessRounded";
 import CategoryRounded from "@mui/icons-material/CategoryRounded";
 import CloudUploadRounded from "@mui/icons-material/CloudUploadRounded";
 import DirectionsWalkRounded from "@mui/icons-material/DirectionsWalkRounded";
+import FactCheckRounded from "@mui/icons-material/FactCheckRounded";
 import MapRounded from "@mui/icons-material/MapRounded";
 import MiscellaneousServicesRounded from "@mui/icons-material/MiscellaneousServicesRounded";
 import PublishRounded from "@mui/icons-material/PublishRounded";
 import {
   Alert,
+  Box,
   Button,
   Checkbox,
+  Divider,
   FormControl,
   FormControlLabel,
   Grid,
@@ -21,6 +25,9 @@ import {
   MenuItem,
   Select,
   Stack,
+  Step,
+  StepButton,
+  Stepper,
   TextField,
   Typography,
 } from "@mui/material";
@@ -32,7 +39,10 @@ import { FlatSurface } from "@/components/ui/flat-surface";
 import { ContentState } from "@/components/ui/content-state";
 import { MediaManager } from "@/components/admin/media-manager";
 import { CenterReviewDiff } from "@/components/admin/center-review-diff";
-import { ContinuousCenterSectionWorkflow } from "@/components/admin/center-section-workflow";
+import {
+  centerSectionDefinitions,
+  ContinuousCenterSectionWorkflow,
+} from "@/components/admin/center-section-workflow";
 import { PageHeader } from "@/components/ui/page-header";
 import { SectionHeader } from "@/components/ui/section-header";
 import {
@@ -142,6 +152,24 @@ const emptyValues: FormValues = {
   facilityObservations: {},
 };
 
+const centerWizardSteps = [
+  {
+    key: "core",
+    title: "Datos principales",
+    description: "Identificación, ubicación, administración, ingreso y facilidades.",
+  },
+  ...centerSectionDefinitions.map((section) => ({
+    key: section.code,
+    title: section.title,
+    description: section.description,
+  })),
+  {
+    key: "summary",
+    title: "Resumen",
+    description: "Revisa la ficha completa antes de enviarla a revisión.",
+  },
+] as const;
+
 export function CenterEditor({
   token,
   code,
@@ -158,6 +186,7 @@ export function CenterEditor({
   const [detailOverride, setDetailOverride] = useState<AdminCenterDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [working, setWorking] = useState<"auto" | "review" | "publish" | null>(null);
+  const [activeStep, setActiveStep] = useState(0);
   const {
     control,
     register,
@@ -183,7 +212,8 @@ export function CenterEditor({
   const catalogs = catalogsQuery.data ?? null;
   const detail = detailOverride ?? centerQuery.data ?? null;
   const loading = catalogsQuery.isLoading || centerQuery.isLoading;
-  const isNew = code === null;
+  const effectiveCode = detail?.code ?? code;
+  const isNew = effectiveCode === null;
 
   useEffect(() => {
     if (centerQuery.data && catalogs && !isDirty) {
@@ -227,6 +257,13 @@ export function CenterEditor({
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const skipNextAutoSaveRef = useRef(false);
   const lastAttemptedSignatureRef = useRef<string | null>(null);
+  const summaryStepIndex = centerWizardSteps.length - 1;
+  const isCoreStep = activeStep === 0;
+  const isSectionStep = activeStep > 0 && activeStep < summaryStepIndex;
+  const isSummaryStep = activeStep === summaryStepIndex;
+  const activeSectionCode = isSectionStep
+    ? (centerSectionDefinitions[activeStep - 1]?.code ?? null)
+    : null;
 
   const save = useCallback(
     async (values: FormValues, submitForReview = false, silent = false) => {
@@ -237,7 +274,7 @@ export function CenterEditor({
         const input = toPayload(values, detail?.version);
         let saved = isNew
           ? await createAdminCenter(token, input)
-          : await saveAdminCenter(token, code, input);
+          : await saveAdminCenter(token, effectiveCode as string, input);
         if (submitForReview) saved = await submitAdminCenterReview(token, saved.code);
         const latestSignature = JSON.stringify(getValues());
         setDetailOverride(saved);
@@ -254,18 +291,20 @@ export function CenterEditor({
               : "La ficha fue actualizada.",
           );
         }
+        return true;
       } catch (cause) {
         setError(
           cause instanceof Error ? cause.message : "No se pudo actualizar la ficha.",
         );
+        return false;
       } finally {
         setWorking(null);
       }
     },
     [
       catalogs,
-      code,
       detail,
+      effectiveCode,
       getValues,
       isNew,
       onNotice,
@@ -308,6 +347,31 @@ export function CenterEditor({
     },
     [],
   );
+
+  async function goNext() {
+    if (activeStep >= summaryStepIndex) return;
+    const nextStep = activeStep + 1;
+    if (isCoreStep) {
+      await handleSubmit(
+        async (values) => {
+          const persisted = isDirty || isNew ? await save(values, false, true) : true;
+          if (persisted) setActiveStep(nextStep);
+        },
+        () => setError("Completa los campos obligatorios para continuar."),
+      )();
+      return;
+    }
+    setActiveStep(nextStep);
+  }
+
+  function goPrevious() {
+    setActiveStep((current) => Math.max(0, current - 1));
+  }
+
+  function selectStep(step: number) {
+    if (step > 0 && !effectiveCode) return;
+    setActiveStep(step);
+  }
 
   async function publish() {
     if (!detail) return;
@@ -386,14 +450,22 @@ export function CenterEditor({
         </Alert>
       ) : null}
 
-      <CenterReviewDiff detail={detail} catalogs={catalogs} />
+      <CenterWizardStepper
+        steps={centerWizardSteps}
+        activeStep={activeStep}
+        canNavigate={Boolean(effectiveCode)}
+        onSelect={selectStep}
+      />
 
       <ContinuousCenterSectionWorkflow
         token={token}
-        code={detail?.code ?? code}
+        code={effectiveCode}
         detail={detail}
         catalogs={catalogs}
         canEdit={canEdit}
+        activeSectionCode={activeSectionCode}
+        visible={isSectionStep}
+        showOverview={false}
         onDetailChanged={(saved) => {
           setDetailOverride(saved);
           queryClient.setQueryData(["admin", "center", saved.code], saved);
@@ -402,441 +474,638 @@ export function CenterEditor({
         onError={setError}
       />
 
-      <FlatSurface id="center-section-identificacion" padding="default">
-        <Stack spacing={webTokens.spacing.section}>
-          <SectionHeader
-            icon={<CategoryRounded />}
-            title="Identificación y clasificación"
-            description="Estos campos determinan el código institucional y la ubicación territorial."
-          />
-          <Grid container spacing={webTokens.spacing.control}>
-            <Grid size={{ xs: 12, md: 8 }}>
-              <TextField
-                label="Nombre del atractivo"
-                fullWidth
-                required
-                disabled={!canEdit}
-                error={Boolean(errors.name)}
-                helperText={errors.name?.message}
-                {...register("name", {
-                  required: "El nombre es obligatorio",
-                  maxLength: { value: 180, message: "Máximo 180 caracteres" },
-                })}
-              />
+      <Box sx={{ display: isCoreStep ? "block" : "none" }}>
+        <FlatSurface id="center-section-identificacion" padding="default">
+          <Stack spacing={webTokens.spacing.section}>
+            <SectionHeader
+              icon={<CategoryRounded />}
+              title="Identificación y clasificación"
+              description="Estos campos determinan el código institucional y la ubicación territorial."
+            />
+            <Grid container spacing={webTokens.spacing.control}>
+              <Grid size={{ xs: 12, md: 8 }}>
+                <TextField
+                  label="Nombre del atractivo"
+                  fullWidth
+                  required
+                  disabled={!canEdit}
+                  error={Boolean(errors.name)}
+                  helperText={errors.name?.message}
+                  {...register("name", {
+                    required: "El nombre es obligatorio",
+                    maxLength: { value: 180, message: "Máximo 180 caracteres" },
+                  })}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <CatalogSelect
+                  label="Categoría"
+                  name="categoryId"
+                  options={catalogs?.categories ?? []}
+                  register={register}
+                  disabled={!canEdit}
+                  required
+                  onValueChange={() => {
+                    setValue("typeId", "");
+                    setValue("subtypeId", "");
+                  }}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <CatalogSelect
+                  label="Tipo"
+                  name="typeId"
+                  options={typeOptions}
+                  register={register}
+                  disabled={!canEdit || !categoryId}
+                  required
+                  onValueChange={() => setValue("subtypeId", "")}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <CatalogSelect
+                  label="Subtipo"
+                  name="subtypeId"
+                  options={subtypeOptions}
+                  register={register}
+                  disabled={!canEdit || !typeId}
+                  required
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <CatalogSelect
+                  label="Zona turística"
+                  name="touristZoneId"
+                  options={zoneOptions}
+                  register={register}
+                  disabled={!canEdit}
+                  required
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <CatalogSelect
+                  label="Provincia"
+                  name="provinceId"
+                  options={catalogs?.provinces ?? []}
+                  register={register}
+                  disabled={!canEdit}
+                  required
+                  onValueChange={() => {
+                    setValue("cantonId", "");
+                    setValue("parishId", "");
+                  }}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <CatalogSelect
+                  label="Cantón"
+                  name="cantonId"
+                  options={cantonOptions}
+                  register={register}
+                  disabled={!canEdit || !provinceId}
+                  required
+                  onValueChange={() => setValue("parishId", "")}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <CatalogSelect
+                  label="Parroquia"
+                  name="parishId"
+                  options={parishOptions}
+                  register={register}
+                  disabled={!canEdit || !cantonId}
+                  required
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <CatalogSelect
+                  label="Línea de producto"
+                  name="productLineId"
+                  options={catalogs?.lines ?? []}
+                  register={register}
+                  disabled={!canEdit}
+                  required
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <CatalogSelect
+                  label="Escenario"
+                  name="scenarioId"
+                  options={catalogs?.scenarios ?? []}
+                  register={register}
+                  disabled={!canEdit}
+                  required
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <CatalogSelect
+                  label="Jerarquía calculada"
+                  name="hierarchyId"
+                  options={catalogs?.hierarchies ?? []}
+                  register={register}
+                  disabled
+                />
+                <Typography variant="caption" color="text.secondary">
+                  Se determina con la valoración de la ficha; no se edita manualmente.
+                </Typography>
+              </Grid>
             </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <CatalogSelect
-                label="Categoría"
-                name="categoryId"
-                options={catalogs?.categories ?? []}
-                register={register}
-                disabled={!canEdit}
-                required
-                onValueChange={() => {
-                  setValue("typeId", "");
-                  setValue("subtypeId", "");
-                }}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <CatalogSelect
-                label="Tipo"
-                name="typeId"
-                options={typeOptions}
-                register={register}
-                disabled={!canEdit || !categoryId}
-                required
-                onValueChange={() => setValue("subtypeId", "")}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <CatalogSelect
-                label="Subtipo"
-                name="subtypeId"
-                options={subtypeOptions}
-                register={register}
-                disabled={!canEdit || !typeId}
-                required
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <CatalogSelect
-                label="Zona turística"
-                name="touristZoneId"
-                options={zoneOptions}
-                register={register}
-                disabled={!canEdit}
-                required
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <CatalogSelect
-                label="Provincia"
-                name="provinceId"
-                options={catalogs?.provinces ?? []}
-                register={register}
-                disabled={!canEdit}
-                required
-                onValueChange={() => {
-                  setValue("cantonId", "");
-                  setValue("parishId", "");
-                }}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <CatalogSelect
-                label="Cantón"
-                name="cantonId"
-                options={cantonOptions}
-                register={register}
-                disabled={!canEdit || !provinceId}
-                required
-                onValueChange={() => setValue("parishId", "")}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <CatalogSelect
-                label="Parroquia"
-                name="parishId"
-                options={parishOptions}
-                register={register}
-                disabled={!canEdit || !cantonId}
-                required
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <CatalogSelect
-                label="Línea de producto"
-                name="productLineId"
-                options={catalogs?.lines ?? []}
-                register={register}
-                disabled={!canEdit}
-                required
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <CatalogSelect
-                label="Escenario"
-                name="scenarioId"
-                options={catalogs?.scenarios ?? []}
-                register={register}
-                disabled={!canEdit}
-                required
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <CatalogSelect
-                label="Jerarquía calculada"
-                name="hierarchyId"
-                options={catalogs?.hierarchies ?? []}
-                register={register}
-                disabled
-              />
-              <Typography variant="caption" color="text.secondary">
-                Se determina con la valoración de la ficha; no se edita manualmente.
-              </Typography>
-            </Grid>
-          </Grid>
-        </Stack>
-      </FlatSurface>
+          </Stack>
+        </FlatSurface>
 
-      <FlatSurface id="center-section-ubicacion-admin" padding="default">
-        <Stack spacing={webTokens.spacing.section}>
-          <SectionHeader
-            icon={<MapRounded />}
-            title="Ubicación y descripción"
-            description="La API sincroniza las coordenadas con PostGIS."
-          />
-          <Grid container spacing={webTokens.spacing.control}>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                label="Latitud"
-                type="number"
-                fullWidth
-                required
-                disabled={!canEdit}
-                {...register("latitude", { required: "La latitud es obligatoria" })}
-              />
+        <FlatSurface id="center-section-ubicacion-admin" padding="default">
+          <Stack spacing={webTokens.spacing.section}>
+            <SectionHeader
+              icon={<MapRounded />}
+              title="Ubicación y descripción"
+              description="La API sincroniza las coordenadas con PostGIS."
+            />
+            <Grid container spacing={webTokens.spacing.control}>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  label="Latitud"
+                  type="number"
+                  fullWidth
+                  required
+                  disabled={!canEdit}
+                  {...register("latitude", { required: "La latitud es obligatoria" })}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  label="Longitud"
+                  type="number"
+                  fullWidth
+                  required
+                  disabled={!canEdit}
+                  {...register("longitude", { required: "La longitud es obligatoria" })}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 4 }}>
+                <TextField
+                  label="Altitud (msnm)"
+                  type="number"
+                  fullWidth
+                  disabled={!canEdit}
+                  {...register("altitudeMeters")}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 8 }}>
+                <TextField
+                  label="Barrio, sector o comuna"
+                  fullWidth
+                  disabled={!canEdit}
+                  {...register("address.barrio")}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  label="Calle principal"
+                  fullWidth
+                  disabled={!canEdit}
+                  {...register("address.street")}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 3 }}>
+                <TextField
+                  label="Número"
+                  fullWidth
+                  disabled={!canEdit}
+                  {...register("address.number")}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 3 }}>
+                <TextField
+                  label="Calle transversal"
+                  fullWidth
+                  disabled={!canEdit}
+                  {...register("address.crossStreet")}
+                />
+              </Grid>
+              <Grid id="center-section-descripcion" size={12}>
+                <TextField
+                  label="Descripción"
+                  fullWidth
+                  multiline
+                  minRows={4}
+                  disabled={!canEdit}
+                  {...register("description", {
+                    maxLength: { value: 500, message: "Máximo 500 caracteres" },
+                  })}
+                  error={Boolean(errors.description)}
+                  helperText={errors.description?.message}
+                />
+              </Grid>
             </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                label="Longitud"
-                type="number"
-                fullWidth
-                required
-                disabled={!canEdit}
-                {...register("longitude", { required: "La longitud es obligatoria" })}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 4 }}>
-              <TextField
-                label="Altitud (msnm)"
-                type="number"
-                fullWidth
-                disabled={!canEdit}
-                {...register("altitudeMeters")}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 8 }}>
-              <TextField
-                label="Barrio, sector o comuna"
-                fullWidth
-                disabled={!canEdit}
-                {...register("address.barrio")}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                label="Calle principal"
-                fullWidth
-                disabled={!canEdit}
-                {...register("address.street")}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 3 }}>
-              <TextField
-                label="Número"
-                fullWidth
-                disabled={!canEdit}
-                {...register("address.number")}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 3 }}>
-              <TextField
-                label="Calle transversal"
-                fullWidth
-                disabled={!canEdit}
-                {...register("address.crossStreet")}
-              />
-            </Grid>
-            <Grid id="center-section-descripcion" size={12}>
-              <TextField
-                label="Descripción"
-                fullWidth
-                multiline
-                minRows={4}
-                disabled={!canEdit}
-                {...register("description", {
-                  maxLength: { value: 500, message: "Máximo 500 caracteres" },
-                })}
-                error={Boolean(errors.description)}
-                helperText={errors.description?.message}
-              />
-            </Grid>
-          </Grid>
-        </Stack>
-      </FlatSurface>
+          </Stack>
+        </FlatSurface>
 
-      <FlatSurface padding="default">
-        <Stack spacing={webTokens.spacing.section}>
-          <SectionHeader
-            icon={<BusinessRounded />}
-            title="Administración"
-            description="Contacto institucional responsable del atractivo."
-          />
-          <Grid container spacing={webTokens.spacing.control}>
-            <Grid size={{ xs: 12, sm: 4 }}>
-              <TextField
-                label="Tipo de administrador"
-                fullWidth
-                disabled={!canEdit}
-                {...register("administration.type")}
-              />
+        <FlatSurface padding="default">
+          <Stack spacing={webTokens.spacing.section}>
+            <SectionHeader
+              icon={<BusinessRounded />}
+              title="Administración"
+              description="Contacto institucional responsable del atractivo."
+            />
+            <Grid container spacing={webTokens.spacing.control}>
+              <Grid size={{ xs: 12, sm: 4 }}>
+                <TextField
+                  label="Tipo de administrador"
+                  fullWidth
+                  disabled={!canEdit}
+                  {...register("administration.type")}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 8 }}>
+                <TextField
+                  label="Institución"
+                  fullWidth
+                  disabled={!canEdit}
+                  {...register("administration.institution")}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  label="Nombre del responsable"
+                  fullWidth
+                  disabled={!canEdit}
+                  {...register("administration.name")}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  label="Cargo"
+                  fullWidth
+                  disabled={!canEdit}
+                  {...register("administration.position")}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  label="Teléfono"
+                  fullWidth
+                  disabled={!canEdit}
+                  {...register("administration.phone")}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  label="Correo"
+                  type="email"
+                  fullWidth
+                  disabled={!canEdit}
+                  {...register("administration.email")}
+                />
+              </Grid>
+              <Grid size={12}>
+                <TextField
+                  label="Observación"
+                  fullWidth
+                  multiline
+                  minRows={2}
+                  disabled={!canEdit}
+                  {...register("administration.observation")}
+                />
+              </Grid>
             </Grid>
-            <Grid size={{ xs: 12, sm: 8 }}>
-              <TextField
-                label="Institución"
-                fullWidth
-                disabled={!canEdit}
-                {...register("administration.institution")}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                label="Nombre del responsable"
-                fullWidth
-                disabled={!canEdit}
-                {...register("administration.name")}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                label="Cargo"
-                fullWidth
-                disabled={!canEdit}
-                {...register("administration.position")}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                label="Teléfono"
-                fullWidth
-                disabled={!canEdit}
-                {...register("administration.phone")}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                label="Correo"
-                type="email"
-                fullWidth
-                disabled={!canEdit}
-                {...register("administration.email")}
-              />
-            </Grid>
-            <Grid size={12}>
-              <TextField
-                label="Observación"
-                fullWidth
-                multiline
-                minRows={2}
-                disabled={!canEdit}
-                {...register("administration.observation")}
-              />
-            </Grid>
-          </Grid>
-        </Stack>
-      </FlatSurface>
+          </Stack>
+        </FlatSurface>
 
-      <FlatSurface id="center-section-caracteristicas" padding="default">
-        <Stack spacing={webTokens.spacing.section}>
-          <SectionHeader
-            icon={<AccessTimeRounded />}
-            title="Ingreso y atención"
-            description="Información que se mostrará en la ficha pública cuando se publique."
-          />
-          <Grid container spacing={webTokens.spacing.control}>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <CatalogSelect
-                label="Tipo de ingreso"
-                name="admission.incomeTypeId"
-                options={catalogs?.incomeTypes ?? []}
-                register={register}
-                disabled={!canEdit}
-              />
+        <FlatSurface id="center-section-caracteristicas" padding="default">
+          <Stack spacing={webTokens.spacing.section}>
+            <SectionHeader
+              icon={<AccessTimeRounded />}
+              title="Ingreso y atención"
+              description="Información que se mostrará en la ficha pública cuando se publique."
+            />
+            <Grid container spacing={webTokens.spacing.control}>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <CatalogSelect
+                  label="Tipo de ingreso"
+                  name="admission.incomeTypeId"
+                  options={catalogs?.incomeTypes ?? []}
+                  register={register}
+                  disabled={!canEdit}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <CatalogSelect
+                  label="Modalidad de atención"
+                  name="admission.attentionModeId"
+                  options={catalogs?.attentionModes ?? []}
+                  register={register}
+                  disabled={!canEdit}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  label="Hora de ingreso"
+                  type="time"
+                  fullWidth
+                  disabled={!canEdit}
+                  InputLabelProps={{ shrink: true }}
+                  {...register("admission.opensAt")}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  label="Hora de salida"
+                  type="time"
+                  fullWidth
+                  disabled={!canEdit}
+                  InputLabelProps={{ shrink: true }}
+                  {...register("admission.closesAt")}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  label="Precio desde"
+                  type="number"
+                  fullWidth
+                  disabled={!canEdit}
+                  {...register("admission.priceFrom")}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  label="Precio hasta"
+                  type="number"
+                  fullWidth
+                  disabled={!canEdit}
+                  {...register("admission.priceTo")}
+                />
+              </Grid>
+              <Grid size={12}>
+                <TextField
+                  label="Otra modalidad o detalle"
+                  fullWidth
+                  disabled={!canEdit}
+                  {...register("admission.otherAttention")}
+                />
+              </Grid>
+              <Grid size={12}>
+                <TextField
+                  label="Observación"
+                  fullWidth
+                  multiline
+                  minRows={2}
+                  disabled={!canEdit}
+                  {...register("admission.observation")}
+                />
+              </Grid>
             </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <CatalogSelect
-                label="Modalidad de atención"
-                name="admission.attentionModeId"
-                options={catalogs?.attentionModes ?? []}
-                register={register}
-                disabled={!canEdit}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                label="Hora de ingreso"
-                type="time"
-                fullWidth
-                disabled={!canEdit}
-                InputLabelProps={{ shrink: true }}
-                {...register("admission.opensAt")}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                label="Hora de salida"
-                type="time"
-                fullWidth
-                disabled={!canEdit}
-                InputLabelProps={{ shrink: true }}
-                {...register("admission.closesAt")}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                label="Precio desde"
-                type="number"
-                fullWidth
-                disabled={!canEdit}
-                {...register("admission.priceFrom")}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                label="Precio hasta"
-                type="number"
-                fullWidth
-                disabled={!canEdit}
-                {...register("admission.priceTo")}
-              />
-            </Grid>
-            <Grid size={12}>
-              <TextField
-                label="Otra modalidad o detalle"
-                fullWidth
-                disabled={!canEdit}
-                {...register("admission.otherAttention")}
-              />
-            </Grid>
-            <Grid size={12}>
-              <TextField
-                label="Observación"
-                fullWidth
-                multiline
-                minRows={2}
-                disabled={!canEdit}
-                {...register("admission.observation")}
-              />
-            </Grid>
-          </Grid>
-        </Stack>
-      </FlatSurface>
-      <FlatSurface id="center-section-actividades" padding="default">
-        <Stack spacing={webTokens.spacing.section}>
-          <SectionHeader
-            icon={<DirectionsWalkRounded />}
-            title="Actividades"
-            description="Selecciona únicamente las actividades que se practican en el atractivo."
-          />
-          <OptionGrid
-            options={catalogs?.activities ?? []}
-            selectedName="activityIds"
-            register={register}
-            disabled={!canEdit}
-          />
-        </Stack>
-      </FlatSurface>
-      <FlatSurface id="center-section-accesibilidad" padding="default">
-        <Stack spacing={webTokens.spacing.section}>
-          <SectionHeader
-            icon={<AccessibleRounded />}
-            title="Accesibilidad"
-            description="Registra las condiciones verificadas para orientar a turistas."
-          />
-          <OptionGrid
-            options={catalogs?.accessibilityTypes ?? []}
-            selectedName="accessibilityIds"
-            register={register}
-            disabled={!canEdit}
-          />
-        </Stack>
-      </FlatSurface>
-      <FlatSurface id="center-section-planta" padding="default">
-        <Stack spacing={webTokens.spacing.section}>
-          <SectionHeader
-            icon={<MiscellaneousServicesRounded />}
-            title="Facilidades"
-            description="Indica los servicios y elementos disponibles en el entorno."
-          />
-          <OptionGrid
-            options={catalogs?.facilities ?? []}
-            selectedName="facilityIds"
-            register={register}
-            disabled={!canEdit}
-            selectedIds={selectedFacilityIds}
-          />
-        </Stack>
-      </FlatSurface>
-      <MediaManager
-        token={token}
-        code={detail?.code ?? code}
-        canEdit={canEdit || state === "APROBADO"}
-        onNotice={onNotice}
+          </Stack>
+        </FlatSurface>
+        <FlatSurface id="center-section-actividades" padding="default">
+          <Stack spacing={webTokens.spacing.section}>
+            <SectionHeader
+              icon={<DirectionsWalkRounded />}
+              title="Actividades"
+              description="Selecciona únicamente las actividades que se practican en el atractivo."
+            />
+            <OptionGrid
+              options={catalogs?.activities ?? []}
+              selectedName="activityIds"
+              register={register}
+              disabled={!canEdit}
+            />
+          </Stack>
+        </FlatSurface>
+        <FlatSurface id="center-section-accesibilidad" padding="default">
+          <Stack spacing={webTokens.spacing.section}>
+            <SectionHeader
+              icon={<AccessibleRounded />}
+              title="Accesibilidad"
+              description="Registra las condiciones verificadas para orientar a turistas."
+            />
+            <OptionGrid
+              options={catalogs?.accessibilityTypes ?? []}
+              selectedName="accessibilityIds"
+              register={register}
+              disabled={!canEdit}
+            />
+          </Stack>
+        </FlatSurface>
+        <FlatSurface id="center-section-planta" padding="default">
+          <Stack spacing={webTokens.spacing.section}>
+            <SectionHeader
+              icon={<MiscellaneousServicesRounded />}
+              title="Facilidades"
+              description="Indica los servicios y elementos disponibles en el entorno."
+            />
+            <OptionGrid
+              options={catalogs?.facilities ?? []}
+              selectedName="facilityIds"
+              register={register}
+              disabled={!canEdit}
+              selectedIds={selectedFacilityIds}
+            />
+          </Stack>
+        </FlatSurface>
+        <MediaManager
+          token={token}
+          code={effectiveCode}
+          canEdit={canEdit || state === "APROBADO"}
+          onNotice={onNotice}
+        />
+      </Box>
+
+      {isSummaryStep ? <CenterSummaryStep detail={detail} catalogs={catalogs} /> : null}
+
+      <CenterWizardNavigation
+        activeStep={activeStep}
+        lastStep={summaryStepIndex}
+        working={working !== null}
+        onPrevious={goPrevious}
+        onNext={() => void goNext()}
       />
     </Stack>
   );
+}
+
+function CenterWizardStepper({
+  steps,
+  activeStep,
+  canNavigate,
+  onSelect,
+}: {
+  steps: ReadonlyArray<{ title: string; description: string }>;
+  activeStep: number;
+  canNavigate: boolean;
+  onSelect: (step: number) => void;
+}) {
+  const active = steps[activeStep];
+  return (
+    <FlatSurface padding="compact">
+      <Stack spacing={webTokens.spacing.control}>
+        <Box sx={{ overflowX: "auto", pb: 1 }}>
+          <Stepper
+            nonLinear
+            activeStep={activeStep}
+            alternativeLabel
+            sx={{ minWidth: 980 }}
+          >
+            {steps.map((step, index) => (
+              <Step key={step.title} completed={index < activeStep}>
+                <StepButton
+                  disabled={index > 0 && !canNavigate}
+                  onClick={() => onSelect(index)}
+                >
+                  {step.title}
+                </StepButton>
+              </Step>
+            ))}
+          </Stepper>
+        </Box>
+        <Stack direction="row" justifyContent="space-between" gap={2}>
+          <Typography variant="body2" color="text.secondary">
+            Paso {activeStep + 1} de {steps.length}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" textAlign="right">
+            {active?.description}
+          </Typography>
+        </Stack>
+      </Stack>
+    </FlatSurface>
+  );
+}
+
+function CenterWizardNavigation({
+  activeStep,
+  lastStep,
+  working,
+  onPrevious,
+  onNext,
+}: {
+  activeStep: number;
+  lastStep: number;
+  working: boolean;
+  onPrevious: () => void;
+  onNext: () => void;
+}) {
+  return (
+    <Stack
+      direction={{ xs: "column-reverse", sm: "row" }}
+      alignItems={{ sm: "center" }}
+      justifyContent="space-between"
+      gap={webTokens.spacing.control}
+    >
+      <Button
+        type="button"
+        variant="outlined"
+        onClick={onPrevious}
+        disabled={activeStep === 0 || working}
+        startIcon={<ArrowBackRounded />}
+      >
+        Anterior
+      </Button>
+      {activeStep < lastStep ? (
+        <Button
+          type="button"
+          variant="contained"
+          onClick={onNext}
+          disabled={working}
+          endIcon={<ArrowForwardRounded />}
+        >
+          Siguiente
+        </Button>
+      ) : (
+        <Typography variant="body2" color="text.secondary">
+          Revisión final de la ficha
+        </Typography>
+      )}
+    </Stack>
+  );
+}
+
+function CenterSummaryStep({
+  detail,
+  catalogs,
+}: {
+  detail: AdminCenterDetail | null;
+  catalogs: AdminCatalogs | null;
+}) {
+  const draft = detail?.draft ?? detail?.published ?? null;
+  const sectionValues = draft?.sections ?? {};
+  const completedSections = centerSectionDefinitions.filter(
+    (section) => sectionValues[section.code] !== undefined,
+  ).length;
+  const summaryRows = [
+    ["Nombre", draft?.name ?? "Pendiente"],
+    ["Subtipo", findCatalogName(catalogs?.subtypes, draft?.subtypeId)],
+    ["Zona turística", findCatalogName(catalogs?.zones, draft?.touristZoneId)],
+    ["Parroquia", findCatalogName(catalogs?.parishes, draft?.parishId)],
+    ["Coordenadas", formatCoordinates(draft?.latitude, draft?.longitude)],
+    ["Estado", detail?.status.name ?? "Pendiente"],
+  ];
+
+  return (
+    <Stack spacing={webTokens.spacing.section}>
+      <FlatSurface padding="default">
+        <Stack spacing={webTokens.spacing.section}>
+          <SectionHeader
+            icon={<FactCheckRounded />}
+            title="Resumen de la ficha"
+            description="Revisa los datos principales y el avance de cada apartado antes de enviarla a revisión."
+          />
+          <Grid container spacing={webTokens.spacing.control}>
+            {summaryRows.map(([label, value]) => (
+              <Grid key={label} size={{ xs: 12, sm: 6, md: 4 }}>
+                <Typography variant="caption" color="text.secondary" display="block">
+                  {label}
+                </Typography>
+                <Typography variant="body1" fontWeight={600}>
+                  {value}
+                </Typography>
+              </Grid>
+            ))}
+          </Grid>
+          <Divider />
+          <Typography variant="body2" color="text.secondary">
+            {completedSections} de {centerSectionDefinitions.length} apartados tienen
+            información registrada.
+          </Typography>
+          <Grid container spacing={webTokens.spacing.inline}>
+            {centerSectionDefinitions.map((section) => (
+              <Grid key={section.code} size={{ xs: 12, sm: 6, md: 4 }}>
+                <Box
+                  sx={{
+                    border: 1,
+                    borderColor: "divider",
+                    borderRadius: `${webTokens.shape.radius}px`,
+                    p: webTokens.spacing.inline,
+                  }}
+                >
+                  <Typography variant="body2" fontWeight={600}>
+                    {section.title}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {sectionValues[section.code]
+                      ? "Información registrada"
+                      : "Pendiente de completar"}
+                  </Typography>
+                </Box>
+              </Grid>
+            ))}
+          </Grid>
+        </Stack>
+      </FlatSurface>
+      <CenterReviewDiff detail={detail} catalogs={catalogs} />
+    </Stack>
+  );
+}
+
+function findCatalogName(
+  options: Array<{ id: number; name: string }> | undefined,
+  id: number | undefined,
+) {
+  if (id === undefined) return "Pendiente";
+  return options?.find((option) => Number(option.id) === Number(id))?.name ?? "Pendiente";
+}
+
+function formatCoordinates(latitude: number | undefined, longitude: number | undefined) {
+  if (latitude === undefined || longitude === undefined) return "Pendiente";
+  return `${latitude}, ${longitude}`;
 }
 
 function CatalogSelect({

@@ -6152,12 +6152,11 @@ function isSectionResponse(value: unknown): value is SectionResponse {
 }
 
 /**
- * Continuous version of the section editor.
+ * Wizard-backed version of the section editor.
  *
- * The original workflow is kept above for backwards compatibility while the
- * administrative editor uses this layout: every section is visible in one
- * vertical flow and owns its own react-hook-form state. This keeps the API
- * contract and the per-section save operation unchanged.
+ * Every section keeps its own react-hook-form state mounted while the parent
+ * shows one step at a time. This preserves pending edits when the operator
+ * navigates and keeps the API contract and per-section persistence unchanged.
  */
 export function ContinuousCenterSectionWorkflow({
   token,
@@ -6165,6 +6164,9 @@ export function ContinuousCenterSectionWorkflow({
   detail,
   catalogs,
   canEdit,
+  activeSectionCode,
+  visible,
+  showOverview,
   onDetailChanged,
   onError,
 }: {
@@ -6173,6 +6175,9 @@ export function ContinuousCenterSectionWorkflow({
   detail: AdminCenterDetail | null;
   catalogs: AdminCatalogs | null;
   canEdit: boolean;
+  activeSectionCode: AdminCenterSectionCode | null;
+  visible: boolean;
+  showOverview: boolean;
   onDetailChanged: (detail: AdminCenterDetail) => void;
   onError: (message: string | null) => void;
 }) {
@@ -6219,28 +6224,34 @@ export function ContinuousCenterSectionWorkflow({
   );
 
   if (code && sectionsQuery.isLoading) {
-    return <ContentState status="loading" label="Cargando secciones de la ficha" />;
+    return (
+      <Box sx={{ display: visible ? "block" : "none" }}>
+        <ContentState status="loading" label="Cargando secciones de la ficha" />
+      </Box>
+    );
   }
 
   if (sectionsQuery.error) {
     return (
-      <Alert
-        severity="error"
-        action={
-          <Button
-            type="button"
-            color="inherit"
-            size="small"
-            onClick={() => void sectionsQuery.refetch()}
-          >
-            Reintentar
-          </Button>
-        }
-      >
-        {sectionsQuery.error instanceof Error
-          ? sectionsQuery.error.message
-          : "No se pudieron cargar las secciones de la ficha."}
-      </Alert>
+      <Box sx={{ display: visible ? "block" : "none" }}>
+        <Alert
+          severity="error"
+          action={
+            <Button
+              type="button"
+              color="inherit"
+              size="small"
+              onClick={() => void sectionsQuery.refetch()}
+            >
+              Reintentar
+            </Button>
+          }
+        >
+          {sectionsQuery.error instanceof Error
+            ? sectionsQuery.error.message
+            : "No se pudieron cargar las secciones de la ficha."}
+        </Alert>
+      </Box>
     );
   }
 
@@ -6255,52 +6266,56 @@ export function ContinuousCenterSectionWorkflow({
           event.preventDefault();
         }
       }}
+      sx={{ display: visible ? "flex" : "none" }}
     >
-      <FlatSurface padding="default">
-        <Stack spacing={webTokens.spacing.section}>
-          <SectionHeader
-            icon={<FactCheckRounded />}
-            title="Ficha integral por secciones"
-            description="Completa la ficha en un solo recorrido. Cada apartado conserva su avance para la revisión."
-          />
-          <InstitutionalCodeCard
-            code={detail?.code ?? null}
-            valuation={valuationQuery.data ?? null}
-          />
-          {!code ? (
-            <Alert severity="info">
-              Completa los datos generales obligatorios. La ficha se creará
-              automáticamente y después podrás registrar el detalle de cada sección.
-            </Alert>
-          ) : null}
-          <Stack spacing={1}>
-            <Stack
-              direction="row"
-              justifyContent="space-between"
-              alignItems="center"
-              gap={2}
-            >
-              <Typography variant="body2" color="text.secondary">
-                Progreso de captura: {progress} de {centerSectionDefinitions.length}{" "}
-                secciones
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {Math.round((progress / centerSectionDefinitions.length) * 100)}%
-              </Typography>
-            </Stack>
-            <LinearProgress
-              variant="determinate"
-              value={(progress / centerSectionDefinitions.length) * 100}
-              aria-label="Progreso de la ficha integral"
+      {showOverview ? (
+        <FlatSurface padding="default">
+          <Stack spacing={webTokens.spacing.section}>
+            <SectionHeader
+              icon={<FactCheckRounded />}
+              title="Ficha integral por secciones"
+              description="Completa la ficha en un solo recorrido. Cada apartado conserva su avance para la revisión."
             />
+            <InstitutionalCodeCard
+              code={detail?.code ?? null}
+              valuation={valuationQuery.data ?? null}
+            />
+            {!code ? (
+              <Alert severity="info">
+                Completa los datos generales obligatorios. La ficha se creará
+                automáticamente y después podrás registrar el detalle de cada sección.
+              </Alert>
+            ) : null}
+            <Stack spacing={1}>
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+                gap={2}
+              >
+                <Typography variant="body2" color="text.secondary">
+                  Progreso de captura: {progress} de {centerSectionDefinitions.length}{" "}
+                  secciones
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {Math.round((progress / centerSectionDefinitions.length) * 100)}%
+                </Typography>
+              </Stack>
+              <LinearProgress
+                variant="determinate"
+                value={(progress / centerSectionDefinitions.length) * 100}
+                aria-label="Progreso de la ficha integral"
+              />
+            </Stack>
           </Stack>
-        </Stack>
-      </FlatSurface>
+        </FlatSurface>
+      ) : null}
 
       {centerSectionDefinitions.map((definition, index) => (
         <ContinuousSectionCard
           key={definition.code}
           index={index}
+          active={definition.code === activeSectionCode}
           definition={definition}
           token={token}
           code={code}
@@ -6319,6 +6334,7 @@ export function ContinuousCenterSectionWorkflow({
 
 function ContinuousSectionCard({
   index,
+  active,
   definition,
   token,
   code,
@@ -6331,6 +6347,7 @@ function ContinuousSectionCard({
   onError,
 }: {
   index: number;
+  active: boolean;
   definition: SectionDefinition;
   token: string;
   code: string | null;
@@ -6414,7 +6431,11 @@ function ContinuousSectionCard({
   const responseLabelId = `section-response-label-${definition.code}`;
 
   return (
-    <FlatSurface id={`center-detail-section-${definition.code}`} padding="default">
+    <FlatSurface
+      id={`center-detail-section-${definition.code}`}
+      padding="default"
+      sx={{ display: active ? "block" : "none" }}
+    >
       <Stack spacing={webTokens.spacing.section}>
         <Stack
           direction={{ xs: "column", sm: "row" }}
