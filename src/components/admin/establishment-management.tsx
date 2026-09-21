@@ -1,6 +1,5 @@
 "use client";
 
-import AddRounded from "@mui/icons-material/AddRounded";
 import EditRounded from "@mui/icons-material/EditRounded";
 import PowerSettingsNewRounded from "@mui/icons-material/PowerSettingsNewRounded";
 import {
@@ -27,7 +26,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 
 import {
@@ -81,15 +80,18 @@ const emptyValues: EstablishmentFormValues = {
 
 const pageSize = 20;
 
-export function EstablishmentManagement({
-  token,
-  onNotice,
-  onError,
-}: {
-  token: string;
-  onNotice: (message: string) => void;
-  onError: (message: string | null) => void;
-}) {
+export type EstablishmentManagementRef = {
+  openCreate: () => void;
+};
+
+export const EstablishmentManagement = forwardRef<
+  EstablishmentManagementRef,
+  {
+    token: string;
+    onNotice: (message: string) => void;
+    onError: (message: string | null) => void;
+  }
+>(function EstablishmentManagement({ token, onNotice, onError }, ref) {
   const queryClient = useQueryClient();
   const [queryDraft, setQueryDraft] = useState("");
   const [provinceId, setProvinceId] = useState("");
@@ -214,11 +216,13 @@ export function EstablishmentManagement({
       (!provinceId || String(option.provinceId) === provinceId) &&
       (!cantonId || String(option.cantonId) === cantonId),
   );
-  function openCreate() {
+  const openCreate = useCallback(() => {
     setEditing(null);
     reset(emptyValues);
     setDialogOpen(true);
-  }
+  }, [reset]);
+
+  useImperativeHandle(ref, () => ({ openCreate }), [openCreate]);
 
   function openEdit(item: AdminEstablishment) {
     setEditing(item);
@@ -256,13 +260,7 @@ export function EstablishmentManagement({
 
   return (
     <Stack spacing={webTokens.spacing.section}>
-      <AdminTableToolbar
-        actions={
-          <Button variant="contained" startIcon={<AddRounded />} onClick={openCreate}>
-            Nuevo establecimiento
-          </Button>
-        }
-      >
+      <AdminTableToolbar>
         <Grid container spacing={webTokens.spacing.control}>
           <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
             <SearchField
@@ -606,7 +604,7 @@ export function EstablishmentManagement({
       </Dialog>
     </Stack>
   );
-}
+});
 
 function toFormValues(item: AdminEstablishment): EstablishmentFormValues {
   return {

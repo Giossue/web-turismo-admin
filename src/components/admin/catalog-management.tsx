@@ -122,11 +122,7 @@ export function CatalogManagement({
   return (
     <Stack spacing={webTokens.spacing.control}>
       <AdminTableToolbar>
-        <Stack
-          direction={{ xs: "column", md: "row" }}
-          spacing={webTokens.spacing.control}
-          alignItems={{ md: "center" }}
-        >
+        <Stack spacing={webTokens.spacing.control}>
           <Tabs
             value={selected}
             onChange={(_, value: AdminCatalogKey) => {
@@ -145,7 +141,7 @@ export function CatalogManagement({
             label="Buscar opción"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            sx={{ maxWidth: { md: 360 } }}
+            sx={{ width: { xs: "100%", sm: 360 } }}
           />
         </Stack>
       </AdminTableToolbar>

@@ -17,6 +17,10 @@ vacío del filtro de Catastro y evitando estilos duplicados.
 - Aplicar búsqueda automática a todos los filtros: los selectores consultan al cambiar y
   los campos de texto usan un debounce compartido de 1.5 segundos.
 - Retirar el botón manual de búsqueda de Catastro.
+- Ubicar las acciones principales de creación en el encabezado de cada módulo, alineadas
+  con el título y reutilizando el mismo patrón de `PageHeader`.
+- Mantener las pestañas de Catálogos separadas del buscador, con la búsqueda debajo y
+  antes de la tabla.
 
 ## Verificación
 
@@ -32,3 +36,7 @@ Implementado el 20 de septiembre de 2026. Las tablas de Centros turísticos, Cat
 Catálogos comparten superficie, densidad, estados, acciones, overflow y pie de paginación;
 el filtro de Catastro dejó de usar el panel sobredimensionado de la captura. La búsqueda
 ahora es automática y reutiliza un debounce de 1.5 segundos para los campos de texto.
+Las acciones principales de Centros turísticos y Catastro también quedan junto al título,
+fuera de las barras de filtros.
+En Catálogos, las pestañas y la búsqueda quedan en filas separadas para facilitar el
+escaneo antes de la tabla.

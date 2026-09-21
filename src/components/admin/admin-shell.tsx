@@ -50,7 +50,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useColorScheme } from "@mui/material/styles";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { FlatSurface } from "@/components/ui/flat-surface";
 import {
@@ -65,7 +65,10 @@ import { SectionHeader } from "@/components/ui/section-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { CenterEditor } from "@/components/admin/center-editor";
 import { CatalogManagement } from "@/components/admin/catalog-management";
-import { EstablishmentManagement } from "@/components/admin/establishment-management";
+import {
+  EstablishmentManagement,
+  type EstablishmentManagementRef,
+} from "@/components/admin/establishment-management";
 import {
   getAdminCenters,
   getAdminSummary,
@@ -138,6 +141,7 @@ function isAdminSection(value: string | null): value is AdminSection {
 export function AdminShell() {
   const { accessToken, ready, user, logout } = useAdminAuth();
   const [open, setOpen] = useState(false);
+  const establishmentRef = useRef<EstablishmentManagementRef>(null);
   const [section, setSection] = useState<AdminSection>(() => {
     if (typeof window === "undefined") return "summary";
     const fromUrl = new URLSearchParams(window.location.search).get("section");
@@ -474,6 +478,14 @@ export function AdminShell() {
                   >
                     Nueva ficha
                   </Button>
+                ) : section === "establishments" ? (
+                  <Button
+                    variant="contained"
+                    startIcon={<AddRounded />}
+                    onClick={() => establishmentRef.current?.openCreate()}
+                  >
+                    Nuevo establecimiento
+                  </Button>
                 ) : undefined
               }
             />
@@ -518,6 +530,7 @@ export function AdminShell() {
           ) : null}
           {section === "establishments" ? (
             <EstablishmentManagement
+              ref={establishmentRef}
               token={accessToken ?? ""}
               onNotice={setNotice}
               onError={setError}
