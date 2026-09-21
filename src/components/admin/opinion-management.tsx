@@ -288,12 +288,12 @@ function OpinionVersionSummary({
 }) {
   return (
     <Stack spacing={expanded ? webTokens.spacing.inline : 0} sx={{ maxWidth: 360 }}>
-      <Typography variant="body2" fontWeight={700}>
-        {version.rating === null
-          ? "Sin calificación"
-          : `${"★".repeat(version.rating)}${"☆".repeat(5 - version.rating)}`}
-        {` · v${version.version}`}
-      </Typography>
+      <Stack direction="row" spacing={webTokens.spacing.inline} alignItems="center">
+        <OpinionRating rating={version.rating} />
+        <Typography variant="body2" fontWeight={700}>
+          · v{version.version}
+        </Typography>
+      </Stack>
       {version.comment ? (
         <Typography
           variant="body2"
@@ -318,7 +318,9 @@ function OpinionVersionSummary({
 function OpinionRating({ rating }: { rating: number | null }) {
   return (
     <Typography variant="body2" fontWeight={700} whiteSpace="nowrap">
-      {rating === null ? "Sin calificación" : `${"★".repeat(rating)}${"☆".repeat(5 - rating)}`}
+      {rating === null
+        ? "Sin calificación"
+        : `${"★".repeat(rating)}${"☆".repeat(5 - rating)}`}
     </Typography>
   );
 }

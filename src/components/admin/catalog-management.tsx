@@ -100,19 +100,12 @@ export function CatalogManagement({
         )
       : source;
   }, [catalogsQuery.data, debouncedSearch, search, selected]);
+  const lastPage = Math.max(Math.ceil(options.length / ADMIN_TABLE_PAGE_SIZE) - 1, 0);
+  const visiblePage = Math.min(page, lastPage);
   const visibleOptions = options.slice(
-    page * ADMIN_TABLE_PAGE_SIZE,
-    (page + 1) * ADMIN_TABLE_PAGE_SIZE,
+    visiblePage * ADMIN_TABLE_PAGE_SIZE,
+    (visiblePage + 1) * ADMIN_TABLE_PAGE_SIZE,
   );
-
-  useEffect(() => {
-    setPage((current) =>
-      Math.min(
-        current,
-        Math.max(Math.ceil(options.length / ADMIN_TABLE_PAGE_SIZE) - 1, 0),
-      ),
-    );
-  }, [options.length]);
 
   function openEdit(option: CatalogOption) {
     setEditing(option);
@@ -192,7 +185,7 @@ export function CatalogManagement({
         footer={
           <AdminTableFooter
             total={options.length}
-            page={page}
+            page={visiblePage}
             pageSize={ADMIN_TABLE_PAGE_SIZE}
             onPageChange={setPage}
           />
