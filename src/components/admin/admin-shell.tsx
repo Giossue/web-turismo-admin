@@ -12,6 +12,7 @@ import LightModeRounded from "@mui/icons-material/LightModeRounded";
 import LogoutRounded from "@mui/icons-material/LogoutRounded";
 import MenuRounded from "@mui/icons-material/MenuRounded";
 import PlaceRounded from "@mui/icons-material/PlaceRounded";
+import RateReviewRounded from "@mui/icons-material/RateReviewRounded";
 import SettingsRounded from "@mui/icons-material/SettingsRounded";
 import StorefrontRounded from "@mui/icons-material/StorefrontRounded";
 import {
@@ -69,6 +70,7 @@ import {
   EstablishmentManagement,
   type EstablishmentManagementRef,
 } from "@/components/admin/establishment-management";
+import { OpinionManagement } from "@/components/admin/opinion-management";
 import {
   getAdminCenters,
   getAdminSummary,
@@ -86,6 +88,7 @@ const pageSize = 20;
 type AdminSection =
   | "summary"
   | "review"
+  | "opinions"
   | "centers"
   | "establishments"
   | "catalogs"
@@ -102,6 +105,11 @@ const sectionMeta: Record<AdminSection, { title: string; description: string }> 
     title: "Revisión de fichas",
     description:
       "Revisa la información propuesta antes de habilitarla para la aplicación móvil.",
+  },
+  opinions: {
+    title: "Opiniones",
+    description:
+      "Modera las opiniones de visitantes y conserva la versión publicada mientras una edición está pendiente.",
   },
   centers: {
     title: "Centros turísticos",
@@ -130,6 +138,7 @@ function isAdminSection(value: string | null): value is AdminSection {
   return (
     value === "summary" ||
     value === "review" ||
+    value === "opinions" ||
     value === "centers" ||
     value === "establishments" ||
     value === "catalogs" ||
@@ -325,6 +334,7 @@ export function AdminShell() {
   const navItems: Array<{ key: AdminSection; label: string; icon: React.ReactNode }> = [
     { key: "summary", label: "Resumen", icon: <AssessmentRounded /> },
     { key: "review", label: "Revisión de fichas", icon: <FactCheckRounded /> },
+    { key: "opinions", label: "Opiniones", icon: <RateReviewRounded /> },
     { key: "centers", label: "Centros turísticos", icon: <PlaceRounded /> },
     { key: "establishments", label: "Catastro", icon: <StorefrontRounded /> },
     { key: "catalogs", label: "Catálogos", icon: <CategoryRounded /> },
@@ -506,6 +516,13 @@ export function AdminShell() {
                 setObservation("");
                 setReviewIntent({ center, action });
               }}
+            />
+          ) : null}
+          {section === "opinions" ? (
+            <OpinionManagement
+              token={accessToken ?? ""}
+              onNotice={setNotice}
+              onError={setError}
             />
           ) : null}
           {section === "centers" ? (
