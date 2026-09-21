@@ -60,7 +60,7 @@ const catalogMeta: Array<{ key: AdminCatalogKey; label: string }> = [
 ];
 
 const defaultCategoryIcon = "hotel";
-const defaultCategoryColor = "#2563eb";
+const defaultCategoryColor = "#7c3aed";
 const catalogIconOptions = [
   { value: "hotel", label: "Hotel", Icon: HotelRounded },
   { value: "restaurant", label: "Restaurante", Icon: RestaurantRounded },
@@ -71,7 +71,6 @@ const catalogIconOptions = [
   { value: "briefcase", label: "Agencia", Icon: BusinessCenterRounded },
 ] as const;
 const categoryColorOptions = [
-  { value: "#2563eb", label: "Azul", foreground: "#ffffff" },
   { value: "#0891b2", label: "Cian", foreground: "#ffffff" },
   { value: "#7c3aed", label: "Violeta", foreground: "#ffffff" },
   { value: "#c026d3", label: "Fucsia", foreground: "#ffffff" },
