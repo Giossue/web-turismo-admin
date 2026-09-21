@@ -105,7 +105,7 @@ const sectionMeta: Record<AdminSection, { title: string; description: string }> 
   review: {
     title: "Revisión de fichas",
     description:
-      "Revisa la información propuesta antes de habilitarla para la aplicación móvil.",
+      "Revisa propuestas y conserva visibles las fichas que ya fueron aprobadas.",
   },
   opinions: {
     title: "Opiniones",
@@ -247,7 +247,7 @@ export function AdminShell() {
       (section !== "review" && section !== "centers")
     )
       return;
-    const status = section === "review" ? "EN_REVISION" : centerStatus;
+    const status = section === "review" ? "REVIEW_QUEUE" : centerStatus;
     void Promise.resolve().then(() =>
       loadCenters(accessToken, status, centerQuery, page * pageSize),
     );
@@ -312,7 +312,7 @@ export function AdminShell() {
       );
       await Promise.all([
         loadSummary(accessToken),
-        loadCenters(accessToken, "EN_REVISION", "", 0),
+        loadCenters(accessToken, "REVIEW_QUEUE", "", 0),
       ]);
       setPage(0);
     } catch (cause) {
@@ -936,38 +936,44 @@ function CenterTable({
             <TableCell>{formatDate(center.updatedAt)}</TableCell>
             {reviewable && onReview ? (
               <TableCell align="right">
-                <Stack
-                  direction={{ xs: "column", sm: "row" }}
-                  spacing={webTokens.spacing.inline}
-                  justifyContent="flex-end"
-                >
-                  {onOpen ? (
+                {center.status.code === "EN_REVISION" ? (
+                  <Stack
+                    direction={{ xs: "column", sm: "row" }}
+                    spacing={webTokens.spacing.inline}
+                    justifyContent="flex-end"
+                  >
+                    {onOpen ? (
+                      <Button
+                        size="small"
+                        variant="text"
+                        onClick={() => onOpen(center.code)}
+                      >
+                        Ver ficha
+                      </Button>
+                    ) : null}
                     <Button
                       size="small"
-                      variant="text"
-                      onClick={() => onOpen(center.code)}
+                      variant="contained"
+                      disabled={workingCode !== null}
+                      onClick={() => onReview(center, "APPROVE")}
                     >
-                      Ver ficha
+                      Aprobar
                     </Button>
-                  ) : null}
-                  <Button
-                    size="small"
-                    variant="contained"
-                    disabled={workingCode !== null}
-                    onClick={() => onReview(center, "APPROVE")}
-                  >
-                    Aprobar
-                  </Button>
-                  <Button
-                    size="small"
-                    color="error"
-                    variant="text"
-                    disabled={workingCode !== null}
-                    onClick={() => onReview(center, "REJECT")}
-                  >
-                    Rechazar
-                  </Button>
-                </Stack>
+                    <Button
+                      size="small"
+                      color="error"
+                      variant="text"
+                      disabled={workingCode !== null}
+                      onClick={() => onReview(center, "REJECT")}
+                    >
+                      Rechazar
+                    </Button>
+                  </Stack>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    Aprobada
+                  </Typography>
+                )}
               </TableCell>
             ) : onOpen ? (
               <TableCell align="right">

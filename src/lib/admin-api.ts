@@ -259,8 +259,8 @@ export type AdminEstablishment = {
   categoryId: number | null;
   direccion: string | null;
   telefono: string | null;
-  latitude: number | null;
-  longitude: number | null;
+  latitude: number;
+  longitude: number;
   active: boolean;
   createdAt: string;
   updatedAt: string;
@@ -280,8 +280,8 @@ export type SaveEstablishmentInput = {
   categoria?: string;
   direccion?: string;
   telefono?: string;
-  latitude?: number;
-  longitude?: number;
+  latitude: number;
+  longitude: number;
 };
 
 export type AdminEstablishmentsOptions = {

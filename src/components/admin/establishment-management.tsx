@@ -290,10 +290,23 @@ export const EstablishmentManagement = forwardRef<
   }
 
   function submitForm(values: EstablishmentFormValues) {
-    const latitude = values.latitude.trim() ? Number(values.latitude) : undefined;
-    const longitude = values.longitude.trim() ? Number(values.longitude) : undefined;
-    if ((latitude === undefined) !== (longitude === undefined)) {
-      onError("La latitud y la longitud deben enviarse juntas.");
+    const latitudeText = values.latitude.trim();
+    const longitudeText = values.longitude.trim();
+    if (!latitudeText || !longitudeText) {
+      onError("La latitud y la longitud son obligatorias.");
+      return;
+    }
+    const latitude = Number(latitudeText);
+    const longitude = Number(longitudeText);
+    if (
+      !Number.isFinite(latitude) ||
+      latitude < -90 ||
+      latitude > 90 ||
+      !Number.isFinite(longitude) ||
+      longitude < -180 ||
+      longitude > 180
+    ) {
+      onError("La latitud o la longitud no están dentro de un rango válido.");
       return;
     }
     if (values.ruc.trim() && !/^\d{13}$/.test(values.ruc.trim())) {
@@ -722,18 +735,46 @@ export const EstablishmentManagement = forwardRef<
                 <TextField
                   label="Latitud"
                   fullWidth
+                  required
                   type="number"
+                  error={Boolean(formState.errors.latitude)}
+                  helperText={formState.errors.latitude?.message}
                   inputProps={{ step: "any", min: -90, max: 90 }}
-                  {...register("latitude")}
+                  {...register("latitude", {
+                    required: "Ingresa la latitud.",
+                    validate: (value) => {
+                      const number = Number(value);
+                      return value.trim() !== "" &&
+                        Number.isFinite(number) &&
+                        number >= -90 &&
+                        number <= 90
+                        ? true
+                        : "La latitud debe estar entre -90 y 90.";
+                    },
+                  })}
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
                 <TextField
                   label="Longitud"
                   fullWidth
+                  required
                   type="number"
+                  error={Boolean(formState.errors.longitude)}
+                  helperText={formState.errors.longitude?.message}
                   inputProps={{ step: "any", min: -180, max: 180 }}
-                  {...register("longitude")}
+                  {...register("longitude", {
+                    required: "Ingresa la longitud.",
+                    validate: (value) => {
+                      const number = Number(value);
+                      return value.trim() !== "" &&
+                        Number.isFinite(number) &&
+                        number >= -180 &&
+                        number <= 180
+                        ? true
+                        : "La longitud debe estar entre -180 y 180.";
+                    },
+                  })}
                 />
               </Grid>
             </Grid>
