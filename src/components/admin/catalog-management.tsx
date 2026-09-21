@@ -10,7 +10,6 @@ import RestaurantRounded from "@mui/icons-material/RestaurantRounded";
 import StorefrontRounded from "@mui/icons-material/StorefrontRounded";
 import EditRounded from "@mui/icons-material/EditRounded";
 import {
-  Box,
   Button,
   Dialog,
   DialogActions,
@@ -21,9 +20,6 @@ import {
   Stack,
   Switch,
   Tab,
-  ToggleButton,
-  ToggleButtonGroup,
-  Typography,
   Tabs,
   TableBody,
   TableCell,
@@ -41,6 +37,7 @@ import {
   AdminTableToolbar,
   ADMIN_TABLE_PAGE_SIZE,
 } from "@/components/ui/admin-table";
+import { CatalogIconSelect } from "@/components/ui/catalog-icon-select";
 import { SearchField } from "@/components/ui/search-field";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
@@ -285,49 +282,23 @@ export function CatalogManagement({
               disabled={working}
             />
             {selected === "ESTABLISHMENT_CATEGORY" ? (
-              <Stack spacing={1}>
-                <Typography variant="body2">Icono del marcador</Typography>
-                <ToggleButtonGroup
-                  aria-label="Icono del marcador"
-                  exclusive
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                <CatalogIconSelect
+                  id="catalog-marker-icon"
+                  label="Icono del marcador"
                   value={icon}
-                  onChange={(_, value: string | null) => {
-                    if (value) setIcon(value);
-                  }}
-                  sx={{ flexWrap: "wrap", gap: 1 }}
-                >
-                  {catalogIconOptions.map(({ value, label, Icon }) => (
-                    <ToggleButton
-                      aria-label={label}
-                      key={value}
-                      value={value}
-                      sx={{
-                        border: 1,
-                        borderColor: "divider",
-                        borderRadius: 1,
-                        gap: 0.75,
-                        minHeight: 42,
-                        textTransform: "none",
-                      }}
-                    >
-                      <Icon fontSize="small" />
-                      <Box
-                        component="span"
-                        sx={{ display: { xs: "none", sm: "inline" } }}
-                      >
-                        {label}
-                      </Box>
-                    </ToggleButton>
-                  ))}
-                </ToggleButtonGroup>
+                  options={catalogIconOptions}
+                  onChange={setIcon}
+                  disabled={working}
+                />
                 <TextField
                   label="Color del marcador"
                   type="color"
                   value={color}
                   onChange={(event) => setColor(event.target.value)}
-                  fullWidth
                   disabled={working}
                   slotProps={{ inputLabel: { shrink: true } }}
+                  sx={{ width: { sm: 180 } }}
                 />
               </Stack>
             ) : null}
