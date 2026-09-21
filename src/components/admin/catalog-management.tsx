@@ -1,16 +1,18 @@
 "use client";
 
 import BusinessCenterRounded from "@mui/icons-material/BusinessCenterRounded";
+import CheckRounded from "@mui/icons-material/CheckRounded";
 import DirectionsBusRounded from "@mui/icons-material/DirectionsBusRounded";
 import HotelRounded from "@mui/icons-material/HotelRounded";
 import LocalActivityRounded from "@mui/icons-material/LocalActivityRounded";
 import LocalCafeRounded from "@mui/icons-material/LocalCafeRounded";
-import PlaceRounded from "@mui/icons-material/PlaceRounded";
 import RestaurantRounded from "@mui/icons-material/RestaurantRounded";
 import StorefrontRounded from "@mui/icons-material/StorefrontRounded";
 import EditRounded from "@mui/icons-material/EditRounded";
 import {
   Button,
+  ButtonBase,
+  Box,
   Dialog,
   DialogActions,
   DialogContent,
@@ -25,6 +27,7 @@ import {
   TableCell,
   TableHead,
   TableRow,
+  Typography,
   TextField,
   Tooltip,
 } from "@mui/material";
@@ -56,10 +59,9 @@ const catalogMeta: Array<{ key: AdminCatalogKey; label: string }> = [
   { key: "ESTABLISHMENT_CATEGORY", label: "Categorías de catastro" },
 ];
 
-const defaultCategoryIcon = "mapPin";
+const defaultCategoryIcon = "hotel";
 const defaultCategoryColor = "#2563eb";
 const catalogIconOptions = [
-  { value: "mapPin", label: "Lugar", Icon: PlaceRounded },
   { value: "hotel", label: "Hotel", Icon: HotelRounded },
   { value: "restaurant", label: "Restaurante", Icon: RestaurantRounded },
   { value: "coffee", label: "Cafetería", Icon: LocalCafeRounded },
@@ -68,6 +70,28 @@ const catalogIconOptions = [
   { value: "ticket", label: "Actividad", Icon: LocalActivityRounded },
   { value: "briefcase", label: "Agencia", Icon: BusinessCenterRounded },
 ] as const;
+const categoryColorOptions = [
+  { value: "#2563eb", label: "Azul", foreground: "#ffffff" },
+  { value: "#0891b2", label: "Cian", foreground: "#ffffff" },
+  { value: "#7c3aed", label: "Violeta", foreground: "#ffffff" },
+  { value: "#c026d3", label: "Fucsia", foreground: "#ffffff" },
+  { value: "#ea580c", label: "Naranja", foreground: "#ffffff" },
+  { value: "#d97706", label: "Ámbar", foreground: "#111827" },
+  { value: "#dc2626", label: "Rojo", foreground: "#ffffff" },
+  { value: "#4f46e5", label: "Índigo", foreground: "#ffffff" },
+] as const;
+
+function normalizeCategoryIcon(value?: string) {
+  return catalogIconOptions.some((option) => option.value === value)
+    ? value!
+    : defaultCategoryIcon;
+}
+
+function normalizeCategoryColor(value?: string) {
+  return categoryColorOptions.some((option) => option.value === value)
+    ? value!
+    : defaultCategoryColor;
+}
 
 export function CatalogManagement({
   token,
@@ -135,8 +159,8 @@ export function CatalogManagement({
     setEditing(option);
     setName(option.name);
     setActive(option.active !== false);
-    setIcon(option.icon ?? defaultCategoryIcon);
-    setColor(option.color ?? defaultCategoryColor);
+    setIcon(normalizeCategoryIcon(option.icon));
+    setColor(normalizeCategoryColor(option.color));
     onError(null);
   }
 
@@ -291,15 +315,79 @@ export function CatalogManagement({
                   onChange={setIcon}
                   disabled={working}
                 />
-                <TextField
-                  label="Color del marcador"
-                  type="color"
-                  value={color}
-                  onChange={(event) => setColor(event.target.value)}
-                  disabled={working}
-                  slotProps={{ inputLabel: { shrink: true } }}
-                  sx={{ width: { sm: 180 } }}
-                />
+                <Box
+                  component="fieldset"
+                  sx={{
+                    border: 0,
+                    flex: { sm: "0 0 200px" },
+                    m: 0,
+                    minWidth: 0,
+                    p: 0,
+                  }}
+                >
+                  <Typography
+                    component="legend"
+                    sx={{ color: "text.secondary", fontSize: "0.75rem", mb: 1 }}
+                  >
+                    Color del marcador
+                  </Typography>
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    useFlexGap
+                    flexWrap="wrap"
+                  >
+                    {categoryColorOptions.map((option) => {
+                      const selectedColor = color === option.value;
+                      return (
+                        <ButtonBase
+                          aria-label={`Seleccionar color ${option.label}`}
+                          aria-pressed={selectedColor}
+                          disabled={working}
+                          key={option.value}
+                          onClick={() => setColor(option.value)}
+                          sx={{
+                            alignItems: "center",
+                            backgroundColor: option.value,
+                            border: "2px solid",
+                            borderColor: selectedColor
+                              ? "text.primary"
+                              : "divider",
+                            borderRadius: "50%",
+                            display: "inline-flex",
+                            height: 34,
+                            justifyContent: "center",
+                            transition: "transform 120ms ease, border-color 120ms ease",
+                            width: 34,
+                            "&:hover": {
+                              backgroundColor: option.value,
+                              opacity: 0.86,
+                              transform: "scale(1.08)",
+                            },
+                            "&:focus-visible": {
+                              outline: "3px solid",
+                              outlineColor: "primary.main",
+                              outlineOffset: 2,
+                            },
+                          }}
+                        >
+                          {selectedColor ? (
+                            <CheckRounded
+                              sx={{ color: option.foreground, fontSize: 20 }}
+                            />
+                          ) : null}
+                        </ButtonBase>
+                      );
+                    })}
+                  </Stack>
+                  <Typography
+                    color="text.secondary"
+                    sx={{ display: "block", mt: 1 }}
+                    variant="caption"
+                  >
+                    {color}
+                  </Typography>
+                </Box>
               </Stack>
             ) : null}
             <FormControlLabel
