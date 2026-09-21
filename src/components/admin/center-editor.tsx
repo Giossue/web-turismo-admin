@@ -31,7 +31,13 @@ import {
 } from "@mui/material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useForm, useWatch } from "react-hook-form";
+import {
+  useController,
+  useForm,
+  useWatch,
+  type Control,
+  type FieldPath,
+} from "react-hook-form";
 
 import { FlatSurface } from "@/components/ui/flat-surface";
 import { ContentState } from "@/components/ui/content-state";
@@ -609,7 +615,7 @@ export function CenterEditor({
                   label="Categoría"
                   name="categoryId"
                   options={catalogs?.categories ?? []}
-                  register={register}
+                  control={control}
                   disabled={!canEdit}
                   required
                   onValueChange={() => {
@@ -623,7 +629,7 @@ export function CenterEditor({
                   label="Tipo"
                   name="typeId"
                   options={typeOptions}
-                  register={register}
+                  control={control}
                   disabled={!canEdit || !categoryId}
                   required
                   onValueChange={() => setValue("subtypeId", "")}
@@ -634,7 +640,7 @@ export function CenterEditor({
                   label="Subtipo"
                   name="subtypeId"
                   options={subtypeOptions}
-                  register={register}
+                  control={control}
                   disabled={!canEdit || !typeId}
                   required
                 />
@@ -644,7 +650,7 @@ export function CenterEditor({
                   label="Provincia"
                   name="provinceId"
                   options={catalogs?.provinces ?? []}
-                  register={register}
+                  control={control}
                   disabled={!canEdit}
                   required
                   onValueChange={() => {
@@ -658,7 +664,7 @@ export function CenterEditor({
                   label="Cantón"
                   name="cantonId"
                   options={cantonOptions}
-                  register={register}
+                  control={control}
                   disabled={!canEdit || !provinceId}
                   required
                   onValueChange={() => setValue("parishId", "")}
@@ -669,7 +675,7 @@ export function CenterEditor({
                   label="Parroquia"
                   name="parishId"
                   options={parishOptions}
-                  register={register}
+                  control={control}
                   disabled={!canEdit || !cantonId}
                   required
                 />
@@ -679,7 +685,7 @@ export function CenterEditor({
                   label="Zona turística"
                   name="touristZoneId"
                   options={zoneOptions}
-                  register={register}
+                  control={control}
                   disabled={!canEdit || !cantonId}
                   required
                 />
@@ -689,7 +695,7 @@ export function CenterEditor({
                   label="Línea de producto"
                   name="productLineId"
                   options={catalogs?.lines ?? []}
-                  register={register}
+                  control={control}
                   disabled={!canEdit}
                   required
                 />
@@ -699,7 +705,7 @@ export function CenterEditor({
                   label="Escenario"
                   name="scenarioId"
                   options={catalogs?.scenarios ?? []}
-                  register={register}
+                  control={control}
                   disabled={!canEdit}
                   required
                 />
@@ -902,7 +908,7 @@ export function CenterEditor({
                   label="Tipo de ingreso"
                   name="admission.incomeTypeId"
                   options={catalogs?.incomeTypes ?? []}
-                  register={register}
+                  control={control}
                   disabled={!canEdit}
                 />
               </Grid>
@@ -931,7 +937,7 @@ export function CenterEditor({
                   label="Modalidad de atención"
                   name="admission.attentionModeId"
                   options={catalogs?.attentionModes ?? []}
-                  register={register}
+                  control={control}
                   disabled={!canEdit}
                 />
               </Grid>
@@ -1324,33 +1330,38 @@ function CatalogSelect({
   label,
   name,
   options,
-  register,
+  control,
   disabled,
   required,
   onValueChange,
 }: {
   label: string;
-  name: keyof FormValues | `administration.${string}` | `admission.${string}`;
+  name: FieldPath<FormValues>;
   options: Array<{ id: number; name: string }>;
-  register: ReturnType<typeof useForm<FormValues>>["register"];
+  control: Control<FormValues>;
   disabled: boolean;
   required?: boolean;
   onValueChange?: (value: string) => void;
 }) {
-  const field = register(name as never, {
-    required: required ? `${label} es obligatorio` : false,
+  const { field } = useController({
+    control,
+    name,
+    rules: { required: required ? `${label} es obligatorio` : undefined },
   });
   return (
     <FormControl fullWidth required={required}>
       <InputLabel>{label}</InputLabel>
       <Select
         label={label}
-        defaultValue=""
+        name={field.name}
+        value={String(field.value ?? "")}
         disabled={disabled}
-        {...field}
+        inputRef={field.ref}
+        onBlur={field.onBlur}
         onChange={(event) => {
-          field.onChange(event);
-          onValueChange?.(String(event.target.value));
+          const value = String(event.target.value);
+          field.onChange(value);
+          onValueChange?.(value);
         }}
       >
         {options.map((option) => (
