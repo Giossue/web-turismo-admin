@@ -18,6 +18,8 @@ campos, contratos de API y validaciones existentes, con guardado automático inv
   botones, badges ni mensajes técnicos de persistencia.
 - Crear la ficha automáticamente cuando se completen los datos mínimos requeridos y
   conservar únicamente las acciones explícitas de enviar a revisión y publicar.
+- Evitar rerenders globales del formulario al escribir: observar los cambios de
+  autoguardado sin suscripción visual y memorizar las secciones inactivas.
 - Integrar el formulario núcleo (identificación, ubicación, administración, ingreso,
   actividades, accesibilidad, facilidades y multimedia) en las secciones de la ficha
   donde corresponde, sin crear un paso adicional.
@@ -73,3 +75,6 @@ promoción y anexos, y muestra la reserva de ingreso que ya soportaba el contrat
 verificaciones específicas del editor pasan; queda pendiente únicamente la revisión visual
 manual en navegador. La verificación global sigue teniendo errores preexistentes en
 `admin-shell.tsx` fuera de este cambio.
+El autoguardado del núcleo ahora se suscribe a los cambios sin rerenderizar el editor en
+cada tecla, y las tarjetas de secciones inactivas conservan su estado sin volver a
+renderizarse durante la edición de otra sección.

@@ -21,7 +21,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   useFieldArray,
   useForm,
@@ -512,8 +512,6 @@ type SectionProgress =
 
 const EMPTY_RESPONSE: SectionResponse = "SIN_INFORMACION";
 
-type AutosaveStatus = "idle" | "pending" | "saving" | "saved" | "error";
-
 function useSectionAutosave({
   form,
   token,
@@ -536,10 +534,7 @@ function useSectionAutosave({
   onError: (message: string | null) => void;
 }) {
   const queryClient = useQueryClient();
-  const { control, reset, getValues, handleSubmit, formState } = form;
-  const watchedValues = useWatch({ control });
-  const watchedSignature = useMemo(() => JSON.stringify(watchedValues), [watchedValues]);
-  const [status, setStatus] = useState<AutosaveStatus>("idle");
+  const { reset, getValues, handleSubmit, subscribe, formState } = form;
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const skipNextAutosaveRef = useRef(false);
 
@@ -550,7 +545,6 @@ function useSectionAutosave({
         return;
       }
       const submittedSignature = JSON.stringify(values);
-      setStatus("saving");
       onError(null);
       try {
         const content = toSectionContent(definition.code, values);
@@ -567,16 +561,12 @@ function useSectionAutosave({
           reset(
             createSectionValues(definition, saved.draft?.sections?.[definition.code]),
           );
-          setStatus("saved");
-        } else {
-          setStatus("pending");
         }
         onDetailChanged(saved);
         await queryClient.invalidateQueries({
           queryKey: ["admin", "center", code, "sections"],
         });
       } catch (cause) {
-        setStatus("error");
         onError(
           cause instanceof Error
             ? cause.message
@@ -604,39 +594,33 @@ function useSectionAutosave({
   }, [definition, formState.isDirty, rawSection, reset]);
 
   useEffect(() => {
-    if (!code || !canEdit || !formState.isDirty || skipNextAutosaveRef.current) {
-      skipNextAutosaveRef.current = false;
-      return;
-    }
-    if (timerRef.current) clearTimeout(timerRef.current);
-    setStatus("pending");
-    timerRef.current = setTimeout(() => {
-      void handleSubmit(saveSection, () => {
-        setStatus("error");
-        onError("Corrige los campos marcados.");
-      })();
-    }, 2_000);
+    const unsubscribe = subscribe({
+      formState: { values: true, isDirty: true },
+      callback: ({ isDirty: subscribedIsDirty }) => {
+        if (!subscribedIsDirty) {
+          skipNextAutosaveRef.current = false;
+          return;
+        }
+        if (!code || !canEdit) return;
+        if (skipNextAutosaveRef.current) {
+          skipNextAutosaveRef.current = false;
+        }
+        if (timerRef.current) clearTimeout(timerRef.current);
+        timerRef.current = setTimeout(() => {
+          void handleSubmit(saveSection, () => {
+            onError("Corrige los campos marcados.");
+          })();
+        }, 2_000);
+      },
+    });
     return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
+      unsubscribe();
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
     };
-  }, [
-    canEdit,
-    code,
-    formState.isDirty,
-    handleSubmit,
-    onError,
-    saveSection,
-    watchedSignature,
-  ]);
-
-  useEffect(
-    () => () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    },
-    [],
-  );
-
-  return { status };
+  }, [canEdit, code, handleSubmit, onError, saveSection, subscribe]);
 }
 
 export function CenterSectionWorkflow({
@@ -6287,6 +6271,10 @@ export function ContinuousCenterSectionWorkflow({
     enabled: Boolean(token && code),
     staleTime: 5_000,
   });
+  const mediaItems = useMemo(
+    () => mediaQuery.data?.items ?? [],
+    [mediaQuery.data?.items],
+  );
   useEffect(() => {
     if (sectionsQuery.error) {
       onError(
@@ -6400,7 +6388,7 @@ export function ContinuousCenterSectionWorkflow({
           catalogs={catalogs}
           canEdit={canEdit}
           rawSection={sections[definition.code]}
-          mediaItems={mediaQuery.data?.items ?? []}
+          mediaItems={mediaItems}
           onDetailChanged={onDetailChanged}
           onError={onError}
         />
@@ -6409,7 +6397,7 @@ export function ContinuousCenterSectionWorkflow({
   );
 }
 
-function ContinuousSectionCard({
+const ContinuousSectionCard = memo(function ContinuousSectionCard({
   active,
   definition,
   token,
@@ -6814,7 +6802,7 @@ function ContinuousSectionCard({
       </Stack>
     </FlatSurface>
   );
-}
+});
 
 function SectionResponseControl({
   labelId,

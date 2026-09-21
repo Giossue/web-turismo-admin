@@ -566,23 +566,19 @@ export function AdminShell() {
       <Snackbar
         key={`${error ? "error" : "success"}:${error ?? notice}`}
         open={Boolean(error || notice)}
-        autoHideDuration={error ? 8_000 : 5_000}
+        autoHideDuration={3_000}
         onClose={(_, reason) => {
           if (reason === "clickaway") return;
           setError(null);
           setNotice(null);
         }}
-        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
         sx={{ top: { xs: 72, sm: 80 } }}
       >
         <Alert
           severity={error ? "error" : "success"}
           variant="filled"
-          onClose={() => {
-            setError(null);
-            setNotice(null);
-          }}
-          sx={{ width: "100%", alignItems: "center" }}
+          sx={{ width: "100%", alignItems: "center", border: 0 }}
         >
           {error ?? notice}
         </Alert>

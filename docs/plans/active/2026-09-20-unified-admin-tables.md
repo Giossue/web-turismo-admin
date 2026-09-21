@@ -21,6 +21,8 @@ vacío del filtro de Catastro y evitando estilos duplicados.
   con el título y reutilizando el mismo patrón de `PageHeader`.
 - Mantener las pestañas de Catálogos separadas del buscador, con la búsqueda debajo y
   antes de la tabla.
+- Presentar los avisos globales centrados, sin cierre manual y con desaparición automática
+  a los 3 segundos.
 
 ## Verificación
 
@@ -40,3 +42,5 @@ Las acciones principales de Centros turísticos y Catastro también quedan junto
 fuera de las barras de filtros.
 En Catálogos, las pestañas y la búsqueda quedan en filas separadas para facilitar el
 escaneo antes de la tabla.
+Los avisos globales del panel quedan centrados, sin borde ni botón de cierre, y se ocultan
+automáticamente después de 3 segundos.

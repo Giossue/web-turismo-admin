@@ -30,7 +30,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 
 import { FlatSurface } from "@/components/ui/flat-surface";
@@ -153,7 +153,6 @@ const emptyValues: FormValues = {
 const centerWizardSteps = centerSectionDefinitions.map((section) => ({
   key: section.code,
   title: section.title,
-  description: section.description,
 }));
 
 export function CenterEditor({
@@ -181,6 +180,7 @@ export function CenterEditor({
     handleSubmit,
     getValues,
     setValue,
+    subscribe,
     formState: { errors, isDirty },
   } = useForm<FormValues>({
     defaultValues: emptyValues,
@@ -204,6 +204,14 @@ export function CenterEditor({
   const reportError = useCallback(
     (message: string | null) => onError(message),
     [onError],
+  );
+  const handleDetailChanged = useCallback(
+    (saved: AdminCenterDetail) => {
+      setDetailOverride(saved);
+      queryClient.setQueryData(["admin", "center", saved.code], saved);
+      onSaved(saved);
+    },
+    [onSaved, queryClient],
   );
 
   useEffect(() => {
@@ -261,11 +269,11 @@ export function CenterEditor({
   );
   const canReview = state === "BORRADOR" || state === "RECHAZADO";
   const canPublish = state === "APROBADO";
-  const watchedValues = useWatch({ control });
-  const watchedSignature = useMemo(() => JSON.stringify(watchedValues), [watchedValues]);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const skipNextAutoSaveRef = useRef(false);
-  const lastAttemptedSignatureRef = useRef<string | null>(null);
+  const autoSaveVersionRef = useRef(0);
+  const lastAttemptedAutoSaveVersionRef = useRef<number | null>(null);
+  const pendingAutoSaveRef = useRef(false);
   const summaryStepIndex = centerSectionDefinitions.length;
   const isSectionStep = activeStep >= 0 && activeStep < summaryStepIndex;
   const isSummaryStep = activeStep === summaryStepIndex;
@@ -332,7 +340,14 @@ export function CenterEditor({
 
   const save = useCallback(
     async (values: FormValues, submitForReview = false, silent = false) => {
+      const submittedVersion = autoSaveVersionRef.current;
       const submittedSignature = JSON.stringify(values);
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = null;
+      }
+      pendingAutoSaveRef.current = false;
+      lastAttemptedAutoSaveVersionRef.current = submittedVersion;
       setWorking(submitForReview ? "review" : "auto");
       reportError(null);
       try {
@@ -342,11 +357,14 @@ export function CenterEditor({
           : await saveAdminCenter(token, effectiveCode as string, input);
         if (submitForReview) saved = await submitAdminCenterReview(token, saved.code);
         const latestSignature = JSON.stringify(getValues());
+        const hasChangesSinceSubmit = latestSignature !== submittedSignature;
         setDetailOverride(saved);
         queryClient.setQueryData(["admin", "center", saved.code], saved);
-        if (catalogs && latestSignature === submittedSignature) {
+        if (catalogs && !hasChangesSinceSubmit) {
           skipNextAutoSaveRef.current = true;
           reset(toFormValues(saved.draft ?? saved.published, catalogs));
+        } else if (hasChangesSinceSubmit) {
+          pendingAutoSaveRef.current = true;
         }
         onSaved(saved);
         if (!silent) {
@@ -381,20 +399,15 @@ export function CenterEditor({
     ],
   );
 
-  useEffect(() => {
-    if (
-      !canEdit ||
-      !isDirty ||
-      working !== null ||
-      skipNextAutoSaveRef.current ||
-      lastAttemptedSignatureRef.current === watchedSignature
-    ) {
-      if (!isDirty) skipNextAutoSaveRef.current = false;
-      return;
-    }
+  const scheduleAutoSave = useCallback(() => {
+    if (!canEdit || working !== null || skipNextAutoSaveRef.current) return;
+    const version = autoSaveVersionRef.current;
+    if (lastAttemptedAutoSaveVersionRef.current === version) return;
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     autoSaveTimerRef.current = setTimeout(() => {
-      lastAttemptedSignatureRef.current = watchedSignature;
+      autoSaveTimerRef.current = null;
+      lastAttemptedAutoSaveVersionRef.current = version;
+      pendingAutoSaveRef.current = false;
       void handleSubmit(
         (values) => save(values, false, true),
         () => {
@@ -402,17 +415,38 @@ export function CenterEditor({
         },
       )();
     }, 2_000);
-    return () => {
-      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-    };
-  }, [canEdit, handleSubmit, isDirty, reportError, save, watchedSignature, working]);
+  }, [canEdit, handleSubmit, reportError, save, working]);
 
-  useEffect(
-    () => () => {
-      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-    },
-    [],
-  );
+  useEffect(() => {
+    const unsubscribe = subscribe({
+      formState: { values: true, isDirty: true },
+      callback: ({ isDirty: subscribedIsDirty }) => {
+        autoSaveVersionRef.current += 1;
+        if (!subscribedIsDirty) {
+          pendingAutoSaveRef.current = false;
+          skipNextAutoSaveRef.current = false;
+          return;
+        }
+        if (!canEdit || skipNextAutoSaveRef.current) return;
+        pendingAutoSaveRef.current = true;
+        scheduleAutoSave();
+      },
+    });
+    return () => {
+      unsubscribe();
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = null;
+      }
+    };
+  }, [canEdit, scheduleAutoSave, subscribe]);
+
+  useEffect(() => {
+    if (working === null && pendingAutoSaveRef.current) {
+      pendingAutoSaveRef.current = false;
+      scheduleAutoSave();
+    }
+  }, [scheduleAutoSave, working]);
 
   async function goNext() {
     if (activeStep >= summaryStepIndex) return;
@@ -539,11 +573,7 @@ export function CenterEditor({
         activeSectionCode={activeSectionCode}
         visible={isSectionStep}
         showOverview={false}
-        onDetailChanged={(saved) => {
-          setDetailOverride(saved);
-          queryClient.setQueryData(["admin", "center", saved.code], saved);
-          onSaved(saved);
-        }}
+        onDetailChanged={handleDetailChanged}
         onError={reportError}
       />
 
@@ -1035,13 +1065,12 @@ function CenterWizardStepper({
   canNavigate,
   onSelect,
 }: {
-  steps: ReadonlyArray<{ key: string; title: string; description: string }>;
+  steps: ReadonlyArray<{ key: string; title: string }>;
   activeStep: number;
   canNavigate: boolean;
   onSelect: (step: number) => void;
 }) {
   const isSummary = activeStep >= steps.length;
-  const active = steps[activeStep];
   return (
     <FlatSurface padding="compact">
       <Stack spacing={webTokens.spacing.control}>
@@ -1148,25 +1177,6 @@ function CenterWizardStepper({
             );
           })}
         </Box>
-        <Stack
-          direction={{ xs: "column", sm: "row" }}
-          justifyContent="space-between"
-          alignItems={{ sm: "center" }}
-          gap={1}
-        >
-          <Typography variant="body2" color="text.secondary">
-            {isSummary ? "Resumen final" : `Sección ${activeStep + 1} de ${steps.length}`}
-          </Typography>
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            textAlign={{ xs: "left", sm: "right" }}
-          >
-            {isSummary
-              ? "Revisa la ficha completa antes de enviarla a revisión."
-              : active?.description}
-          </Typography>
-        </Stack>
       </Stack>
     </FlatSurface>
   );
