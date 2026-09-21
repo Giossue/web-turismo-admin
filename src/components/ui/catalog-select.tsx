@@ -22,7 +22,6 @@ export function CatalogSelect({
   disabled = false,
   required = false,
   helperText,
-  emptyLabel = "Selecciona una opción",
 }: {
   id: string;
   label: string;
@@ -32,7 +31,6 @@ export function CatalogSelect({
   disabled?: boolean;
   required?: boolean;
   helperText?: string;
-  emptyLabel?: string;
 }) {
   const labelId = `${id}-label`;
   const handleChange = (event: SelectChangeEvent) => onChange(event.target.value);
@@ -52,9 +50,6 @@ export function CatalogSelect({
         value={value}
         onChange={handleChange}
       >
-        <MenuItem value="">
-          <em>{emptyLabel}</em>
-        </MenuItem>
         {options.map((option) => (
           <MenuItem key={option.id} value={String(option.id)}>
             {option.name}
