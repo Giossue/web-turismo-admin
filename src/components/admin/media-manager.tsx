@@ -4,7 +4,6 @@ import DeleteOutlineRounded from "@mui/icons-material/DeleteOutlineRounded";
 import PhotoLibraryRounded from "@mui/icons-material/PhotoLibraryRounded";
 import UploadFileRounded from "@mui/icons-material/UploadFileRounded";
 import {
-  Alert,
   Box,
   Button,
   CircularProgress,
@@ -20,7 +19,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { FlatSurface } from "@/components/ui/flat-surface";
 import { ContentState } from "@/components/ui/content-state";
@@ -40,11 +39,13 @@ export function MediaManager({
   code,
   canEdit,
   onNotice,
+  onError,
 }: {
   token: string;
   code: string | null;
   canEdit: boolean;
   onNotice: (message: string) => void;
+  onError: (message: string | null) => void;
 }) {
   const fileInput = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
@@ -52,17 +53,26 @@ export function MediaManager({
   const [sourceAuthor, setSourceAuthor] = useState("");
   const [typeCode, setTypeCode] = useState<AdminMediaItem["typeCode"]>("FOTOGRAFIA");
   const [working, setWorking] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const mediaQuery = useQuery({
     queryKey: ["admin", "media", code],
     queryFn: () => getAdminCenterMedia(token, code as string),
     enabled: Boolean(token && code),
   });
 
+  useEffect(() => {
+    if (mediaQuery.error) {
+      onError(
+        mediaQuery.error instanceof Error
+          ? mediaQuery.error.message
+          : "No se pudo cargar la multimedia.",
+      );
+    }
+  }, [mediaQuery.error, onError]);
+
   async function upload(file: File) {
     if (!code) return;
     setWorking(true);
-    setError(null);
+    onError(null);
     try {
       await uploadAdminCenterMedia(token, code, file, {
         typeCode,
@@ -74,7 +84,7 @@ export function MediaManager({
       await queryClient.invalidateQueries({ queryKey: ["admin", "media", code] });
       onNotice("Archivo cargado. Quedará pendiente hasta publicar la ficha.");
     } catch (cause) {
-      setError(
+      onError(
         cause instanceof Error
           ? cause.message
           : "No se pudo cargar el archivo multimedia.",
@@ -88,13 +98,13 @@ export function MediaManager({
   async function remove(item: AdminMediaItem) {
     if (!code || !window.confirm(`¿Eliminar ${item.originalName}?`)) return;
     setWorking(true);
-    setError(null);
+    onError(null);
     try {
       await deleteAdminCenterMedia(token, code, item.id);
       await queryClient.invalidateQueries({ queryKey: ["admin", "media", code] });
       onNotice("Fotografía eliminada.");
     } catch (cause) {
-      setError(
+      onError(
         cause instanceof Error ? cause.message : "No se pudo eliminar la fotografía.",
       );
     } finally {
@@ -111,12 +121,6 @@ export function MediaManager({
           title="Archivos institucionales"
           description="Sube fotografías, multimedia o anexos documentales. Las imágenes tienen límite de 10 MB y el resto de archivos de 50 MB."
         />
-        {!code ? (
-          <Alert severity="info">
-            Completa los datos generales para habilitar la carga de archivos multimedia.
-          </Alert>
-        ) : null}
-        {error ? <Alert severity="error">{error}</Alert> : null}
         <Stack
           direction={{ xs: "column", md: "row" }}
           spacing={webTokens.spacing.control}
@@ -174,10 +178,12 @@ export function MediaManager({
             {working ? "Procesando…" : "Seleccionar archivo"}
           </Button>
         </Stack>
-        {mediaQuery.isLoading ? (
+        {mediaQuery.error ? (
+          <ContentState status="empty" message="No se pudo cargar la multimedia." />
+        ) : mediaQuery.isLoading ? (
           <ContentState status="loading" label="Cargando multimedia" />
         ) : null}
-        {!mediaQuery.isLoading && items.length === 0 ? (
+        {!mediaQuery.isLoading && !mediaQuery.error && items.length === 0 ? (
           <ContentState
             status="empty"
             message="Aún no hay archivos multimedia cargados."

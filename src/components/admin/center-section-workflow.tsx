@@ -2307,13 +2307,6 @@ function PlantSectionFields({
 
   return (
     <Stack spacing={webTokens.spacing.control}>
-      <Alert severity="info">
-        Esta sección conserva la planta en el atractivo y en el poblado cercano, las
-        facilidades con ubicación y responsable, y los servicios complementarios. No crea
-        centros turísticos derivados ni reemplaza el módulo independiente de catastro.
-      </Alert>
-
-      <Divider />
       <AccessibilitySubsectionHeader
         title="Planta turística"
         description="Alojamiento, alimentos y bebidas, agencias y guías por ámbito de ubicación."
@@ -6289,6 +6282,15 @@ export function ContinuousCenterSectionWorkflow({
     enabled: Boolean(token && code),
     staleTime: 5_000,
   });
+  useEffect(() => {
+    if (sectionsQuery.error) {
+      onError(
+        sectionsQuery.error instanceof Error
+          ? sectionsQuery.error.message
+          : "No se pudieron cargar las secciones de la ficha.",
+      );
+    }
+  }, [onError, sectionsQuery.error]);
   const sectionData = sectionsQuery.data;
   const sections = useMemo(
     () => sectionData?.sections ?? detail?.draft?.sections ?? {},
@@ -6324,23 +6326,10 @@ export function ContinuousCenterSectionWorkflow({
   if (sectionsQuery.error) {
     return (
       <Box sx={{ display: visible ? "block" : "none" }}>
-        <Alert
-          severity="error"
-          action={
-            <Button
-              type="button"
-              color="inherit"
-              size="small"
-              onClick={() => void sectionsQuery.refetch()}
-            >
-              Reintentar
-            </Button>
-          }
-        >
-          {sectionsQuery.error instanceof Error
-            ? sectionsQuery.error.message
-            : "No se pudieron cargar las secciones de la ficha."}
-        </Alert>
+        <ContentState
+          status="empty"
+          message="No se pudieron cargar las secciones de la ficha."
+        />
       </Box>
     );
   }

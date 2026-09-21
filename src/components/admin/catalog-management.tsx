@@ -2,7 +2,6 @@
 
 import EditRounded from "@mui/icons-material/EditRounded";
 import {
-  Alert,
   Button,
   Dialog,
   DialogActions,
@@ -23,7 +22,7 @@ import {
   Tooltip,
 } from "@mui/material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { FlatSurface } from "@/components/ui/flat-surface";
 import { ContentState } from "@/components/ui/content-state";
@@ -46,9 +45,11 @@ const catalogMeta: Array<{ key: AdminCatalogKey; label: string }> = [
 export function CatalogManagement({
   token,
   onNotice,
+  onError,
 }: {
   token: string;
   onNotice: (message: string) => void;
+  onError: (message: string | null) => void;
 }) {
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<AdminCatalogKey>("ACCESSIBILITY");
@@ -56,13 +57,22 @@ export function CatalogManagement({
   const [editing, setEditing] = useState<CatalogOption | null>(null);
   const [name, setName] = useState("");
   const [active, setActive] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
   const catalogsQuery = useQuery({
     queryKey: ["admin", "catalogs", "management"],
     queryFn: () => getAdminCatalogs(token, true),
     enabled: token.length > 0,
   });
+
+  useEffect(() => {
+    if (catalogsQuery.error) {
+      onError(
+        catalogsQuery.error instanceof Error
+          ? catalogsQuery.error.message
+          : "No se pudieron cargar los catálogos.",
+      );
+    }
+  }, [catalogsQuery.error, onError]);
 
   const options = useMemo(() => {
     if (!catalogsQuery.data) return [];
@@ -82,16 +92,16 @@ export function CatalogManagement({
     setEditing(option);
     setName(option.name);
     setActive(option.active !== false);
-    setError(null);
+    onError(null);
   }
 
   async function save() {
     if (!editing || name.trim().length < 2) {
-      setError("El nombre debe tener al menos 2 caracteres.");
+      onError("El nombre debe tener al menos 2 caracteres.");
       return;
     }
     setWorking(true);
-    setError(null);
+    onError(null);
     try {
       await updateAdminCatalog(token, selected, editing.id, {
         name: name.trim(),
@@ -101,7 +111,7 @@ export function CatalogManagement({
       setEditing(null);
       onNotice("Catálogo actualizado y auditado.");
     } catch (cause) {
-      setError(
+      onError(
         cause instanceof Error ? cause.message : "No se pudo actualizar el catálogo.",
       );
     } finally {
@@ -137,9 +147,7 @@ export function CatalogManagement({
         {catalogsQuery.isLoading ? (
           <ContentState status="loading" label="Cargando catálogos" />
         ) : catalogsQuery.error ? (
-          <Alert severity="error" sx={{ m: webTokens.spacing.surfaceCompact }}>
-            No se pudieron cargar los catálogos.
-          </Alert>
+          <ContentState status="empty" message="No se pudieron cargar los catálogos." />
         ) : options.length === 0 ? (
           <ContentState
             status="empty"
@@ -212,7 +220,6 @@ export function CatalogManagement({
                   : "No disponible para nuevas fichas"
               }
             />
-            {error ? <Alert severity="error">{error}</Alert> : null}
           </Stack>
         </DialogContent>
         <DialogActions>

@@ -40,6 +40,7 @@ import {
   ListItemText,
   MenuItem,
   Select,
+  Snackbar,
   Stack,
   Table,
   TableBody,
@@ -277,15 +278,6 @@ export function AdminShell() {
     setCenterQuery(query.length >= 2 ? query : "");
   }
 
-  function refreshCurrent() {
-    if (!accessToken) return;
-    void loadSummary(accessToken);
-    if (section === "review" || section === "centers") {
-      const status = section === "review" ? "EN_REVISION" : centerStatus;
-      void loadCenters(accessToken, status, centerQuery, page * pageSize);
-    }
-  }
-
   async function submitReview() {
     if (!accessToken || !reviewIntent) return;
     setWorkingCode(reviewIntent.center.code);
@@ -490,25 +482,6 @@ export function AdminShell() {
               }
             />
           ) : null}
-          {notice ? (
-            <Alert severity="success" onClose={() => setNotice(null)}>
-              {notice}
-            </Alert>
-          ) : null}
-          {error ? (
-            <Alert
-              severity="error"
-              onClose={() => setError(null)}
-              action={
-                <Button color="inherit" size="small" onClick={refreshCurrent}>
-                  Reintentar
-                </Button>
-              }
-            >
-              {error}
-            </Alert>
-          ) : null}
-
           {section === "summary" ? (
             <SummarySection summary={summary} loading={loadingSummary} />
           ) : null}
@@ -546,7 +519,11 @@ export function AdminShell() {
             />
           ) : null}
           {section === "establishments" ? (
-            <EstablishmentManagement token={accessToken ?? ""} onNotice={setNotice} />
+            <EstablishmentManagement
+              token={accessToken ?? ""}
+              onNotice={setNotice}
+              onError={setError}
+            />
           ) : null}
           {section === "editor" ? (
             <CenterEditor
@@ -559,16 +536,46 @@ export function AdminShell() {
                 setSection("editor");
               }}
               onNotice={setNotice}
+              onError={setError}
             />
           ) : null}
           {section === "settings" ? (
             <SettingsSection user={user} onLogout={() => void logout()} />
           ) : null}
           {section === "catalogs" ? (
-            <CatalogManagement token={accessToken ?? ""} onNotice={setNotice} />
+            <CatalogManagement
+              token={accessToken ?? ""}
+              onNotice={setNotice}
+              onError={setError}
+            />
           ) : null}
         </Stack>
       </Box>
+
+      <Snackbar
+        key={`${error ? "error" : "success"}:${error ?? notice}`}
+        open={Boolean(error || notice)}
+        autoHideDuration={error ? 8_000 : 5_000}
+        onClose={(_, reason) => {
+          if (reason === "clickaway") return;
+          setError(null);
+          setNotice(null);
+        }}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+        sx={{ top: { xs: 72, sm: 80 } }}
+      >
+        <Alert
+          severity={error ? "error" : "success"}
+          variant="filled"
+          onClose={() => {
+            setError(null);
+            setNotice(null);
+          }}
+          sx={{ width: "100%", alignItems: "center" }}
+        >
+          {error ?? notice}
+        </Alert>
+      </Snackbar>
 
       <Dialog
         open={reviewIntent !== null}

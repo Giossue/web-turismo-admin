@@ -31,6 +31,8 @@ campos, contratos de API y validaciones existentes, con guardado automático inv
   y mostrar los datos de detalle únicamente cuando la respuesta principal sea afirmativa.
 - Cuando una selección padre cambie, retirar de la vista las opciones hijas que ya no
   pertenecen a ella y limpiar selecciones incompatibles antes del autoguardado.
+- Convertir errores y confirmaciones transitorias del admin en un toast global, dejando
+  dentro de la página únicamente estados persistentes de contexto, permisos o carga.
 
 ## Fuera de alcance
 
@@ -57,5 +59,6 @@ mantienen montadas para conservar el autosalvado mientras se navega; no se muest
 botones, badges ni mensajes técnicos de persistencia, y el botón de recarga del encabezado
 fue retirado. La captura también aplica las cascadas territoriales y de clasificación,
 filtra actividades y facilidades por su catálogo padre, limpia selecciones incompatibles y
-limita los detalles de secciones a respuestas aplicables. Las verificaciones automatizadas
-pasan; queda pendiente únicamente la revisión visual manual en navegador.
+limita los detalles de secciones a respuestas aplicables. Los mensajes transitorios ahora
+se muestran como toast global del admin. Las verificaciones automatizadas pasan; queda
+pendiente únicamente la revisión visual manual en navegador.

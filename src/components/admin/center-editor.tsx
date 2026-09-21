@@ -162,15 +162,16 @@ export function CenterEditor({
   onClose,
   onSaved,
   onNotice,
+  onError,
 }: {
   token: string;
   code: string | null;
   onClose: () => void;
   onSaved: (detail: AdminCenterDetail) => void;
   onNotice: (message: string) => void;
+  onError: (message: string | null) => void;
 }) {
   const [detailOverride, setDetailOverride] = useState<AdminCenterDetail | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [working, setWorking] = useState<"auto" | "review" | "publish" | null>(null);
   const [activeStep, setActiveStep] = useState(0);
   const {
@@ -200,6 +201,10 @@ export function CenterEditor({
   const loading = catalogsQuery.isLoading || centerQuery.isLoading;
   const effectiveCode = detail?.code ?? code;
   const isNew = effectiveCode === null;
+  const reportError = useCallback(
+    (message: string | null) => onError(message),
+    [onError],
+  );
 
   useEffect(() => {
     if (centerQuery.data && catalogs && !isDirty) {
@@ -208,13 +213,15 @@ export function CenterEditor({
   }, [centerQuery.data, catalogs, isDirty, reset]);
 
   const queryError = catalogsQuery.error ?? centerQuery.error;
-  const displayError =
-    error ??
-    (queryError instanceof Error
+  const queryErrorMessage =
+    queryError instanceof Error
       ? queryError.message
       : queryError
         ? "No se pudo cargar la ficha."
-        : null);
+        : null;
+  useEffect(() => {
+    if (queryErrorMessage) onError(queryErrorMessage);
+  }, [onError, queryErrorMessage]);
   const state = detail?.status.code ?? "BORRADOR";
   const canEdit =
     isNew || state === "BORRADOR" || state === "RECHAZADO" || state === "PUBLICADO";
@@ -327,7 +334,7 @@ export function CenterEditor({
     async (values: FormValues, submitForReview = false, silent = false) => {
       const submittedSignature = JSON.stringify(values);
       setWorking(submitForReview ? "review" : "auto");
-      setError(null);
+      reportError(null);
       try {
         const input = toPayload(values, detail?.version);
         let saved = isNew
@@ -351,7 +358,7 @@ export function CenterEditor({
         }
         return true;
       } catch (cause) {
-        setError(
+        reportError(
           cause instanceof Error ? cause.message : "No se pudo actualizar la ficha.",
         );
         return false;
@@ -367,6 +374,7 @@ export function CenterEditor({
       isNew,
       onNotice,
       onSaved,
+      reportError,
       queryClient,
       reset,
       token,
@@ -390,14 +398,14 @@ export function CenterEditor({
       void handleSubmit(
         (values) => save(values, false, true),
         () => {
-          setError(null);
+          reportError(null);
         },
       )();
     }, 2_000);
     return () => {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     };
-  }, [canEdit, handleSubmit, isDirty, save, watchedSignature, working]);
+  }, [canEdit, handleSubmit, isDirty, reportError, save, watchedSignature, working]);
 
   useEffect(
     () => () => {
@@ -415,7 +423,7 @@ export function CenterEditor({
           const persisted = isDirty || isNew ? await save(values, false, true) : true;
           if (persisted) setActiveStep(nextStep);
         },
-        () => setError("Completa los campos obligatorios para continuar."),
+        () => reportError("Completa los campos obligatorios para continuar."),
       )();
       return;
     }
@@ -434,7 +442,7 @@ export function CenterEditor({
   async function publish() {
     if (!detail) return;
     setWorking("publish");
-    setError(null);
+    reportError(null);
     try {
       const published = await publishAdminCenter(token, detail.code);
       setDetailOverride(published);
@@ -443,7 +451,9 @@ export function CenterEditor({
       onSaved(published);
       onNotice("La ficha fue publicada en la aplicación móvil.");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "No se pudo publicar la ficha.");
+      reportError(
+        cause instanceof Error ? cause.message : "No se pudo publicar la ficha.",
+      );
     } finally {
       setWorking(null);
     }
@@ -492,11 +502,6 @@ export function CenterEditor({
           ) : null,
         ]}
       />
-      {displayError ? (
-        <Alert severity="error" onClose={() => setError(null)}>
-          {displayError}
-        </Alert>
-      ) : null}
       {detail?.review?.observation ? (
         <Alert severity={state === "RECHAZADO" ? "warning" : "info"}>
           Observación: {detail.review.observation}
@@ -529,7 +534,7 @@ export function CenterEditor({
           queryClient.setQueryData(["admin", "center", saved.code], saved);
           onSaved(saved);
         }}
-        onError={setError}
+        onError={reportError}
       />
 
       <Box sx={{ display: isSectionStep ? "block" : "none" }}>
@@ -1002,6 +1007,7 @@ export function CenterEditor({
             code={effectiveCode}
             canEdit={canEdit || state === "APROBADO"}
             onNotice={onNotice}
+            onError={reportError}
           />
         </Box>
       </Box>

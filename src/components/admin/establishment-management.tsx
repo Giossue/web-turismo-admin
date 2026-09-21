@@ -5,7 +5,6 @@ import EditRounded from "@mui/icons-material/EditRounded";
 import PowerSettingsNewRounded from "@mui/icons-material/PowerSettingsNewRounded";
 import SearchRounded from "@mui/icons-material/SearchRounded";
 import {
-  Alert,
   Button,
   CircularProgress,
   Dialog,
@@ -31,7 +30,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 
 import { ContentState } from "@/components/ui/content-state";
@@ -84,9 +83,11 @@ const pageSize = 20;
 export function EstablishmentManagement({
   token,
   onNotice,
+  onError,
 }: {
   token: string;
   onNotice: (message: string) => void;
+  onError: (message: string | null) => void;
 }) {
   const queryClient = useQueryClient();
   const [query, setQuery] = useState("");
@@ -101,7 +102,6 @@ export function EstablishmentManagement({
   const [page, setPage] = useState(0);
   const [editing, setEditing] = useState<AdminEstablishment | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
   const { control, register, reset, handleSubmit, formState } =
     useForm<EstablishmentFormValues>({ defaultValues: emptyValues });
 
@@ -140,6 +140,26 @@ export function EstablishmentManagement({
     enabled: token.length > 0,
   });
 
+  useEffect(() => {
+    if (catalogsQuery.error) {
+      onError(
+        catalogsQuery.error instanceof Error
+          ? catalogsQuery.error.message
+          : "No se pudieron cargar los catálogos.",
+      );
+    }
+  }, [catalogsQuery.error, onError]);
+
+  useEffect(() => {
+    if (establishmentsQuery.error) {
+      onError(
+        establishmentsQuery.error instanceof Error
+          ? establishmentsQuery.error.message
+          : "No se pudo cargar el catastro.",
+      );
+    }
+  }, [establishmentsQuery.error, onError]);
+
   const saveMutation = useMutation({
     mutationFn: async (input: SaveEstablishmentInput) =>
       editing
@@ -149,7 +169,6 @@ export function EstablishmentManagement({
       await queryClient.invalidateQueries({ queryKey: ["admin", "establishments"] });
       setDialogOpen(false);
       setEditing(null);
-      setFormError(null);
       onNotice(
         editing
           ? "El establecimiento fue actualizado."
@@ -157,7 +176,7 @@ export function EstablishmentManagement({
       );
     },
     onError: (cause) =>
-      setFormError(
+      onError(
         cause instanceof Error ? cause.message : "No se pudo guardar el establecimiento.",
       ),
   });
@@ -174,9 +193,7 @@ export function EstablishmentManagement({
       );
     },
     onError: (cause) =>
-      setFormError(
-        cause instanceof Error ? cause.message : "No se pudo cambiar el estado.",
-      ),
+      onError(cause instanceof Error ? cause.message : "No se pudo cambiar el estado."),
   });
 
   const data = establishmentsQuery.data;
@@ -195,14 +212,12 @@ export function EstablishmentManagement({
   function openCreate() {
     setEditing(null);
     reset(emptyValues);
-    setFormError(null);
     setDialogOpen(true);
   }
 
   function openEdit(item: AdminEstablishment) {
     setEditing(item);
     reset(toFormValues(item));
-    setFormError(null);
     setDialogOpen(true);
   }
 
@@ -216,14 +231,14 @@ export function EstablishmentManagement({
     const latitude = values.latitude.trim() ? Number(values.latitude) : undefined;
     const longitude = values.longitude.trim() ? Number(values.longitude) : undefined;
     if ((latitude === undefined) !== (longitude === undefined)) {
-      setFormError("La latitud y la longitud deben enviarse juntas.");
+      onError("La latitud y la longitud deben enviarse juntas.");
       return;
     }
     if (values.ruc.trim() && !/^\d{13}$/.test(values.ruc.trim())) {
-      setFormError("El RUC debe contener 13 dígitos.");
+      onError("El RUC debe contener 13 dígitos.");
       return;
     }
-    setFormError(null);
+    onError(null);
     saveMutation.mutate({
       localityId: Number(values.localityId),
       numeroRegistro: values.numeroRegistro.trim() || undefined,
@@ -384,20 +399,6 @@ export function EstablishmentManagement({
         </Stack>
       </FlatSurface>
 
-      {establishmentsQuery.error ? (
-        <Alert severity="error">
-          {establishmentsQuery.error instanceof Error
-            ? establishmentsQuery.error.message
-            : "No se pudo cargar el catastro."}
-        </Alert>
-      ) : null}
-      {activeMutation.error ? (
-        <Alert severity="error" onClose={() => activeMutation.reset()}>
-          {activeMutation.error instanceof Error
-            ? activeMutation.error.message
-            : "No se pudo cambiar el estado del establecimiento."}
-        </Alert>
-      ) : null}
       <FlatSurface padding="none">
         {establishmentsQuery.isLoading ? (
           <ContentState status="loading" label="Cargando catastro" />
@@ -508,7 +509,6 @@ export function EstablishmentManagement({
             spacing={webTokens.spacing.control}
             sx={{ pt: 1 }}
           >
-            {formError ? <Alert severity="error">{formError}</Alert> : null}
             <Grid container spacing={webTokens.spacing.control}>
               <Grid size={{ xs: 12, md: 6 }}>
                 <Controller
