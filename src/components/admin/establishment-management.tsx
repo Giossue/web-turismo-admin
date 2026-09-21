@@ -19,10 +19,8 @@ import {
   MenuItem,
   Select,
   Stack,
-  Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   TextField,
@@ -33,8 +31,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 
-import { ContentState } from "@/components/ui/content-state";
-import { FlatSurface } from "@/components/ui/flat-surface";
+import {
+  AdminTable,
+  AdminTableFooter,
+  AdminTableToolbar,
+} from "@/components/ui/admin-table";
 import { SearchField } from "@/components/ui/search-field";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
@@ -207,8 +208,6 @@ export function EstablishmentManagement({
       (!provinceId || String(option.provinceId) === provinceId) &&
       (!cantonId || String(option.cantonId) === cantonId),
   );
-  const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / pageSize));
-
   function openCreate() {
     setEditing(null);
     reset(emptyValues);
@@ -257,240 +256,220 @@ export function EstablishmentManagement({
 
   return (
     <Stack spacing={webTokens.spacing.section}>
-      <FlatSurface padding="default">
-        <Stack spacing={webTokens.spacing.control}>
-          <Stack direction="row" justifyContent="flex-end">
-            <Button variant="contained" startIcon={<AddRounded />} onClick={openCreate}>
-              Nuevo establecimiento
-            </Button>
-          </Stack>
-          <Grid
-            component="form"
-            container
-            spacing={webTokens.spacing.control}
-            onSubmit={submitSearch}
-          >
-            <Grid size={{ xs: 12, md: 6 }}>
-              <SearchField
-                label="Buscar por nombre, actividad o registro"
-                value={queryDraft}
-                onChange={(event) => setQueryDraft(event.target.value)}
-                inputProps={{ "aria-label": "Buscar establecimientos" }}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 3 }}>
-              <FormControl fullWidth>
-                <InputLabel id="establishment-province-filter-label">
-                  Provincia
-                </InputLabel>
-                <Select
-                  labelId="establishment-province-filter-label"
-                  label="Provincia"
-                  value={provinceId}
-                  onChange={(event) => {
-                    setProvinceId(event.target.value);
-                    setCantonId("");
-                    setLocalityId("");
-                    setPage(0);
-                  }}
-                >
-                  <MenuItem value="">Todas</MenuItem>
-                  {provinces.map((province) => (
-                    <MenuItem key={province.id} value={String(province.id)}>
-                      {province.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid size={{ xs: 12, md: 3 }}>
-              <FormControl fullWidth disabled={!provinceId}>
-                <InputLabel id="establishment-canton-filter-label">Cantón</InputLabel>
-                <Select
-                  labelId="establishment-canton-filter-label"
-                  label="Cantón"
-                  value={cantonId}
-                  onChange={(event) => {
-                    setCantonId(event.target.value);
-                    setLocalityId("");
-                    setPage(0);
-                  }}
-                >
-                  <MenuItem value="">Todos</MenuItem>
-                  {cantons.map((canton) => (
-                    <MenuItem key={canton.id} value={String(canton.id)}>
-                      {canton.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid size={{ xs: 12, md: 3 }}>
-              <FormControl fullWidth>
-                <InputLabel id="establishment-locality-filter-label">
-                  Localidad
-                </InputLabel>
-                <Select
-                  labelId="establishment-locality-filter-label"
-                  label="Localidad"
-                  value={localityId}
-                  onChange={(event) => {
-                    setLocalityId(event.target.value);
-                    setPage(0);
-                  }}
-                >
-                  <MenuItem value="">Todas</MenuItem>
-                  {localities.map((locality) => (
-                    <MenuItem key={locality.id} value={String(locality.id)}>
-                      {locality.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid size={{ xs: 12, md: 3 }}>
-              <TextField
-                label="Actividad"
-                fullWidth
-                value={activity}
-                onChange={(event) => setActivity(event.target.value)}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 3 }}>
-              <TextField
-                label="Clasificación"
-                fullWidth
-                value={classification}
-                onChange={(event) => setClassification(event.target.value)}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 3 }}>
-              <TextField
-                label="Categoría"
-                fullWidth
-                value={category}
-                onChange={(event) => setCategory(event.target.value)}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 3 }}>
-              <FormControl fullWidth>
-                <InputLabel id="establishment-status-filter-label">Estado</InputLabel>
-                <Select
-                  labelId="establishment-status-filter-label"
-                  label="Estado"
-                  value={active}
-                  onChange={(event) => {
-                    setActive(event.target.value);
-                    setPage(0);
-                  }}
-                >
-                  <MenuItem value="ALL">Todos</MenuItem>
-                  <MenuItem value="true">Activos</MenuItem>
-                  <MenuItem value="false">Inactivos</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid size={{ xs: 12 }}>
-              <Button type="submit" variant="outlined" startIcon={<SearchRounded />}>
-                Buscar
-              </Button>
-            </Grid>
+      <AdminTableToolbar
+        actions={
+          <Button variant="contained" startIcon={<AddRounded />} onClick={openCreate}>
+            Nuevo establecimiento
+          </Button>
+        }
+      >
+        <Grid
+          component="form"
+          container
+          spacing={webTokens.spacing.control}
+          onSubmit={submitSearch}
+        >
+          <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
+            <SearchField
+              label="Buscar por nombre, actividad o registro"
+              value={queryDraft}
+              onChange={(event) => setQueryDraft(event.target.value)}
+              inputProps={{ "aria-label": "Buscar establecimientos" }}
+            />
           </Grid>
-        </Stack>
-      </FlatSurface>
-
-      <FlatSurface padding="none">
-        {establishmentsQuery.isLoading ? (
-          <ContentState status="loading" label="Cargando catastro" />
-        ) : !data?.items.length ? (
-          <ContentState
-            status="empty"
-            message="No hay establecimientos para los filtros seleccionados."
-          />
-        ) : (
-          <TableContainer>
-            <Table size="small" aria-label="Catastro de establecimientos">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Establecimiento</TableCell>
-                  <TableCell>Localidad</TableCell>
-                  <TableCell>Actividad</TableCell>
-                  <TableCell>Registro</TableCell>
-                  <TableCell>Estado</TableCell>
-                  <TableCell align="right">Acciones</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {data.items.map((item) => (
-                  <TableRow key={item.id} hover>
-                    <TableCell>
-                      <Typography fontWeight={600}>{item.nombreComercial}</Typography>
-                      {item.categoria ? (
-                        <Typography variant="caption" color="text.secondary">
-                          {item.categoria}
-                        </Typography>
-                      ) : null}
-                    </TableCell>
-                    <TableCell>{item.localityName}</TableCell>
-                    <TableCell>{item.actividad}</TableCell>
-                    <TableCell>{item.numeroRegistro ?? "—"}</TableCell>
-                    <TableCell>
-                      <StatusBadge
-                        code={item.active ? "ACTIVA" : "INACTIVA"}
-                        label={item.active ? "Activo" : "Inactivo"}
-                      />
-                    </TableCell>
-                    <TableCell align="right">
-                      <Tooltip title="Editar establecimiento">
-                        <IconButton
-                          aria-label={`Editar ${item.nombreComercial}`}
-                          onClick={() => openEdit(item)}
-                        >
-                          <EditRounded />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title={item.active ? "Desactivar" : "Reactivar"}>
-                        <span>
-                          <IconButton
-                            aria-label={`${item.active ? "Desactivar" : "Reactivar"} ${item.nombreComercial}`}
-                            onClick={() =>
-                              activeMutation.mutate({ id: item.id, next: !item.active })
-                            }
-                            disabled={activeMutation.isPending}
-                          >
-                            <PowerSettingsNewRounded />
-                          </IconButton>
-                        </span>
-                      </Tooltip>
-                    </TableCell>
-                  </TableRow>
+          <Grid size={{ xs: 12, sm: 6, lg: 2 }}>
+            <FormControl fullWidth>
+              <InputLabel id="establishment-province-filter-label">Provincia</InputLabel>
+              <Select
+                labelId="establishment-province-filter-label"
+                label="Provincia"
+                value={provinceId}
+                onChange={(event) => {
+                  setProvinceId(event.target.value);
+                  setCantonId("");
+                  setLocalityId("");
+                  setPage(0);
+                }}
+              >
+                <MenuItem value="">Todas</MenuItem>
+                {provinces.map((province) => (
+                  <MenuItem key={province.id} value={String(province.id)}>
+                    {province.name}
+                  </MenuItem>
                 ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        )}
-      </FlatSurface>
-      {data?.total ? (
-        <Stack direction="row" justifyContent="space-between" alignItems="center">
-          <Typography variant="body2" color="text.secondary">
-            {data.total} establecimientos · página {page + 1} de {totalPages}
-          </Typography>
-          <Stack direction="row" spacing={1}>
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, lg: 2 }}>
+            <FormControl fullWidth disabled={!provinceId}>
+              <InputLabel id="establishment-canton-filter-label">Cantón</InputLabel>
+              <Select
+                labelId="establishment-canton-filter-label"
+                label="Cantón"
+                value={cantonId}
+                onChange={(event) => {
+                  setCantonId(event.target.value);
+                  setLocalityId("");
+                  setPage(0);
+                }}
+              >
+                <MenuItem value="">Todos</MenuItem>
+                {cantons.map((canton) => (
+                  <MenuItem key={canton.id} value={String(canton.id)}>
+                    {canton.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, lg: 2 }}>
+            <FormControl fullWidth>
+              <InputLabel id="establishment-locality-filter-label">Localidad</InputLabel>
+              <Select
+                labelId="establishment-locality-filter-label"
+                label="Localidad"
+                value={localityId}
+                onChange={(event) => {
+                  setLocalityId(event.target.value);
+                  setPage(0);
+                }}
+              >
+                <MenuItem value="">Todas</MenuItem>
+                {localities.map((locality) => (
+                  <MenuItem key={locality.id} value={String(locality.id)}>
+                    {locality.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, lg: 2 }}>
+            <TextField
+              label="Actividad"
+              fullWidth
+              value={activity}
+              onChange={(event) => setActivity(event.target.value)}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, lg: 2 }}>
+            <TextField
+              label="Clasificación"
+              fullWidth
+              value={classification}
+              onChange={(event) => setClassification(event.target.value)}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, lg: 2 }}>
+            <TextField
+              label="Categoría"
+              fullWidth
+              value={category}
+              onChange={(event) => setCategory(event.target.value)}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, lg: 2 }}>
+            <FormControl fullWidth>
+              <InputLabel id="establishment-status-filter-label">Estado</InputLabel>
+              <Select
+                labelId="establishment-status-filter-label"
+                label="Estado"
+                value={active}
+                onChange={(event) => {
+                  setActive(event.target.value);
+                  setPage(0);
+                }}
+              >
+                <MenuItem value="ALL">Todos</MenuItem>
+                <MenuItem value="true">Activos</MenuItem>
+                <MenuItem value="false">Inactivos</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, lg: 2 }}>
             <Button
-              disabled={page === 0}
-              onClick={() => setPage((current) => current - 1)}
+              type="submit"
+              variant="outlined"
+              startIcon={<SearchRounded />}
+              fullWidth
             >
-              Anterior
+              Buscar
             </Button>
-            <Button
-              disabled={page + 1 >= totalPages}
-              onClick={() => setPage((current) => current + 1)}
-            >
-              Siguiente
-            </Button>
-          </Stack>
-        </Stack>
-      ) : null}
+          </Grid>
+        </Grid>
+      </AdminTableToolbar>
+
+      <AdminTable
+        ariaLabel="Catastro de establecimientos"
+        minWidth={760}
+        loading={establishmentsQuery.isLoading}
+        empty={!establishmentsQuery.isLoading && !data?.items.length}
+        emptyMessage="No hay establecimientos para los filtros seleccionados."
+        footer={
+          <AdminTableFooter
+            total={data?.total ?? 0}
+            page={page}
+            pageSize={pageSize}
+            onPageChange={setPage}
+          />
+        }
+      >
+        <TableHead>
+          <TableRow>
+            <TableCell>Establecimiento</TableCell>
+            <TableCell>Localidad</TableCell>
+            <TableCell>Actividad</TableCell>
+            <TableCell>Registro</TableCell>
+            <TableCell>Estado</TableCell>
+            <TableCell align="right">Acciones</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {(data?.items ?? []).map((item) => (
+            <TableRow key={item.id} hover>
+              <TableCell component="th" scope="row">
+                <Typography fontWeight={600}>{item.nombreComercial}</Typography>
+                {item.categoria ? (
+                  <Typography variant="caption" color="text.secondary">
+                    {item.categoria}
+                  </Typography>
+                ) : null}
+              </TableCell>
+              <TableCell>{item.localityName}</TableCell>
+              <TableCell>{item.actividad}</TableCell>
+              <TableCell>{item.numeroRegistro ?? "—"}</TableCell>
+              <TableCell>
+                <StatusBadge
+                  code={item.active ? "ACTIVA" : "INACTIVA"}
+                  label={item.active ? "Activo" : "Inactivo"}
+                />
+              </TableCell>
+              <TableCell align="right">
+                <Tooltip title="Editar establecimiento">
+                  <IconButton
+                    aria-label={`Editar ${item.nombreComercial}`}
+                    onClick={() => openEdit(item)}
+                  >
+                    <EditRounded />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title={item.active ? "Desactivar" : "Reactivar"}>
+                  <span>
+                    <IconButton
+                      aria-label={`${item.active ? "Desactivar" : "Reactivar"} ${item.nombreComercial}`}
+                      onClick={() =>
+                        activeMutation.mutate({ id: item.id, next: !item.active })
+                      }
+                      disabled={activeMutation.isPending}
+                    >
+                      <PowerSettingsNewRounded />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </AdminTable>
 
       <Dialog
         open={dialogOpen}

@@ -5,8 +5,6 @@ import AccountCircleRounded from "@mui/icons-material/AccountCircleRounded";
 import AddRounded from "@mui/icons-material/AddRounded";
 import CheckCircleRounded from "@mui/icons-material/CheckCircleRounded";
 import CategoryRounded from "@mui/icons-material/CategoryRounded";
-import ChevronLeftRounded from "@mui/icons-material/ChevronLeftRounded";
-import ChevronRightRounded from "@mui/icons-material/ChevronRightRounded";
 import DarkModeRounded from "@mui/icons-material/DarkModeRounded";
 import EditRounded from "@mui/icons-material/EditRounded";
 import FactCheckRounded from "@mui/icons-material/FactCheckRounded";
@@ -42,10 +40,8 @@ import {
   Select,
   Snackbar,
   Stack,
-  Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   TextField,
@@ -57,7 +53,11 @@ import { useColorScheme } from "@mui/material/styles";
 import { useCallback, useEffect, useState } from "react";
 
 import { FlatSurface } from "@/components/ui/flat-surface";
-import { ContentState } from "@/components/ui/content-state";
+import {
+  AdminTable,
+  AdminTableFooter,
+  AdminTableToolbar,
+} from "@/components/ui/admin-table";
 import { MetricCard } from "@/components/ui/metric-card";
 import { PageHeader } from "@/components/ui/page-header";
 import { SearchField } from "@/components/ui/search-field";
@@ -692,12 +692,9 @@ function ReviewSection({
   onReview: (center: AdminCenter, action: "APPROVE" | "REJECT") => void;
 }) {
   return (
-    <FlatSurface sx={{ overflow: "hidden" }}>
+    <Stack spacing={webTokens.spacing.control}>
       {!canReview ? (
-        <Alert
-          severity="info"
-          sx={{ mx: webTokens.spacing.surface, mb: webTokens.spacing.control }}
-        >
+        <Alert severity="info">
           Tu rol puede consultar la cola, pero no aprobar ni rechazar fichas.
         </Alert>
       ) : null}
@@ -707,9 +704,16 @@ function ReviewSection({
         reviewable={canReview}
         workingCode={workingCode}
         onReview={onReview}
+        footer={
+          <AdminTableFooter
+            total={total}
+            page={page}
+            pageSize={pageSize}
+            onPageChange={onPageChange}
+          />
+        }
       />
-      <PaginationFooter total={total} page={page} onPageChange={onPageChange} />
-    </FlatSurface>
+    </Stack>
   );
 }
 
@@ -740,39 +744,50 @@ function CentersSection({
 }) {
   return (
     <Stack spacing={webTokens.spacing.control}>
-      <Box component="form" onSubmit={onSearch}>
-        <Stack
-          direction={{ xs: "column", sm: "row" }}
-          spacing={webTokens.spacing.control}
-        >
-          <SearchField
-            label="Buscar por nombre o código"
-            value={query}
-            onChange={(event) => onQueryChange(event.target.value)}
+      <AdminTableToolbar>
+        <Box component="form" onSubmit={onSearch}>
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            spacing={webTokens.spacing.control}
+          >
+            <SearchField
+              label="Buscar por nombre o código"
+              value={query}
+              onChange={(event) => onQueryChange(event.target.value)}
+            />
+            <FormControl sx={{ minWidth: { sm: 220 } }}>
+              <InputLabel id="center-status-label">Estado</InputLabel>
+              <Select
+                labelId="center-status-label"
+                label="Estado"
+                value={status}
+                onChange={(event) => onStatusChange(event.target.value)}
+              >
+                <MenuItem value="ALL">Todos</MenuItem>
+                <MenuItem value="BORRADOR">Borrador</MenuItem>
+                <MenuItem value="EN_REVISION">En revisión</MenuItem>
+                <MenuItem value="APROBADO">Aprobado</MenuItem>
+                <MenuItem value="PUBLICADO">Publicado</MenuItem>
+                <MenuItem value="RECHAZADO">Rechazado</MenuItem>
+                <MenuItem value="INACTIVO">Inactivo</MenuItem>
+              </Select>
+            </FormControl>
+          </Stack>
+        </Box>
+      </AdminTableToolbar>
+      <CenterTable
+        centers={centers}
+        loading={loading}
+        onOpen={onOpen}
+        footer={
+          <AdminTableFooter
+            total={total}
+            page={page}
+            pageSize={pageSize}
+            onPageChange={onPageChange}
           />
-          <FormControl sx={{ minWidth: { sm: 220 } }}>
-            <InputLabel id="center-status-label">Estado</InputLabel>
-            <Select
-              labelId="center-status-label"
-              label="Estado"
-              value={status}
-              onChange={(event) => onStatusChange(event.target.value)}
-            >
-              <MenuItem value="ALL">Todos</MenuItem>
-              <MenuItem value="BORRADOR">Borrador</MenuItem>
-              <MenuItem value="EN_REVISION">En revisión</MenuItem>
-              <MenuItem value="APROBADO">Aprobado</MenuItem>
-              <MenuItem value="PUBLICADO">Publicado</MenuItem>
-              <MenuItem value="RECHAZADO">Rechazado</MenuItem>
-              <MenuItem value="INACTIVO">Inactivo</MenuItem>
-            </Select>
-          </FormControl>
-        </Stack>
-      </Box>
-      <FlatSurface sx={{ overflow: "hidden" }}>
-        <CenterTable centers={centers} loading={loading} onOpen={onOpen} />
-        <PaginationFooter total={total} page={page} onPageChange={onPageChange} />
-      </FlatSurface>
+        }
+      />
     </Stack>
   );
 }
@@ -848,6 +863,7 @@ function CenterTable({
   workingCode,
   onReview,
   onOpen,
+  footer,
 }: {
   centers: AdminCenter[];
   loading: boolean;
@@ -855,156 +871,93 @@ function CenterTable({
   workingCode?: string | null;
   onReview?: (center: AdminCenter, action: "APPROVE" | "REJECT") => void;
   onOpen?: (code: string) => void;
+  footer?: React.ReactNode;
 }) {
-  if (loading && centers.length === 0)
-    return <ContentState status="loading" label="Cargando fichas" />;
   return (
-    <TableContainer>
-      <Table aria-label="Centros turísticos">
-        <TableHead>
-          <TableRow>
-            <TableCell>Ficha</TableCell>
-            <TableCell>Estado</TableCell>
-            <TableCell>Actividad</TableCell>
-            <TableCell>Solicitó</TableCell>
-            <TableCell>Actualizada</TableCell>
-            {reviewable || onOpen ? <TableCell align="right">Acciones</TableCell> : null}
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {centers.length === 0 ? (
-            <TableRow>
-              <TableCell
-                colSpan={reviewable || onOpen ? 6 : 5}
-                align="center"
-                sx={{ py: webTokens.spacing.section }}
-              >
-                <Typography color="text.secondary">
-                  No hay fichas para mostrar.
-                </Typography>
-              </TableCell>
-            </TableRow>
-          ) : (
-            centers.map((center) => (
-              <TableRow key={center.code} hover>
-                <TableCell>
-                  <Typography fontWeight={700}>{center.name}</Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {center.code}
-                  </Typography>
-                </TableCell>
-                <TableCell>
-                  <StatusBadge code={center.status.code} label={center.status.name} />
-                </TableCell>
-                <TableCell>{center.active ? "Activa" : "Inactiva"}</TableCell>
-                <TableCell>{center.requestedBy ?? "—"}</TableCell>
-                <TableCell>{formatDate(center.updatedAt)}</TableCell>
-                {reviewable && onReview ? (
-                  <TableCell align="right">
-                    <Stack
-                      direction={{ xs: "column", sm: "row" }}
-                      spacing={webTokens.spacing.inline}
-                      justifyContent="flex-end"
-                    >
-                      {onOpen ? (
-                        <Button
-                          size="small"
-                          variant="text"
-                          onClick={() => onOpen(center.code)}
-                        >
-                          Ver ficha
-                        </Button>
-                      ) : null}
-                      <Button
-                        size="small"
-                        variant="contained"
-                        disabled={workingCode !== null}
-                        onClick={() => onReview(center, "APPROVE")}
-                      >
-                        Aprobar
-                      </Button>
-                      <Button
-                        size="small"
-                        color="error"
-                        variant="text"
-                        disabled={workingCode !== null}
-                        onClick={() => onReview(center, "REJECT")}
-                      >
-                        Rechazar
-                      </Button>
-                    </Stack>
-                  </TableCell>
-                ) : onOpen ? (
-                  <TableCell align="right">
-                    <Tooltip title="Editar">
-                      <IconButton
-                        aria-label={`Editar ${center.name}`}
-                        onClick={() => onOpen(center.code)}
-                      >
-                        <EditRounded fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
-                ) : null}
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
-    </TableContainer>
-  );
-}
-
-function PaginationFooter({
-  total,
-  page,
-  onPageChange,
-}: {
-  total: number;
-  page: number;
-  onPageChange: (page: number) => void;
-}) {
-  const lastPage = Math.max(Math.ceil(total / pageSize) - 1, 0);
-  return (
-    <Stack
-      direction="row"
-      alignItems="center"
-      justifyContent="space-between"
-      sx={{
-        p: webTokens.spacing.tableFooter,
-        borderTop: "1px solid var(--mui-palette-divider)",
-      }}
+    <AdminTable
+      ariaLabel="Centros turísticos"
+      minWidth={reviewable ? 860 : 760}
+      loading={loading && centers.length === 0}
+      empty={!loading && centers.length === 0}
+      emptyMessage="No hay fichas para mostrar."
+      footer={footer}
     >
-      <Typography variant="body2" color="text.secondary">
-        {total === 0
-          ? "0 resultados"
-          : `${page * pageSize + 1}–${Math.min((page + 1) * pageSize, total)} de ${total}`}
-      </Typography>
-      <Stack direction="row">
-        <Tooltip title="Página anterior">
-          <span>
-            <IconButton
-              aria-label="Página anterior"
-              onClick={() => onPageChange(page - 1)}
-              disabled={page <= 0}
-            >
-              <ChevronLeftRounded />
-            </IconButton>
-          </span>
-        </Tooltip>
-        <Tooltip title="Página siguiente">
-          <span>
-            <IconButton
-              aria-label="Página siguiente"
-              onClick={() => onPageChange(page + 1)}
-              disabled={page >= lastPage}
-            >
-              <ChevronRightRounded />
-            </IconButton>
-          </span>
-        </Tooltip>
-      </Stack>
-    </Stack>
+      <TableHead>
+        <TableRow>
+          <TableCell>Ficha</TableCell>
+          <TableCell>Estado</TableCell>
+          <TableCell>Actividad</TableCell>
+          <TableCell>Solicitó</TableCell>
+          <TableCell>Actualizada</TableCell>
+          {reviewable || onOpen ? <TableCell align="right">Acciones</TableCell> : null}
+        </TableRow>
+      </TableHead>
+      <TableBody>
+        {centers.map((center) => (
+          <TableRow key={center.code} hover>
+            <TableCell component="th" scope="row">
+              <Typography fontWeight={700}>{center.name}</Typography>
+              <Typography variant="caption" color="text.secondary">
+                {center.code}
+              </Typography>
+            </TableCell>
+            <TableCell>
+              <StatusBadge code={center.status.code} label={center.status.name} />
+            </TableCell>
+            <TableCell>{center.active ? "Activa" : "Inactiva"}</TableCell>
+            <TableCell>{center.requestedBy ?? "—"}</TableCell>
+            <TableCell>{formatDate(center.updatedAt)}</TableCell>
+            {reviewable && onReview ? (
+              <TableCell align="right">
+                <Stack
+                  direction={{ xs: "column", sm: "row" }}
+                  spacing={webTokens.spacing.inline}
+                  justifyContent="flex-end"
+                >
+                  {onOpen ? (
+                    <Button
+                      size="small"
+                      variant="text"
+                      onClick={() => onOpen(center.code)}
+                    >
+                      Ver ficha
+                    </Button>
+                  ) : null}
+                  <Button
+                    size="small"
+                    variant="contained"
+                    disabled={workingCode !== null}
+                    onClick={() => onReview(center, "APPROVE")}
+                  >
+                    Aprobar
+                  </Button>
+                  <Button
+                    size="small"
+                    color="error"
+                    variant="text"
+                    disabled={workingCode !== null}
+                    onClick={() => onReview(center, "REJECT")}
+                  >
+                    Rechazar
+                  </Button>
+                </Stack>
+              </TableCell>
+            ) : onOpen ? (
+              <TableCell align="right">
+                <Tooltip title="Editar">
+                  <IconButton
+                    aria-label={`Editar ${center.name}`}
+                    onClick={() => onOpen(center.code)}
+                  >
+                    <EditRounded fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </TableCell>
+            ) : null}
+          </TableRow>
+        ))}
+      </TableBody>
+    </AdminTable>
   );
 }
 

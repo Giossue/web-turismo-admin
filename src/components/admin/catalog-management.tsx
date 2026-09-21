@@ -13,7 +13,6 @@ import {
   Switch,
   Tab,
   Tabs,
-  Table,
   TableBody,
   TableCell,
   TableHead,
@@ -24,8 +23,7 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 
-import { FlatSurface } from "@/components/ui/flat-surface";
-import { ContentState } from "@/components/ui/content-state";
+import { AdminTable, AdminTableToolbar } from "@/components/ui/admin-table";
 import { SearchField } from "@/components/ui/search-field";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
@@ -121,73 +119,82 @@ export function CatalogManagement({
 
   return (
     <Stack spacing={webTokens.spacing.control}>
-      <Stack spacing={webTokens.spacing.control}>
-        <Tabs
-          value={selected}
-          onChange={(_, value: AdminCatalogKey) => {
-            setSelected(value);
-            setSearch("");
-          }}
-          variant="scrollable"
-          allowScrollButtonsMobile
-          aria-label="Tipo de catálogo"
+      <AdminTableToolbar>
+        <Stack
+          direction={{ xs: "column", md: "row" }}
+          spacing={webTokens.spacing.control}
+          alignItems={{ md: "center" }}
         >
-          {catalogMeta.map((item) => (
-            <Tab key={item.key} value={item.key} label={item.label} />
-          ))}
-        </Tabs>
-        <SearchField
-          label="Buscar opción"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-        />
-      </Stack>
-
-      <FlatSurface sx={{ overflow: "hidden" }}>
-        {catalogsQuery.isLoading ? (
-          <ContentState status="loading" label="Cargando catálogos" />
-        ) : catalogsQuery.error ? (
-          <ContentState status="empty" message="No se pudieron cargar los catálogos." />
-        ) : options.length === 0 ? (
-          <ContentState
-            status="empty"
-            message="No hay opciones que coincidan con la búsqueda."
+          <Tabs
+            value={selected}
+            onChange={(_, value: AdminCatalogKey) => {
+              setSelected(value);
+              setSearch("");
+            }}
+            variant="scrollable"
+            allowScrollButtonsMobile
+            aria-label="Tipo de catálogo"
+          >
+            {catalogMeta.map((item) => (
+              <Tab key={item.key} value={item.key} label={item.label} />
+            ))}
+          </Tabs>
+          <SearchField
+            label="Buscar opción"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            sx={{ maxWidth: { md: 360 } }}
           />
-        ) : (
-          <Table size="small" aria-label="Opciones del catálogo">
-            <TableHead>
-              <TableRow>
-                <TableCell>Nombre</TableCell>
-                <TableCell>Estado</TableCell>
-                <TableCell align="right">Acción</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {options.map((option) => (
-                <TableRow key={option.id} hover>
-                  <TableCell>{option.name}</TableCell>
-                  <TableCell>
-                    <StatusBadge
-                      code={option.active === false ? "INACTIVA" : "ACTIVA"}
-                      label={option.active === false ? "Inactiva" : "Activa"}
-                    />
-                  </TableCell>
-                  <TableCell align="right">
-                    <Tooltip title="Editar">
-                      <IconButton
-                        aria-label={`Editar ${option.name}`}
-                        onClick={() => openEdit(option)}
-                      >
-                        <EditRounded fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </FlatSurface>
+        </Stack>
+      </AdminTableToolbar>
+
+      <AdminTable
+        ariaLabel="Opciones del catálogo"
+        minWidth={560}
+        loading={catalogsQuery.isLoading}
+        empty={
+          Boolean(catalogsQuery.error) ||
+          (!catalogsQuery.isLoading && options.length === 0)
+        }
+        emptyMessage={
+          catalogsQuery.error
+            ? "No se pudieron cargar los catálogos."
+            : "No hay opciones que coincidan con la búsqueda."
+        }
+      >
+        <TableHead>
+          <TableRow>
+            <TableCell>Nombre</TableCell>
+            <TableCell>Estado</TableCell>
+            <TableCell align="right">Acción</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {options.map((option) => (
+            <TableRow key={option.id} hover>
+              <TableCell component="th" scope="row">
+                {option.name}
+              </TableCell>
+              <TableCell>
+                <StatusBadge
+                  code={option.active === false ? "INACTIVA" : "ACTIVA"}
+                  label={option.active === false ? "Inactiva" : "Activa"}
+                />
+              </TableCell>
+              <TableCell align="right">
+                <Tooltip title="Editar">
+                  <IconButton
+                    aria-label={`Editar ${option.name}`}
+                    onClick={() => openEdit(option)}
+                  >
+                    <EditRounded fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </AdminTable>
 
       <Dialog
         open={editing !== null}
