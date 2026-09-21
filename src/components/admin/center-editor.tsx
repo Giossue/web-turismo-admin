@@ -288,13 +288,18 @@ export function CenterEditor({
     : null;
 
   useEffect(() => {
-    if (typeId && !typeOptions.some((option) => Number(option.id) === Number(typeId))) {
+    if (
+      canEdit &&
+      typeId &&
+      !typeOptions.some((option) => Number(option.id) === Number(typeId))
+    ) {
       setValue("typeId", "");
       setValue("subtypeId", "");
     }
-  }, [setValue, typeId, typeOptions]);
+  }, [canEdit, setValue, typeId, typeOptions]);
 
   useEffect(() => {
+    if (!canEdit) return;
     const subtype = getValues("subtypeId");
     if (
       subtype &&
@@ -302,28 +307,31 @@ export function CenterEditor({
     ) {
       setValue("subtypeId", "");
     }
-  }, [getValues, setValue, subtypeOptions]);
+  }, [canEdit, getValues, setValue, subtypeOptions]);
 
   useEffect(() => {
     if (
+      canEdit &&
       cantonId &&
       !cantonOptions.some((option) => Number(option.id) === Number(cantonId))
     ) {
       setValue("cantonId", "");
       setValue("parishId", "");
     }
-  }, [cantonId, cantonOptions, setValue]);
+  }, [canEdit, cantonId, cantonOptions, setValue]);
 
   useEffect(() => {
     if (
+      canEdit &&
       parishId &&
       !parishOptions.some((option) => Number(option.id) === Number(parishId))
     ) {
       setValue("parishId", "");
     }
-  }, [parishId, parishOptions, setValue]);
+  }, [canEdit, parishId, parishOptions, setValue]);
 
   useEffect(() => {
+    if (!canEdit) return;
     const touristZoneId = getValues("touristZoneId");
     if (
       touristZoneId &&
@@ -331,9 +339,10 @@ export function CenterEditor({
     ) {
       setValue("touristZoneId", "");
     }
-  }, [getValues, setValue, zoneOptions]);
+  }, [canEdit, getValues, setValue, zoneOptions]);
 
   useEffect(() => {
+    if (!canEdit) return;
     const currentActivityIds = activityIds ?? [];
     const validActivityIds = new Set(activityOptions.map((option) => String(option.id)));
     const nextActivityIds = currentActivityIds.filter((id) =>
@@ -342,7 +351,7 @@ export function CenterEditor({
     if (nextActivityIds.length !== currentActivityIds.length) {
       setValue("activityIds", nextActivityIds);
     }
-  }, [activityIds, activityOptions, setValue]);
+  }, [activityIds, activityOptions, canEdit, setValue]);
 
   const save = useCallback(
     async (values: FormValues, submitForReview = false, silent = false) => {
