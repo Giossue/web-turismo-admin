@@ -39,6 +39,7 @@ const catalogMeta: Array<{ key: AdminCatalogKey; label: string }> = [
   { key: "ACCESSIBILITY", label: "Accesibilidad" },
   { key: "ACTIVITY", label: "Actividades" },
   { key: "FACILITY", label: "Facilidades" },
+  { key: "ESTABLISHMENT_CATEGORY", label: "Categorías de catastro" },
 ];
 
 export function CatalogManagement({
@@ -81,10 +82,16 @@ export function CatalogManagement({
         ? catalogsQuery.data.accessibilityTypes
         : selected === "ACTIVITY"
           ? catalogsQuery.data.activities
-          : catalogsQuery.data.facilities;
+          : selected === "FACILITY"
+            ? catalogsQuery.data.facilities
+            : catalogsQuery.data.establishmentCategories;
     const normalized = (search.trim() ? debouncedSearch : "").toLocaleLowerCase();
     return normalized
-      ? source.filter((item) => item.name.toLocaleLowerCase().includes(normalized))
+      ? source.filter((item) =>
+          [item.name, item.activityName, item.classificationName]
+            .filter(Boolean)
+            .some((value) => value?.toLocaleLowerCase().includes(normalized)),
+        )
       : source;
   }, [catalogsQuery.data, debouncedSearch, search, selected]);
 
@@ -163,6 +170,12 @@ export function CatalogManagement({
         <TableHead>
           <TableRow>
             <TableCell>Nombre</TableCell>
+            {selected === "ESTABLISHMENT_CATEGORY" ? (
+              <>
+                <TableCell>Actividad</TableCell>
+                <TableCell>Clasificación</TableCell>
+              </>
+            ) : null}
             <TableCell>Estado</TableCell>
             <TableCell align="right">Acción</TableCell>
           </TableRow>
@@ -173,6 +186,12 @@ export function CatalogManagement({
               <TableCell component="th" scope="row">
                 {option.name}
               </TableCell>
+              {selected === "ESTABLISHMENT_CATEGORY" ? (
+                <>
+                  <TableCell>{option.activityName ?? "—"}</TableCell>
+                  <TableCell>{option.classificationName ?? "—"}</TableCell>
+                </>
+              ) : null}
               <TableCell>
                 <StatusBadge
                   code={option.active === false ? "INACTIVA" : "ACTIVA"}

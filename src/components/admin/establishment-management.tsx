@@ -26,14 +26,22 @@ import {
   Typography,
 } from "@mui/material";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useState,
+} from "react";
+import { Controller, useForm, useWatch } from "react-hook-form";
 
 import {
   AdminTable,
   AdminTableFooter,
   AdminTableToolbar,
 } from "@/components/ui/admin-table";
+import { CatalogSelect } from "@/components/ui/catalog-select";
 import { SearchField } from "@/components/ui/search-field";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
@@ -42,6 +50,7 @@ import {
   getAdminEstablishments,
   saveAdminEstablishment,
   setAdminEstablishmentActive,
+  type AdminCatalogs,
   type AdminEstablishment,
   type SaveEstablishmentInput,
 } from "@/lib/admin-api";
@@ -54,6 +63,9 @@ type EstablishmentFormValues = {
   ruc: string;
   nombreComercial: string;
   razonSocial: string;
+  activityId: string;
+  classificationId: string;
+  categoryId: string;
   actividad: string;
   clasificacion: string;
   categoria: string;
@@ -69,6 +81,9 @@ const emptyValues: EstablishmentFormValues = {
   ruc: "",
   nombreComercial: "",
   razonSocial: "",
+  activityId: "",
+  classificationId: "",
+  categoryId: "",
   actividad: "",
   clasificacion: "",
   categoria: "",
@@ -111,8 +126,10 @@ export const EstablishmentManagement = forwardRef<
     ADMIN_SEARCH_DEBOUNCE_MS,
   );
   const debouncedCategory = useDebouncedValue(category.trim(), ADMIN_SEARCH_DEBOUNCE_MS);
-  const { control, register, reset, handleSubmit, formState } =
+  const { control, register, reset, setValue, handleSubmit, formState } =
     useForm<EstablishmentFormValues>({ defaultValues: emptyValues });
+  const formActivityId = useWatch({ control, name: "activityId" });
+  const formClassificationId = useWatch({ control, name: "classificationId" });
 
   const catalogsQuery = useQuery({
     queryKey: ["admin", "catalogs"],
@@ -207,6 +224,47 @@ export const EstablishmentManagement = forwardRef<
 
   const data = establishmentsQuery.data;
   const catalogs = catalogsQuery.data;
+  const establishmentActivities = catalogs?.establishmentActivities ?? [];
+  const establishmentClassifications = useMemo(
+    () =>
+      (catalogs?.establishmentClassifications ?? []).filter(
+        (option) =>
+          !formActivityId || String(option.activityId) === String(formActivityId),
+      ),
+    [catalogs?.establishmentClassifications, formActivityId],
+  );
+  const establishmentCategories = useMemo(
+    () =>
+      (catalogs?.establishmentCategories ?? []).filter(
+        (option) =>
+          !formClassificationId ||
+          String(option.classificationId) === String(formClassificationId),
+      ),
+    [catalogs?.establishmentCategories, formClassificationId],
+  );
+  const filterActivityId = establishmentActivities.find(
+    (option) => option.name === activity,
+  )?.id;
+  const filterClassifications = useMemo(
+    () =>
+      (catalogs?.establishmentClassifications ?? []).filter(
+        (option) =>
+          !filterActivityId || String(option.activityId) === String(filterActivityId),
+      ),
+    [catalogs?.establishmentClassifications, filterActivityId],
+  );
+  const filterClassificationId = filterClassifications.find(
+    (option) => option.name === classification,
+  )?.id;
+  const filterCategories = useMemo(
+    () =>
+      (catalogs?.establishmentCategories ?? []).filter(
+        (option) =>
+          !filterClassificationId ||
+          String(option.classificationId) === String(filterClassificationId),
+      ),
+    [catalogs?.establishmentCategories, filterClassificationId],
+  );
   const provinces = catalogs?.provinces ?? [];
   const cantons = (catalogs?.cantons ?? []).filter(
     (option) => !provinceId || String(option.provinceId) === provinceId,
@@ -226,7 +284,7 @@ export const EstablishmentManagement = forwardRef<
 
   function openEdit(item: AdminEstablishment) {
     setEditing(item);
-    reset(toFormValues(item));
+    reset(toFormValues(item, catalogs));
     setDialogOpen(true);
   }
 
@@ -242,15 +300,28 @@ export const EstablishmentManagement = forwardRef<
       return;
     }
     onError(null);
+    const activityOption = establishmentActivities.find(
+      (option) => String(option.id) === values.activityId,
+    );
+    const classificationOption = establishmentClassifications.find(
+      (option) => String(option.id) === values.classificationId,
+    );
+    const categoryOption = establishmentCategories.find(
+      (option) => String(option.id) === values.categoryId,
+    );
     saveMutation.mutate({
       localityId: Number(values.localityId),
       numeroRegistro: values.numeroRegistro.trim() || undefined,
       ruc: values.ruc.trim() || undefined,
       nombreComercial: values.nombreComercial.trim(),
       razonSocial: values.razonSocial.trim() || undefined,
-      actividad: values.actividad.trim(),
-      clasificacion: values.clasificacion.trim() || undefined,
-      categoria: values.categoria.trim() || undefined,
+      activityId: activityOption?.id,
+      classificationId: classificationOption?.id,
+      categoryId: categoryOption?.id,
+      actividad: activityOption?.name ?? values.actividad.trim(),
+      clasificacion:
+        classificationOption?.name ?? (values.clasificacion.trim() || undefined),
+      categoria: categoryOption?.name ?? (values.categoria.trim() || undefined),
       direccion: values.direccion.trim() || undefined,
       telefono: values.telefono.trim() || undefined,
       latitude,
@@ -340,34 +411,57 @@ export const EstablishmentManagement = forwardRef<
             </FormControl>
           </Grid>
           <Grid size={{ xs: 12, sm: 6, lg: 2 }}>
-            <TextField
+            <CatalogSelect
+              id="establishment-activity-filter"
               label="Actividad"
-              fullWidth
-              value={activity}
-              onChange={(event) => {
-                setActivity(event.target.value);
+              value={filterActivityId ? String(filterActivityId) : ""}
+              options={establishmentActivities}
+              onChange={(value) => {
+                const option = establishmentActivities.find(
+                  (candidate) => String(candidate.id) === value,
+                );
+                setActivity(option?.name ?? "");
+                setClassification("");
+                setCategory("");
                 setPage(0);
               }}
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6, lg: 2 }}>
-            <TextField
+            <CatalogSelect
+              id="establishment-classification-filter"
               label="Clasificación"
-              fullWidth
-              value={classification}
-              onChange={(event) => {
-                setClassification(event.target.value);
+              value={filterClassificationId ? String(filterClassificationId) : ""}
+              options={filterClassifications}
+              disabled={!activity}
+              onChange={(value) => {
+                const option = filterClassifications.find(
+                  (candidate) => String(candidate.id) === value,
+                );
+                setClassification(option?.name ?? "");
+                setCategory("");
                 setPage(0);
               }}
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6, lg: 2 }}>
-            <TextField
+            <CatalogSelect
+              id="establishment-category-filter"
               label="Categoría"
-              fullWidth
-              value={category}
-              onChange={(event) => {
-                setCategory(event.target.value);
+              value={
+                filterCategories.find((option) => option.name === category)
+                  ? String(
+                      filterCategories.find((option) => option.name === category)?.id,
+                    )
+                  : ""
+              }
+              options={filterCategories}
+              disabled={!classification}
+              onChange={(value) => {
+                const option = filterCategories.find(
+                  (candidate) => String(candidate.id) === value,
+                );
+                setCategory(option?.name ?? "");
                 setPage(0);
               }}
             />
@@ -483,6 +577,9 @@ export const EstablishmentManagement = forwardRef<
             spacing={webTokens.spacing.control}
             sx={{ pt: 1 }}
           >
+            <input type="hidden" {...register("actividad")} />
+            <input type="hidden" {...register("clasificacion")} />
+            <input type="hidden" {...register("categoria")} />
             <Grid container spacing={webTokens.spacing.control}>
               <Grid size={{ xs: 12, md: 6 }}>
                 <Controller
@@ -528,24 +625,80 @@ export const EstablishmentManagement = forwardRef<
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
-                <TextField
-                  label="Actividad"
-                  fullWidth
-                  required
-                  error={Boolean(formState.errors.actividad)}
-                  helperText={formState.errors.actividad?.message}
-                  {...register("actividad", { required: "Ingresa la actividad." })}
+                <Controller
+                  name="activityId"
+                  control={control}
+                  rules={{ required: "Selecciona una actividad." }}
+                  render={({ field, fieldState }) => (
+                    <CatalogSelect
+                      id="establishment-activity"
+                      label="Actividad"
+                      value={field.value}
+                      options={establishmentActivities}
+                      required
+                      helperText={fieldState.error?.message}
+                      onChange={(value) => {
+                        field.onChange(value);
+                        setValue("classificationId", "");
+                        setValue("categoryId", "");
+                        const option = establishmentActivities.find(
+                          (candidate) => String(candidate.id) === value,
+                        );
+                        setValue("actividad", option?.name ?? "");
+                        setValue("clasificacion", "");
+                        setValue("categoria", "");
+                      }}
+                    />
+                  )}
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
-                <TextField
-                  label="Clasificación"
-                  fullWidth
-                  {...register("clasificacion")}
+                <Controller
+                  name="classificationId"
+                  control={control}
+                  render={({ field, fieldState }) => (
+                    <CatalogSelect
+                      id="establishment-classification"
+                      label="Clasificación"
+                      value={field.value}
+                      options={establishmentClassifications}
+                      disabled={!formActivityId}
+                      helperText={fieldState.error?.message}
+                      onChange={(value) => {
+                        field.onChange(value);
+                        setValue("categoryId", "");
+                        const option = establishmentClassifications.find(
+                          (candidate) => String(candidate.id) === value,
+                        );
+                        setValue("clasificacion", option?.name ?? "");
+                        setValue("categoria", "");
+                      }}
+                    />
+                  )}
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
-                <TextField label="Categoría" fullWidth {...register("categoria")} />
+                <Controller
+                  name="categoryId"
+                  control={control}
+                  render={({ field, fieldState }) => (
+                    <CatalogSelect
+                      id="establishment-category"
+                      label="Categoría"
+                      value={field.value}
+                      options={establishmentCategories}
+                      disabled={!formClassificationId}
+                      helperText={fieldState.error?.message}
+                      onChange={(value) => {
+                        field.onChange(value);
+                        const option = establishmentCategories.find(
+                          (candidate) => String(candidate.id) === value,
+                        );
+                        setValue("categoria", option?.name ?? "");
+                      }}
+                    />
+                  )}
+                />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
                 <TextField label="Razón social" fullWidth {...register("razonSocial")} />
@@ -606,13 +759,39 @@ export const EstablishmentManagement = forwardRef<
   );
 });
 
-function toFormValues(item: AdminEstablishment): EstablishmentFormValues {
+function toFormValues(
+  item: AdminEstablishment,
+  catalogs?: AdminCatalogs,
+): EstablishmentFormValues {
+  const activityId =
+    item.activityId ?? findCatalogId(catalogs?.establishmentActivities, item.actividad);
+  const classificationId =
+    item.classificationId ??
+    findCatalogId(
+      catalogs?.establishmentClassifications?.filter(
+        (option) => !activityId || String(option.activityId) === String(activityId),
+      ),
+      item.clasificacion,
+    );
+  const categoryId =
+    item.categoryId ??
+    findCatalogId(
+      catalogs?.establishmentCategories?.filter(
+        (option) =>
+          !classificationId ||
+          String(option.classificationId) === String(classificationId),
+      ),
+      item.categoria,
+    );
   return {
     localityId: String(item.localityId),
     numeroRegistro: item.numeroRegistro ?? "",
     ruc: item.ruc ?? "",
     nombreComercial: item.nombreComercial,
     razonSocial: item.razonSocial ?? "",
+    activityId: activityId === null ? "" : String(activityId ?? ""),
+    classificationId: classificationId === null ? "" : String(classificationId ?? ""),
+    categoryId: categoryId === null ? "" : String(categoryId ?? ""),
     actividad: item.actividad,
     clasificacion: item.clasificacion ?? "",
     categoria: item.categoria ?? "",
@@ -621,4 +800,12 @@ function toFormValues(item: AdminEstablishment): EstablishmentFormValues {
     latitude: item.latitude === null ? "" : String(item.latitude),
     longitude: item.longitude === null ? "" : String(item.longitude),
   };
+}
+
+function findCatalogId(
+  options: Array<{ id: number; name: string }> | undefined,
+  name: string | null,
+) {
+  if (!name) return null;
+  return options?.find((option) => option.name === name)?.id ?? null;
 }

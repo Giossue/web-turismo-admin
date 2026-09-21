@@ -122,6 +122,10 @@ export type CatalogOption = {
   provinceId?: number;
   cantonId?: number;
   localityId?: number;
+  activityId?: number;
+  classificationId?: number;
+  activityName?: string;
+  classificationName?: string;
   groupId?: number;
   group?: string;
   origin?: string;
@@ -130,8 +134,12 @@ export type CatalogOption = {
   unit2?: string;
   unit3?: string;
 };
-export type AdminCatalogKey = "ACCESSIBILITY" | "ACTIVITY" | "FACILITY";
+export type AdminCatalogKey =
+  "ACCESSIBILITY" | "ACTIVITY" | "FACILITY" | "ESTABLISHMENT_CATEGORY";
 export type AdminCatalogs = {
+  establishmentActivities: CatalogOption[];
+  establishmentClassifications: CatalogOption[];
+  establishmentCategories: CatalogOption[];
   categories: CatalogOption[];
   types: CatalogOption[];
   subtypes: CatalogOption[];
@@ -242,8 +250,11 @@ export type AdminEstablishment = {
   nombreComercial: string;
   razonSocial: string | null;
   actividad: string;
+  activityId: number | null;
   clasificacion: string | null;
+  classificationId: number | null;
   categoria: string | null;
+  categoryId: number | null;
   direccion: string | null;
   telefono: string | null;
   latitude: number | null;
@@ -259,6 +270,9 @@ export type SaveEstablishmentInput = {
   ruc?: string;
   nombreComercial: string;
   razonSocial?: string;
+  activityId?: number;
+  classificationId?: number;
+  categoryId?: number;
   actividad: string;
   clasificacion?: string;
   categoria?: string;
