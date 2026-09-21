@@ -222,20 +222,36 @@ export function CenterEditor({
   const typeId = useWatch({ control, name: "typeId" });
   const provinceId = useWatch({ control, name: "provinceId" });
   const cantonId = useWatch({ control, name: "cantonId" });
+  const parishId = useWatch({ control, name: "parishId" });
+  const activityIds = useWatch({ control, name: "activityIds" });
   const selectedFacilityIds = useWatch({ control, name: "facilityIds" }) ?? [];
   const typeOptions = (catalogs?.types ?? []).filter(
-    (option) => !categoryId || Number(option.categoryId) === Number(categoryId),
+    (option) => Boolean(categoryId) && Number(option.categoryId) === Number(categoryId),
   );
   const subtypeOptions = (catalogs?.subtypes ?? []).filter(
-    (option) => !typeId || Number(option.typeId) === Number(typeId),
+    (option) => Boolean(typeId) && Number(option.typeId) === Number(typeId),
   );
   const cantonOptions = (catalogs?.cantons ?? []).filter(
-    (option) => !provinceId || Number(option.provinceId) === Number(provinceId),
+    (option) => Boolean(provinceId) && Number(option.provinceId) === Number(provinceId),
   );
   const parishOptions = (catalogs?.parishes ?? []).filter(
-    (option) => !cantonId || Number(option.cantonId) === Number(cantonId),
+    (option) => Boolean(cantonId) && Number(option.cantonId) === Number(cantonId),
   );
-  const zoneOptions = catalogs?.zones ?? [];
+  const localityOptions = (catalogs?.localities ?? []).filter(
+    (option) =>
+      (!provinceId || Number(option.provinceId) === Number(provinceId)) &&
+      (!cantonId || Number(option.cantonId) === Number(cantonId)),
+  );
+  const zoneOptions = (catalogs?.zones ?? []).filter((option) => {
+    if (!cantonId) return false;
+    if (option.localityId === undefined) return false;
+    return localityOptions.some(
+      (locality) => Number(locality.id) === Number(option.localityId),
+    );
+  });
+  const activityOptions = (catalogs?.activities ?? []).filter(
+    (option) => Boolean(categoryId) && Number(option.categoryId) === Number(categoryId),
+  );
   const canReview = state === "BORRADOR" || state === "RECHAZADO";
   const canPublish = state === "APROBADO";
   const watchedValues = useWatch({ control });
@@ -249,6 +265,63 @@ export function CenterEditor({
   const activeSectionCode = isSectionStep
     ? (centerSectionDefinitions[activeStep]?.code ?? null)
     : null;
+
+  useEffect(() => {
+    if (typeId && !typeOptions.some((option) => Number(option.id) === Number(typeId))) {
+      setValue("typeId", "");
+      setValue("subtypeId", "");
+    }
+  }, [setValue, typeId, typeOptions]);
+
+  useEffect(() => {
+    const subtype = getValues("subtypeId");
+    if (
+      subtype &&
+      !subtypeOptions.some((option) => Number(option.id) === Number(subtype))
+    ) {
+      setValue("subtypeId", "");
+    }
+  }, [getValues, setValue, subtypeOptions]);
+
+  useEffect(() => {
+    if (
+      cantonId &&
+      !cantonOptions.some((option) => Number(option.id) === Number(cantonId))
+    ) {
+      setValue("cantonId", "");
+      setValue("parishId", "");
+    }
+  }, [cantonId, cantonOptions, setValue]);
+
+  useEffect(() => {
+    if (
+      parishId &&
+      !parishOptions.some((option) => Number(option.id) === Number(parishId))
+    ) {
+      setValue("parishId", "");
+    }
+  }, [parishId, parishOptions, setValue]);
+
+  useEffect(() => {
+    const touristZoneId = getValues("touristZoneId");
+    if (
+      touristZoneId &&
+      !zoneOptions.some((option) => Number(option.id) === Number(touristZoneId))
+    ) {
+      setValue("touristZoneId", "");
+    }
+  }, [getValues, setValue, zoneOptions]);
+
+  useEffect(() => {
+    const currentActivityIds = activityIds ?? [];
+    const validActivityIds = new Set(activityOptions.map((option) => String(option.id)));
+    const nextActivityIds = currentActivityIds.filter((id) =>
+      validActivityIds.has(String(id)),
+    );
+    if (nextActivityIds.length !== currentActivityIds.length) {
+      setValue("activityIds", nextActivityIds);
+    }
+  }, [activityIds, activityOptions, setValue]);
 
   const save = useCallback(
     async (values: FormValues, submitForReview = false, silent = false) => {
@@ -527,7 +600,7 @@ export function CenterEditor({
                   name="touristZoneId"
                   options={zoneOptions}
                   register={register}
-                  disabled={!canEdit}
+                  disabled={!canEdit || !cantonId}
                   required
                 />
               </Grid>
@@ -877,10 +950,10 @@ export function CenterEditor({
               description="Selecciona únicamente las actividades que se practican en el atractivo."
             />
             <OptionGrid
-              options={catalogs?.activities ?? []}
+              options={activityOptions}
               selectedName="activityIds"
               register={register}
-              disabled={!canEdit}
+              disabled={!canEdit || !categoryId}
             />
           </Stack>
         </FlatSurface>

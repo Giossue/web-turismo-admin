@@ -28,6 +28,7 @@ import {
   useWatch,
   type Control,
   type UseFormRegister,
+  type UseFormSetValue,
   type UseFormReturn,
 } from "react-hook-form";
 
@@ -711,7 +712,7 @@ export function CenterSectionWorkflow({
     defaultValues: createSectionValues(definition),
     mode: "onBlur",
   });
-  const { control, register, getValues, formState } = form;
+  const { control, register, setValue, getValues, formState } = form;
   const { fields, append, remove } = useFieldArray({ control, name: "rows" });
   const {
     fields: conservationFactorFields,
@@ -909,6 +910,7 @@ export function CenterSectionWorkflow({
                   canEdit={canEdit}
                   control={control}
                   register={register}
+                  setValue={setValue}
                 />
               ) : null}
               {definition.code === "caracteristicas" ? (
@@ -924,6 +926,7 @@ export function CenterSectionWorkflow({
                   canEdit={canEdit}
                   control={control}
                   register={register}
+                  setValue={setValue}
                 />
               ) : null}
               {definition.code === "conservacion" ? (
@@ -961,6 +964,7 @@ export function CenterSectionWorkflow({
                 <PromotionSectionFields
                   catalogs={catalogs}
                   canEdit={canEdit}
+                  control={control}
                   register={register}
                   mediaFields={promotionMediaFields}
                   appendMedia={appendPromotionMedia}
@@ -970,6 +974,7 @@ export function CenterSectionWorkflow({
               {definition.code === "visitantes" ? (
                 <VisitorsSectionFields
                   canEdit={canEdit}
+                  control={control}
                   register={register}
                   seasonFields={visitorSeasonFields}
                   originFields={visitorOriginFields}
@@ -1253,11 +1258,13 @@ function AccessibilitySectionFields({
   canEdit,
   control,
   register,
+  setValue,
 }: {
   catalogs: AdminCatalogs | null;
   canEdit: boolean;
   control: Control<SectionFormValues>;
   register: UseFormRegister<SectionFormValues>;
+  setValue: UseFormSetValue<SectionFormValues>;
 }) {
   const {
     fields: roadFields,
@@ -1298,7 +1305,33 @@ function AccessibilitySectionFields({
   const transportOptions = catalogs?.transportTypes ?? [];
   const frequencyOptions = catalogs?.serviceFrequencies ?? [];
   const accessibilityTypeOptions = catalogs?.accessibilityTypes ?? [];
-  const criterionOptions = catalogs?.accessibilityCriteria ?? [];
+  const criterionOptions = useMemo(
+    () => catalogs?.accessibilityCriteria ?? [],
+    [catalogs?.accessibilityCriteria],
+  );
+  const watchedTransportTypes = useWatch({
+    control,
+    name: "accessibilityTransportTypes",
+  });
+  const watchedCriteria = useWatch({ control, name: "accessibilityCriteria" });
+  const signageAvailable = useWatch({
+    control,
+    name: "accessibilitySignage.available",
+  });
+
+  useEffect(() => {
+    watchedCriteria?.forEach((criterion, index) => {
+      const typeId = criterion?.accessibilityTypeId;
+      const criterionId = criterion?.criterionId;
+      if (!typeId || !criterionId) return;
+      const selected = criterionOptions.find(
+        (option) => Number(option.id) === Number(criterionId),
+      );
+      if (!selected || Number(selected.typeId) !== Number(typeId)) {
+        setValue(`accessibilityCriteria.${index}.criterionId`, "");
+      }
+    });
+  }, [criterionOptions, setValue, watchedCriteria]);
 
   const emptyState = (label: string, actionLabel: string, onAdd: () => void) => (
     <Stack direction="row" justifyContent="space-between" alignItems="center" gap={2}>
@@ -1322,8 +1355,9 @@ function AccessibilitySectionFields({
     name: string,
     label: string,
     options: AdminCatalogs["conditionStates"] = conditionOptions,
+    disabled = false,
   ) => (
-    <FormControl fullWidth disabled={!canEdit}>
+    <FormControl fullWidth disabled={!canEdit || disabled}>
       <InputLabel id={`${name}-label`}>{label}</InputLabel>
       <Select
         labelId={`${name}-label`}
@@ -1792,7 +1826,9 @@ function AccessibilitySectionFields({
                   <TextField
                     label="Detalle de otro tipo"
                     fullWidth
-                    disabled={!canEdit}
+                    disabled={
+                      !canEdit || watchedTransportTypes?.[index]?.applies !== "SI"
+                    }
                     {...register(`accessibilityTransportTypes.${index}.detailOther`)}
                   />
                 </Grid>
@@ -1988,7 +2024,14 @@ function AccessibilitySectionFields({
                       {...register(`accessibilityCriteria.${index}.criterionId`)}
                     >
                       <MenuItem value="">Usar descripción manual</MenuItem>
-                      {criterionOptions.map((option) => (
+                      {(watchedCriteria?.[index]?.accessibilityTypeId
+                        ? criterionOptions.filter(
+                            (option) =>
+                              Number(option.typeId) ===
+                              Number(watchedCriteria[index]?.accessibilityTypeId),
+                          )
+                        : []
+                      ).map((option) => (
                         <MenuItem key={option.id} value={String(option.id)}>
                           {option.name}
                         </MenuItem>
@@ -2077,7 +2120,12 @@ function AccessibilitySectionFields({
           </FormControl>
         </Grid>
         <Grid size={{ xs: 12, sm: 4 }}>
-          {conditionSelect("accessibilitySignage.conditionId", "Estado")}
+          {conditionSelect(
+            "accessibilitySignage.conditionId",
+            "Estado",
+            conditionOptions,
+            signageAvailable !== "SI",
+          )}
         </Grid>
         <Grid size={{ xs: 12, sm: 4 }}>
           <TextField
@@ -2132,11 +2180,13 @@ function PlantSectionFields({
   canEdit,
   control,
   register,
+  setValue,
 }: {
   catalogs: AdminCatalogs | null;
   canEdit: boolean;
   control: Control<SectionFormValues>;
   register: UseFormRegister<SectionFormValues>;
+  setValue: UseFormSetValue<SectionFormValues>;
 }) {
   const {
     fields: plantFields,
@@ -2157,9 +2207,25 @@ function PlantSectionFields({
   const scopeOptions = catalogs?.serviceScopes ?? [];
   const plantOptions = catalogs?.plantTypes ?? [];
   const facilityCategoryOptions = catalogs?.facilityCategories ?? [];
-  const facilityOptions = catalogs?.facilities ?? [];
+  const facilityOptions = useMemo(
+    () => catalogs?.facilities ?? [],
+    [catalogs?.facilities],
+  );
   const conditionOptions = catalogs?.conditionStates ?? [];
   const complementaryOptions = catalogs?.complementaryServiceTypes ?? [];
+  const watchedFacilityDetails = useWatch({ control, name: "facilityDetails" });
+
+  useEffect(() => {
+    watchedFacilityDetails?.forEach((facility, index) => {
+      const categoryId = facility?.categoryId;
+      const typeId = facility?.typeId;
+      if (!categoryId || !typeId) return;
+      const type = facilityOptions.find((option) => Number(option.id) === Number(typeId));
+      if (!type || Number(type.categoryId) !== Number(categoryId)) {
+        setValue(`facilityDetails.${index}.typeId`, "");
+      }
+    });
+  }, [facilityOptions, setValue, watchedFacilityDetails]);
 
   const appendEmptyPlant = () =>
     appendPlant({
@@ -2407,7 +2473,10 @@ function PlantSectionFields({
                 </FormControl>
               </Grid>
               <Grid size={{ xs: 12, md: 3 }}>
-                <FormControl fullWidth disabled={!canEdit}>
+                <FormControl
+                  fullWidth
+                  disabled={!canEdit || !watchedFacilityDetails?.[index]?.categoryId}
+                >
                   <InputLabel id={`facility-type-${index}-label`}>
                     Tipo catalogado
                   </InputLabel>
@@ -2418,7 +2487,14 @@ function PlantSectionFields({
                     {...register(`facilityDetails.${index}.typeId`)}
                   >
                     <MenuItem value="">Usar descripción manual</MenuItem>
-                    {facilityOptions.map((option) => (
+                    {(watchedFacilityDetails?.[index]?.categoryId
+                      ? facilityOptions.filter(
+                          (option) =>
+                            Number(option.categoryId) ===
+                            Number(watchedFacilityDetails[index]?.categoryId),
+                        )
+                      : []
+                    ).map((option) => (
                       <MenuItem key={option.id} value={String(option.id)}>
                         {option.name}
                       </MenuItem>
@@ -2430,7 +2506,7 @@ function PlantSectionFields({
                 <TextField
                   label="Tipo de facilidad (si no está catalogado)"
                   fullWidth
-                  disabled={!canEdit}
+                  disabled={!canEdit || !watchedFacilityDetails?.[index]?.categoryId}
                   {...register(`facilityDetails.${index}.typeLabel`)}
                 />
               </Grid>
@@ -3018,6 +3094,8 @@ function HygieneSafetySectionFields({
   removeEntry: (index: number) => void;
 }) {
   const watchedEntries = useWatch({ control, name: "hygieneEntries" });
+  const watchedRadios = useWatch({ control, name: "hygieneRadios" });
+  const watchedContingency = useWatch({ control, name: "hygieneContingency" });
   const typeOptions = (kind: HygieneEntryKind) => {
     if (!catalogs) return [];
     switch (kind) {
@@ -3097,202 +3175,231 @@ function HygieneSafetySectionFields({
                   spacing={webTokens.spacing.control}
                   alignItems="flex-start"
                 >
-                  <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-                    <FormControl fullWidth disabled={!canEdit}>
-                      <InputLabel id={`hygiene-kind-${index}`}>
-                        Tipo de registro
-                      </InputLabel>
-                      <Select
-                        labelId={`hygiene-kind-${index}`}
-                        label="Tipo de registro"
-                        defaultValue="BASIC_SERVICE"
-                        {...register(`hygieneEntries.${index}.kind`)}
-                      >
-                        {HYGIENE_ENTRY_OPTIONS.map((option) => (
-                          <MenuItem key={option.value} value={option.value}>
-                            {option.label}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-                    <FormControl fullWidth disabled={!canEdit}>
-                      <InputLabel id={`hygiene-scope-${index}`}>Ámbito</InputLabel>
-                      <Select
-                        labelId={`hygiene-scope-${index}`}
-                        label="Ámbito"
-                        defaultValue="EN_ATRACTIVO"
-                        {...register(`hygieneEntries.${index}.scope`)}
-                      >
-                        <MenuItem value="">No aplica</MenuItem>
-                        <MenuItem value="EN_ATRACTIVO">En el atractivo</MenuItem>
-                        <MenuItem value="EN_POBLADO_CERCANO">En poblado cercano</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6, md: 6 }}>
-                    <FormControl
-                      fullWidth
-                      disabled={
-                        !canEdit ||
-                        typeOptions(
-                          (watchedEntries?.[index]?.kind as HygieneEntryKind) ||
-                            "BASIC_SERVICE",
-                        ).length === 0
-                      }
-                    >
-                      <InputLabel id={`hygiene-type-${index}`}>
-                        Tipo catalogado
-                      </InputLabel>
-                      <Select
-                        labelId={`hygiene-type-${index}`}
-                        label="Tipo catalogado"
-                        defaultValue=""
-                        {...register(`hygieneEntries.${index}.typeId`)}
-                      >
-                        <MenuItem value="">Sin seleccionar</MenuItem>
-                        {typeOptions(
-                          (watchedEntries?.[index]?.kind as HygieneEntryKind) ||
-                            "BASIC_SERVICE",
-                        ).map((option) => (
-                          <MenuItem key={option.id} value={String(option.id)}>
-                            {option.name}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-                    <Tooltip title="Eliminar registro">
-                      <IconButton
-                        type="button"
-                        aria-label={`Eliminar registro ${index + 1}`}
-                        disabled={!canEdit}
-                        onClick={() => removeEntry(index)}
-                        sx={{ mt: { md: 1 } }}
-                      >
-                        <DeleteOutlineRounded />
-                      </IconButton>
-                    </Tooltip>
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                    <TextField
-                      label="Nombre alternativo (otro)"
-                      fullWidth
-                      disabled={!canEdit}
-                      {...register(`hygieneEntries.${index}.name`, {
-                        maxLength: { value: 180, message: "Máximo 180 caracteres" },
-                      })}
-                    />
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                    <TextField
-                      label="Proveedor"
-                      fullWidth
-                      disabled={!canEdit}
-                      {...register(`hygieneEntries.${index}.provider`, {
-                        maxLength: { value: 180, message: "Máximo 180 caracteres" },
-                      })}
-                    />
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                    <TextField
-                      label="Especificación o detalle"
-                      fullWidth
-                      disabled={!canEdit}
-                      {...register(`hygieneEntries.${index}.secondary`, {
-                        maxLength: { value: 250, message: "Máximo 250 caracteres" },
-                      })}
-                    />
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                    <FormControl fullWidth disabled={!canEdit}>
-                      <InputLabel id={`hygiene-response-${index}`}>Respuesta</InputLabel>
-                      <Select
-                        labelId={`hygiene-response-${index}`}
-                        label="Respuesta"
-                        defaultValue={EMPTY_RESPONSE}
-                        {...register(`hygieneEntries.${index}.response`)}
-                      >
-                        {SECTION_RESPONSE_OPTIONS.map((option) => (
-                          <MenuItem key={option.value} value={option.value}>
-                            {option.label}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-                    <TextField
-                      label="Cantidad"
-                      type="number"
-                      fullWidth
-                      disabled={!canEdit}
-                      slotProps={{ htmlInput: { min: 0, step: 1 } }}
-                      {...register(`hygieneEntries.${index}.quantity`, {
-                        validate: (value) =>
-                          !value.trim() ||
-                          (Number.isInteger(Number(value)) && Number(value) >= 0)
-                            ? true
-                            : "Usa un entero no negativo",
-                      })}
-                    />
-                  </Grid>
-                  {((watchedEntries?.[index]?.kind as HygieneEntryKind) ||
-                    "BASIC_SERVICE") === "SIGNAGE" ? (
-                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                      <FormControl
-                        fullWidth
-                        disabled={
-                          !canEdit || (catalogs?.signageMaterials.length ?? 0) === 0
-                        }
-                      >
-                        <InputLabel id={`hygiene-material-${index}`}>
-                          Material de señalética
-                        </InputLabel>
-                        <Select
-                          labelId={`hygiene-material-${index}`}
-                          label="Material de señalética"
-                          defaultValue=""
-                          {...register(`hygieneEntries.${index}.secondaryId`)}
-                        >
-                          <MenuItem value="">Sin seleccionar</MenuItem>
-                          {(catalogs?.signageMaterials ?? []).map((option) => (
-                            <MenuItem key={option.id} value={String(option.id)}>
-                              {option.name}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </Grid>
-                  ) : null}
-                  <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-                    <FormControl fullWidth disabled={!canEdit}>
-                      <InputLabel id={`hygiene-condition-${index}`}>Condición</InputLabel>
-                      <Select
-                        labelId={`hygiene-condition-${index}`}
-                        label="Condición"
-                        defaultValue=""
-                        {...register(`hygieneEntries.${index}.condition`)}
-                      >
-                        <MenuItem value="">Sin registrar</MenuItem>
-                        <MenuItem value="BUENO">Bueno</MenuItem>
-                        <MenuItem value="REGULAR">Regular</MenuItem>
-                        <MenuItem value="MALO">Malo</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid size={12}>
-                    <TextField
-                      label="Observación"
-                      fullWidth
-                      disabled={!canEdit}
-                      {...register(`hygieneEntries.${index}.observation`, {
-                        maxLength: { value: 1_000, message: "Máximo 1.000 caracteres" },
-                      })}
-                    />
-                  </Grid>
+                  {(() => {
+                    const entry = watchedEntries?.[index];
+                    const kind = (entry?.kind as HygieneEntryKind) || "BASIC_SERVICE";
+                    const response = entry?.response || EMPTY_RESPONSE;
+                    const detailEnabled =
+                      kind === "THREAT" ||
+                      (response !== "NO" && response !== "NO_APLICA");
+                    const scopeEnabled = [
+                      "BASIC_SERVICE",
+                      "HEALTH",
+                      "COMMUNICATION",
+                    ].includes(kind);
+                    return (
+                      <>
+                        <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                          <FormControl fullWidth disabled={!canEdit}>
+                            <InputLabel id={`hygiene-kind-${index}`}>
+                              Tipo de registro
+                            </InputLabel>
+                            <Select
+                              labelId={`hygiene-kind-${index}`}
+                              label="Tipo de registro"
+                              defaultValue="BASIC_SERVICE"
+                              {...register(`hygieneEntries.${index}.kind`)}
+                            >
+                              {HYGIENE_ENTRY_OPTIONS.map((option) => (
+                                <MenuItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                        </Grid>
+                        <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                          <FormControl fullWidth disabled={!canEdit}>
+                            <InputLabel id={`hygiene-scope-${index}`}>Ámbito</InputLabel>
+                            <Select
+                              labelId={`hygiene-scope-${index}`}
+                              label="Ámbito"
+                              defaultValue="EN_ATRACTIVO"
+                              disabled={!canEdit || !scopeEnabled}
+                              {...register(`hygieneEntries.${index}.scope`)}
+                            >
+                              <MenuItem value="">No aplica</MenuItem>
+                              <MenuItem value="EN_ATRACTIVO">En el atractivo</MenuItem>
+                              <MenuItem value="EN_POBLADO_CERCANO">
+                                En poblado cercano
+                              </MenuItem>
+                            </Select>
+                          </FormControl>
+                        </Grid>
+                        <Grid size={{ xs: 12, sm: 6, md: 6 }}>
+                          <FormControl
+                            fullWidth
+                            disabled={
+                              !canEdit ||
+                              typeOptions(
+                                (watchedEntries?.[index]?.kind as HygieneEntryKind) ||
+                                  "BASIC_SERVICE",
+                              ).length === 0
+                            }
+                          >
+                            <InputLabel id={`hygiene-type-${index}`}>
+                              Tipo catalogado
+                            </InputLabel>
+                            <Select
+                              labelId={`hygiene-type-${index}`}
+                              label="Tipo catalogado"
+                              defaultValue=""
+                              {...register(`hygieneEntries.${index}.typeId`)}
+                            >
+                              <MenuItem value="">Sin seleccionar</MenuItem>
+                              {typeOptions(
+                                (watchedEntries?.[index]?.kind as HygieneEntryKind) ||
+                                  "BASIC_SERVICE",
+                              ).map((option) => (
+                                <MenuItem key={option.id} value={String(option.id)}>
+                                  {option.name}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                        </Grid>
+                        <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                          <Tooltip title="Eliminar registro">
+                            <IconButton
+                              type="button"
+                              aria-label={`Eliminar registro ${index + 1}`}
+                              disabled={!canEdit}
+                              onClick={() => removeEntry(index)}
+                              sx={{ mt: { md: 1 } }}
+                            >
+                              <DeleteOutlineRounded />
+                            </IconButton>
+                          </Tooltip>
+                        </Grid>
+                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                          <TextField
+                            label="Nombre alternativo (otro)"
+                            fullWidth
+                            disabled={!canEdit || !detailEnabled}
+                            {...register(`hygieneEntries.${index}.name`, {
+                              maxLength: { value: 180, message: "Máximo 180 caracteres" },
+                            })}
+                          />
+                        </Grid>
+                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                          <TextField
+                            label="Proveedor"
+                            fullWidth
+                            disabled={!canEdit || !detailEnabled}
+                            {...register(`hygieneEntries.${index}.provider`, {
+                              maxLength: { value: 180, message: "Máximo 180 caracteres" },
+                            })}
+                          />
+                        </Grid>
+                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                          <TextField
+                            label="Especificación o detalle"
+                            fullWidth
+                            disabled={!canEdit || !detailEnabled}
+                            {...register(`hygieneEntries.${index}.secondary`, {
+                              maxLength: { value: 250, message: "Máximo 250 caracteres" },
+                            })}
+                          />
+                        </Grid>
+                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                          <FormControl fullWidth disabled={!canEdit}>
+                            <InputLabel id={`hygiene-response-${index}`}>
+                              Respuesta
+                            </InputLabel>
+                            <Select
+                              labelId={`hygiene-response-${index}`}
+                              label="Respuesta"
+                              defaultValue={EMPTY_RESPONSE}
+                              {...register(`hygieneEntries.${index}.response`)}
+                            >
+                              {SECTION_RESPONSE_OPTIONS.map((option) => (
+                                <MenuItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                        </Grid>
+                        <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                          <TextField
+                            label="Cantidad"
+                            type="number"
+                            fullWidth
+                            disabled={!canEdit || !detailEnabled}
+                            slotProps={{ htmlInput: { min: 0, step: 1 } }}
+                            {...register(`hygieneEntries.${index}.quantity`, {
+                              validate: (value) =>
+                                !value.trim() ||
+                                (Number.isInteger(Number(value)) && Number(value) >= 0)
+                                  ? true
+                                  : "Usa un entero no negativo",
+                            })}
+                          />
+                        </Grid>
+                        {((watchedEntries?.[index]?.kind as HygieneEntryKind) ||
+                          "BASIC_SERVICE") === "SIGNAGE" ? (
+                          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                            <FormControl
+                              fullWidth
+                              disabled={
+                                !canEdit ||
+                                (catalogs?.signageMaterials.length ?? 0) === 0 ||
+                                response !== "SI"
+                              }
+                            >
+                              <InputLabel id={`hygiene-material-${index}`}>
+                                Material de señalética
+                              </InputLabel>
+                              <Select
+                                labelId={`hygiene-material-${index}`}
+                                label="Material de señalética"
+                                defaultValue=""
+                                {...register(`hygieneEntries.${index}.secondaryId`)}
+                              >
+                                <MenuItem value="">Sin seleccionar</MenuItem>
+                                {(catalogs?.signageMaterials ?? []).map((option) => (
+                                  <MenuItem key={option.id} value={String(option.id)}>
+                                    {option.name}
+                                  </MenuItem>
+                                ))}
+                              </Select>
+                            </FormControl>
+                          </Grid>
+                        ) : null}
+                        <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                          <FormControl fullWidth disabled={!canEdit || !detailEnabled}>
+                            <InputLabel id={`hygiene-condition-${index}`}>
+                              Condición
+                            </InputLabel>
+                            <Select
+                              labelId={`hygiene-condition-${index}`}
+                              label="Condición"
+                              defaultValue=""
+                              {...register(`hygieneEntries.${index}.condition`)}
+                            >
+                              <MenuItem value="">Sin registrar</MenuItem>
+                              <MenuItem value="BUENO">Bueno</MenuItem>
+                              <MenuItem value="REGULAR">Regular</MenuItem>
+                              <MenuItem value="MALO">Malo</MenuItem>
+                            </Select>
+                          </FormControl>
+                        </Grid>
+                        <Grid size={12}>
+                          <TextField
+                            label="Observación"
+                            fullWidth
+                            disabled={!canEdit}
+                            {...register(`hygieneEntries.${index}.observation`, {
+                              maxLength: {
+                                value: 1_000,
+                                message: "Máximo 1.000 caracteres",
+                              },
+                            })}
+                          />
+                        </Grid>
+                      </>
+                    );
+                  })()}
                 </Grid>
               </FlatSurface>
             ))}
@@ -3313,7 +3420,12 @@ function HygieneSafetySectionFields({
               ] as const
             ).map(([key, label]) => (
               <Grid key={key} size={{ xs: 12, sm: 6, md: 3 }}>
-                <FormControl fullWidth disabled={!canEdit}>
+                <FormControl
+                  fullWidth
+                  disabled={
+                    !canEdit || (key !== "available" && watchedRadios?.available !== "SI")
+                  }
+                >
                   <InputLabel id={`radios-${key}`}>{label}</InputLabel>
                   <Select
                     labelId={`radios-${key}`}
@@ -3335,7 +3447,7 @@ function HygieneSafetySectionFields({
                 label="Cantidad de radios"
                 type="number"
                 fullWidth
-                disabled={!canEdit}
+                disabled={!canEdit || watchedRadios?.available !== "SI"}
                 slotProps={{ htmlInput: { min: 0, step: 1 } }}
                 {...register("hygieneRadios.quantity", {
                   validate: (value) =>
@@ -3350,7 +3462,7 @@ function HygieneSafetySectionFields({
               <TextField
                 label="Observación de radios"
                 fullWidth
-                disabled={!canEdit}
+                disabled={!canEdit || watchedRadios?.available !== "SI"}
                 {...register("hygieneRadios.observation", {
                   maxLength: { value: 1_000, message: "Máximo 1.000 caracteres" },
                 })}
@@ -3385,7 +3497,7 @@ function HygieneSafetySectionFields({
               <TextField
                 label="Institución responsable"
                 fullWidth
-                disabled={!canEdit}
+                disabled={!canEdit || watchedContingency?.exists !== "SI"}
                 {...register("hygieneContingency.institution", {
                   maxLength: { value: 180, message: "Máximo 180 caracteres" },
                 })}
@@ -3396,7 +3508,7 @@ function HygieneSafetySectionFields({
                 label="Año"
                 type="number"
                 fullWidth
-                disabled={!canEdit}
+                disabled={!canEdit || watchedContingency?.exists !== "SI"}
                 slotProps={{ htmlInput: { min: 1900, max: 2200, step: 1 } }}
                 {...register("hygieneContingency.year", {
                   validate: (value) =>
@@ -3418,7 +3530,7 @@ function HygieneSafetySectionFields({
               <TextField
                 label="Nombre del documento u observación"
                 fullWidth
-                disabled={!canEdit}
+                disabled={!canEdit || watchedContingency?.exists !== "SI"}
                 {...register("hygieneContingency.document", {
                   maxLength: { value: 250, message: "Máximo 250 caracteres" },
                 })}
@@ -3555,6 +3667,7 @@ function PoliciesSectionFields({
 function PromotionSectionFields({
   catalogs,
   canEdit,
+  control,
   register,
   mediaFields,
   appendMedia,
@@ -3562,12 +3675,15 @@ function PromotionSectionFields({
 }: {
   catalogs: AdminCatalogs | null;
   canEdit: boolean;
+  control: Control<SectionFormValues>;
   register: UseFormRegister<SectionFormValues>;
   mediaFields: Array<{ id: string }>;
   appendMedia: (value: PromotionMediaForm) => void;
   removeMedia: (index: number) => void;
 }) {
   const mediaTypes = catalogs?.promotionMediaTypes ?? [];
+  const promotion = useWatch({ control, name: "promotion" });
+  const watchedMedia = useWatch({ control, name: "promotionMedia" });
   return (
     <Stack spacing={webTokens.spacing.section}>
       <Box>
@@ -3600,14 +3716,14 @@ function PromotionSectionFields({
             <TextField
               label="Nombre del plan"
               fullWidth
-              disabled={!canEdit}
+              disabled={!canEdit || promotion?.hasPlan !== "SI"}
               {...register("promotion.planName", {
                 maxLength: { value: 250, message: "Máximo 250 caracteres" },
               })}
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <FormControl fullWidth disabled={!canEdit}>
+            <FormControl fullWidth disabled={!canEdit || promotion?.hasPlan !== "SI"}>
               <InputLabel id="promotion-included">¿Está incluido en un plan?</InputLabel>
               <Select
                 labelId="promotion-included"
@@ -3646,7 +3762,7 @@ function PromotionSectionFields({
               fullWidth
               multiline
               minRows={2}
-              disabled={!canEdit}
+              disabled={!canEdit || promotion?.partOfPackage !== "SI"}
               {...register("promotion.packageDetail", {
                 maxLength: { value: 1_000, message: "Máximo 1.000 caracteres" },
               })}
@@ -3735,7 +3851,14 @@ function PromotionSectionFields({
                     </FormControl>
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                    <FormControl fullWidth disabled={!canEdit || mediaTypes.length === 0}>
+                    <FormControl
+                      fullWidth
+                      disabled={
+                        !canEdit ||
+                        mediaTypes.length === 0 ||
+                        watchedMedia?.[index]?.response !== "SI"
+                      }
+                    >
                       <InputLabel id={`promotion-media-type-${index}`}>
                         Tipo de medio
                       </InputLabel>
@@ -3758,7 +3881,7 @@ function PromotionSectionFields({
                     <TextField
                       label="Nombre o cuenta"
                       fullWidth
-                      disabled={!canEdit}
+                      disabled={!canEdit || watchedMedia?.[index]?.response !== "SI"}
                       {...register(`promotionMedia.${index}.name`, {
                         maxLength: { value: 180, message: "Máximo 180 caracteres" },
                       })}
@@ -3769,7 +3892,7 @@ function PromotionSectionFields({
                       label="URL"
                       type="url"
                       fullWidth
-                      disabled={!canEdit}
+                      disabled={!canEdit || watchedMedia?.[index]?.response !== "SI"}
                       {...register(`promotionMedia.${index}.url`, {
                         maxLength: { value: 500, message: "Máximo 500 caracteres" },
                       })}
@@ -3792,7 +3915,7 @@ function PromotionSectionFields({
                     <TextField
                       label="Periodicidad"
                       fullWidth
-                      disabled={!canEdit}
+                      disabled={!canEdit || watchedMedia?.[index]?.response !== "SI"}
                       {...register(`promotionMedia.${index}.periodicity`, {
                         maxLength: { value: 100, message: "Máximo 100 caracteres" },
                       })}
@@ -3802,7 +3925,7 @@ function PromotionSectionFields({
                     <TextField
                       label="Detalle de otro medio"
                       fullWidth
-                      disabled={!canEdit}
+                      disabled={!canEdit || watchedMedia?.[index]?.response !== "SI"}
                       {...register(`promotionMedia.${index}.detailOther`, {
                         maxLength: { value: 180, message: "Máximo 180 caracteres" },
                       })}
@@ -3830,6 +3953,7 @@ function PromotionSectionFields({
 
 function VisitorsSectionFields({
   canEdit,
+  control,
   register,
   seasonFields,
   originFields,
@@ -3842,6 +3966,7 @@ function VisitorsSectionFields({
   removeInformant,
 }: {
   canEdit: boolean;
+  control: Control<SectionFormValues>;
   register: UseFormRegister<SectionFormValues>;
   seasonFields: Array<{ id: string }>;
   originFields: Array<{ id: string }>;
@@ -3853,6 +3978,7 @@ function VisitorsSectionFields({
   appendInformant: (value: VisitorInformantForm) => void;
   removeInformant: (index: number) => void;
 }) {
+  const registry = useWatch({ control, name: "visitorRegistry" });
   return (
     <Stack spacing={webTokens.spacing.section}>
       <Box>
@@ -3891,6 +4017,7 @@ function VisitorsSectionFields({
                   labelId="visitor-registry-type"
                   label="Tipo de registro"
                   defaultValue=""
+                  disabled={!canEdit || registry?.exists !== "SI"}
                   {...register("visitorRegistry.type")}
                 >
                   <MenuItem value="">Sin seleccionar</MenuItem>
@@ -3904,7 +4031,7 @@ function VisitorsSectionFields({
                 label="Años de registro"
                 type="number"
                 fullWidth
-                disabled={!canEdit}
+                disabled={!canEdit || registry?.exists !== "SI"}
                 slotProps={{ htmlInput: { min: 0, max: 200, step: 1 } }}
                 {...register("visitorRegistry.years", {
                   validate: (value) =>
@@ -3924,6 +4051,7 @@ function VisitorsSectionFields({
                   labelId="visitor-registry-reports"
                   label="¿Genera reportes?"
                   defaultValue={EMPTY_RESPONSE}
+                  disabled={!canEdit || registry?.exists !== "SI"}
                   {...register("visitorRegistry.reports")}
                 >
                   {SECTION_RESPONSE_OPTIONS.map((option) => (
@@ -3938,7 +4066,7 @@ function VisitorsSectionFields({
               <TextField
                 label="Frecuencia de reportes"
                 fullWidth
-                disabled={!canEdit}
+                disabled={!canEdit || registry?.reports !== "SI"}
                 {...register("visitorRegistry.frequency", {
                   maxLength: { value: 80, message: "Máximo 80 caracteres" },
                 })}
@@ -6319,7 +6447,7 @@ function ContinuousSectionCard({
     defaultValues: createSectionValues(definition, rawSection),
     mode: "onBlur",
   });
-  const { control, register, formState } = form;
+  const { control, register, setValue, formState } = form;
   const { fields, append, remove } = useFieldArray({ control, name: "rows" });
   const {
     fields: conservationFactorFields,
@@ -6385,6 +6513,8 @@ function ContinuousSectionCard({
   });
 
   const responseLabelId = `section-response-label-${definition.code}`;
+  const sectionResponse = useWatch({ control, name: "response" }) ?? EMPTY_RESPONSE;
+  const showSectionDetails = sectionResponse !== "NO" && sectionResponse !== "NO_APLICA";
 
   return (
     <FlatSurface
@@ -6407,126 +6537,122 @@ function ContinuousSectionCard({
             />
           </Box>
         </Stack>
-        {definition.code === "accesibilidad" ? (
-          <AccessibilitySectionFields
-            catalogs={catalogs}
-            canEdit={canEdit}
-            control={control}
-            register={register}
-          />
-        ) : null}
-        {definition.code === "caracteristicas" ? (
-          <CharacteristicsSectionFields
-            catalogs={catalogs}
-            canEdit={canEdit}
-            register={register}
-          />
-        ) : null}
-        {definition.code === "planta" ? (
-          <PlantSectionFields
-            catalogs={catalogs}
-            canEdit={canEdit}
-            control={control}
-            register={register}
-          />
-        ) : null}
-        {definition.code === "conservacion" ? (
-          <ConservationSectionFields
-            catalogs={catalogs}
-            canEdit={canEdit}
-            register={register}
-            factorFields={conservationFactorFields}
-            declarationFields={declarationFields}
-            appendFactor={appendConservationFactor}
-            removeFactor={removeConservationFactor}
-            appendDeclaration={appendDeclaration}
-            removeDeclaration={removeDeclaration}
-          />
-        ) : null}
-        {definition.code === "higiene-seguridad" ? (
-          <HygieneSafetySectionFields
-            catalogs={catalogs}
-            canEdit={canEdit}
-            control={control}
-            register={register}
-            entryFields={hygieneEntryFields}
-            appendEntry={appendHygieneEntry}
-            removeEntry={removeHygieneEntry}
-          />
-        ) : null}
-        {definition.code === "politicas" ? (
-          <PoliciesSectionFields
-            canEdit={canEdit}
-            register={register}
-            fields={policyFields}
-          />
-        ) : null}
-        {definition.code === "promocion" ? (
-          <PromotionSectionFields
-            catalogs={catalogs}
-            canEdit={canEdit}
-            register={register}
-            mediaFields={promotionMediaFields}
-            appendMedia={appendPromotionMedia}
-            removeMedia={removePromotionMedia}
-          />
-        ) : null}
-        {definition.code === "visitantes" ? (
-          <VisitorsSectionFields
-            canEdit={canEdit}
-            register={register}
-            seasonFields={visitorSeasonFields}
-            originFields={visitorOriginFields}
-            informantFields={visitorInformantFields}
-            appendSeason={appendVisitorSeason}
-            removeSeason={removeVisitorSeason}
-            appendOrigin={appendVisitorOrigin}
-            removeOrigin={removeVisitorOrigin}
-            appendInformant={appendVisitorInformant}
-            removeInformant={removeVisitorInformant}
-          />
-        ) : null}
-        {definition.code === "recurso-humano" ? (
-          <HumanResourcesSectionFields
-            catalogs={catalogs}
-            canEdit={canEdit}
-            register={register}
-            trainingFields={humanResourceTrainingFields}
-            appendTraining={appendHumanResourceTraining}
-            removeTraining={removeHumanResourceTraining}
-          />
-        ) : null}
-        {definition.code === "anexos" ? (
-          <AnnexesSectionFields
-            catalogs={catalogs}
-            canEdit={canEdit}
-            register={register}
-            mediaItems={mediaItems}
-            documentFields={annexDocumentFields}
-            responsibleFields={annexResponsibleFields}
-            appendDocument={appendAnnexDocument}
-            removeDocument={removeAnnexDocument}
-            appendResponsible={appendAnnexResponsible}
-            removeResponsible={removeAnnexResponsible}
-          />
-        ) : null}
+        <SectionResponseControl
+          labelId={responseLabelId}
+          canEdit={canEdit}
+          register={register}
+        />
+        <Box sx={{ display: showSectionDetails ? "block" : "none" }}>
+          {definition.code === "accesibilidad" ? (
+            <AccessibilitySectionFields
+              catalogs={catalogs}
+              canEdit={canEdit}
+              control={control}
+              register={register}
+              setValue={setValue}
+            />
+          ) : null}
+          {definition.code === "caracteristicas" ? (
+            <CharacteristicsSectionFields
+              catalogs={catalogs}
+              canEdit={canEdit}
+              register={register}
+            />
+          ) : null}
+          {definition.code === "planta" ? (
+            <PlantSectionFields
+              catalogs={catalogs}
+              canEdit={canEdit}
+              control={control}
+              register={register}
+              setValue={setValue}
+            />
+          ) : null}
+          {definition.code === "conservacion" ? (
+            <ConservationSectionFields
+              catalogs={catalogs}
+              canEdit={canEdit}
+              register={register}
+              factorFields={conservationFactorFields}
+              declarationFields={declarationFields}
+              appendFactor={appendConservationFactor}
+              removeFactor={removeConservationFactor}
+              appendDeclaration={appendDeclaration}
+              removeDeclaration={removeDeclaration}
+            />
+          ) : null}
+          {definition.code === "higiene-seguridad" ? (
+            <HygieneSafetySectionFields
+              catalogs={catalogs}
+              canEdit={canEdit}
+              control={control}
+              register={register}
+              entryFields={hygieneEntryFields}
+              appendEntry={appendHygieneEntry}
+              removeEntry={removeHygieneEntry}
+            />
+          ) : null}
+          {definition.code === "politicas" ? (
+            <PoliciesSectionFields
+              canEdit={canEdit}
+              register={register}
+              fields={policyFields}
+            />
+          ) : null}
+          {definition.code === "promocion" ? (
+            <PromotionSectionFields
+              catalogs={catalogs}
+              canEdit={canEdit}
+              control={control}
+              register={register}
+              mediaFields={promotionMediaFields}
+              appendMedia={appendPromotionMedia}
+              removeMedia={removePromotionMedia}
+            />
+          ) : null}
+          {definition.code === "visitantes" ? (
+            <VisitorsSectionFields
+              canEdit={canEdit}
+              control={control}
+              register={register}
+              seasonFields={visitorSeasonFields}
+              originFields={visitorOriginFields}
+              informantFields={visitorInformantFields}
+              appendSeason={appendVisitorSeason}
+              removeSeason={removeVisitorSeason}
+              appendOrigin={appendVisitorOrigin}
+              removeOrigin={removeVisitorOrigin}
+              appendInformant={appendVisitorInformant}
+              removeInformant={removeVisitorInformant}
+            />
+          ) : null}
+          {definition.code === "recurso-humano" ? (
+            <HumanResourcesSectionFields
+              catalogs={catalogs}
+              canEdit={canEdit}
+              register={register}
+              trainingFields={humanResourceTrainingFields}
+              appendTraining={appendHumanResourceTraining}
+              removeTraining={removeHumanResourceTraining}
+            />
+          ) : null}
+          {definition.code === "anexos" ? (
+            <AnnexesSectionFields
+              catalogs={catalogs}
+              canEdit={canEdit}
+              register={register}
+              mediaItems={mediaItems}
+              documentFields={annexDocumentFields}
+              responsibleFields={annexResponsibleFields}
+              appendDocument={appendAnnexDocument}
+              removeDocument={removeAnnexDocument}
+              appendResponsible={appendAnnexResponsible}
+              removeResponsible={removeAnnexResponsible}
+            />
+          ) : null}
+        </Box>
         <Divider />
         <Stack spacing={webTokens.spacing.control}>
-          <FormControl fullWidth disabled={!canEdit}>
-            <InputLabel id={responseLabelId}>Resultado de la sección</InputLabel>
-            <Select
-              labelId={responseLabelId}
-              label="Resultado de la sección"
-              defaultValue={EMPTY_RESPONSE}
-              {...register("response")}
-            >
-              {SECTION_RESPONSE_OPTIONS.map((option) => (
-                <MenuItem key={option.value} value={option.value}>
-                  {option.label}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
           <TextField
             label="Observación general del apartado"
             multiline
@@ -6539,133 +6665,167 @@ function ContinuousSectionCard({
             error={Boolean(formState.errors.observation)}
             helperText={formState.errors.observation?.message}
           />
-          <Stack spacing={1.5}>
-            <Stack
-              direction={{ xs: "column", sm: "row" }}
-              justifyContent="space-between"
-              alignItems={{ sm: "center" }}
-              gap={2}
-            >
-              <Button
-                type="button"
-                size="small"
-                variant="outlined"
-                startIcon={<AddRounded />}
-                disabled={!canEdit}
-                onClick={() =>
-                  append({
-                    label: "",
-                    response: EMPTY_RESPONSE,
-                    quantity: "",
-                    observation: "",
-                  })
-                }
+          <Box sx={{ display: showSectionDetails ? "block" : "none" }}>
+            <Stack spacing={1.5}>
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                justifyContent="space-between"
+                alignItems={{ sm: "center" }}
+                gap={2}
               >
-                Añadir fila
-              </Button>
-            </Stack>
-            {fields.length > 0 ? (
-              <Stack spacing={1.5}>
-                {fields.map((field, rowIndex) => (
-                  <FlatSurface key={field.id} padding="compact" tone="subtle">
-                    <Grid
-                      container
-                      spacing={webTokens.spacing.control}
-                      alignItems="flex-start"
-                    >
-                      <Grid size={{ xs: 12, md: 4 }}>
-                        <TextField
-                          label="Elemento o indicador"
-                          fullWidth
-                          disabled={!canEdit}
-                          {...register(`rows.${rowIndex}.label`, {
-                            required: "Indica el elemento o indicador",
-                            maxLength: { value: 180, message: "Máximo 180 caracteres" },
-                          })}
-                          error={Boolean(formState.errors.rows?.[rowIndex]?.label)}
-                          helperText={formState.errors.rows?.[rowIndex]?.label?.message}
-                        />
-                      </Grid>
-                      <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                        <FormControl fullWidth disabled={!canEdit}>
-                          <InputLabel id={`row-response-${definition.code}-${rowIndex}`}>
-                            Respuesta
-                          </InputLabel>
-                          <Select
-                            labelId={`row-response-${definition.code}-${rowIndex}`}
-                            label="Respuesta"
-                            defaultValue={EMPTY_RESPONSE}
-                            {...register(`rows.${rowIndex}.response`)}
-                          >
-                            {SECTION_RESPONSE_OPTIONS.map((option) => (
-                              <MenuItem key={option.value} value={option.value}>
-                                {option.label}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                      </Grid>
-                      <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-                        <TextField
-                          label="Cantidad"
-                          type="number"
-                          fullWidth
-                          disabled={!canEdit}
-                          slotProps={{ htmlInput: { min: 0, step: 1 } }}
-                          {...register(`rows.${rowIndex}.quantity`, {
-                            validate: (value) =>
-                              !value.trim() ||
-                              (Number.isInteger(Number(value)) && Number(value) >= 0)
-                                ? true
-                                : "Usa un entero igual o mayor que cero",
-                          })}
-                          error={Boolean(formState.errors.rows?.[rowIndex]?.quantity)}
-                          helperText={
-                            formState.errors.rows?.[rowIndex]?.quantity?.message
-                          }
-                        />
-                      </Grid>
-                      <Grid size={{ xs: 12, md: 2 }}>
-                        <Tooltip title="Eliminar fila">
-                          <IconButton
-                            type="button"
-                            aria-label={`Eliminar fila ${rowIndex + 1}`}
-                            disabled={!canEdit}
-                            onClick={() => remove(rowIndex)}
-                            sx={{ mt: { md: 1 } }}
-                          >
-                            <DeleteOutlineRounded />
-                          </IconButton>
-                        </Tooltip>
-                      </Grid>
-                      <Grid size={12}>
-                        <TextField
-                          label="Observación de la fila"
-                          fullWidth
-                          multiline
-                          minRows={2}
-                          disabled={!canEdit}
-                          {...register(`rows.${rowIndex}.observation`, {
-                            maxLength: {
-                              value: 1_000,
-                              message: "Máximo 1.000 caracteres",
-                            },
-                          })}
-                          error={Boolean(formState.errors.rows?.[rowIndex]?.observation)}
-                          helperText={
-                            formState.errors.rows?.[rowIndex]?.observation?.message
-                          }
-                        />
-                      </Grid>
-                    </Grid>
-                  </FlatSurface>
-                ))}
+                <Button
+                  type="button"
+                  size="small"
+                  variant="outlined"
+                  startIcon={<AddRounded />}
+                  disabled={!canEdit}
+                  onClick={() =>
+                    append({
+                      label: "",
+                      response: EMPTY_RESPONSE,
+                      quantity: "",
+                      observation: "",
+                    })
+                  }
+                >
+                  Añadir fila
+                </Button>
               </Stack>
-            ) : null}
-          </Stack>
+              {fields.length > 0 ? (
+                <Stack spacing={1.5}>
+                  {fields.map((field, rowIndex) => (
+                    <FlatSurface key={field.id} padding="compact" tone="subtle">
+                      <Grid
+                        container
+                        spacing={webTokens.spacing.control}
+                        alignItems="flex-start"
+                      >
+                        <Grid size={{ xs: 12, md: 4 }}>
+                          <TextField
+                            label="Elemento o indicador"
+                            fullWidth
+                            disabled={!canEdit}
+                            {...register(`rows.${rowIndex}.label`, {
+                              required: "Indica el elemento o indicador",
+                              maxLength: { value: 180, message: "Máximo 180 caracteres" },
+                            })}
+                            error={Boolean(formState.errors.rows?.[rowIndex]?.label)}
+                            helperText={formState.errors.rows?.[rowIndex]?.label?.message}
+                          />
+                        </Grid>
+                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                          <FormControl fullWidth disabled={!canEdit}>
+                            <InputLabel
+                              id={`row-response-${definition.code}-${rowIndex}`}
+                            >
+                              Respuesta
+                            </InputLabel>
+                            <Select
+                              labelId={`row-response-${definition.code}-${rowIndex}`}
+                              label="Respuesta"
+                              defaultValue={EMPTY_RESPONSE}
+                              {...register(`rows.${rowIndex}.response`)}
+                            >
+                              {SECTION_RESPONSE_OPTIONS.map((option) => (
+                                <MenuItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                        </Grid>
+                        <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                          <TextField
+                            label="Cantidad"
+                            type="number"
+                            fullWidth
+                            disabled={!canEdit}
+                            slotProps={{ htmlInput: { min: 0, step: 1 } }}
+                            {...register(`rows.${rowIndex}.quantity`, {
+                              validate: (value) =>
+                                !value.trim() ||
+                                (Number.isInteger(Number(value)) && Number(value) >= 0)
+                                  ? true
+                                  : "Usa un entero igual o mayor que cero",
+                            })}
+                            error={Boolean(formState.errors.rows?.[rowIndex]?.quantity)}
+                            helperText={
+                              formState.errors.rows?.[rowIndex]?.quantity?.message
+                            }
+                          />
+                        </Grid>
+                        <Grid size={{ xs: 12, md: 2 }}>
+                          <Tooltip title="Eliminar fila">
+                            <IconButton
+                              type="button"
+                              aria-label={`Eliminar fila ${rowIndex + 1}`}
+                              disabled={!canEdit}
+                              onClick={() => remove(rowIndex)}
+                              sx={{ mt: { md: 1 } }}
+                            >
+                              <DeleteOutlineRounded />
+                            </IconButton>
+                          </Tooltip>
+                        </Grid>
+                        <Grid size={12}>
+                          <TextField
+                            label="Observación de la fila"
+                            fullWidth
+                            multiline
+                            minRows={2}
+                            disabled={!canEdit}
+                            {...register(`rows.${rowIndex}.observation`, {
+                              maxLength: {
+                                value: 1_000,
+                                message: "Máximo 1.000 caracteres",
+                              },
+                            })}
+                            error={Boolean(
+                              formState.errors.rows?.[rowIndex]?.observation,
+                            )}
+                            helperText={
+                              formState.errors.rows?.[rowIndex]?.observation?.message
+                            }
+                          />
+                        </Grid>
+                      </Grid>
+                    </FlatSurface>
+                  ))}
+                </Stack>
+              ) : null}
+            </Stack>
+          </Box>
         </Stack>
       </Stack>
     </FlatSurface>
+  );
+}
+
+function SectionResponseControl({
+  labelId,
+  canEdit,
+  register,
+}: {
+  labelId: string;
+  canEdit: boolean;
+  register: UseFormRegister<SectionFormValues>;
+}) {
+  return (
+    <FormControl fullWidth disabled={!canEdit}>
+      <InputLabel id={labelId}>Resultado de la sección</InputLabel>
+      <Select
+        labelId={labelId}
+        label="Resultado de la sección"
+        defaultValue={EMPTY_RESPONSE}
+        {...register("response")}
+      >
+        {SECTION_RESPONSE_OPTIONS.map((option) => (
+          <MenuItem key={option.value} value={option.value}>
+            {option.label}
+          </MenuItem>
+        ))}
+      </Select>
+    </FormControl>
   );
 }
 

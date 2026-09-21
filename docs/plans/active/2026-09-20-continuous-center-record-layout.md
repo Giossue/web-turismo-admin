@@ -26,6 +26,11 @@ campos, contratos de API y validaciones existentes, con guardado automático inv
 - Retirar el botón de recarga del encabezado administrativo.
 - Conservar progreso, valoración, código institucional, estados y permisos existentes.
 - Asegurar que el diseño responda correctamente en desktop, tablet y móvil.
+- Aplicar las dependencias del XLSM en la captura: clasificación y territorio en
+  cascada, zona compatible con el territorio, actividades compatibles con la categoría
+  y mostrar los datos de detalle únicamente cuando la respuesta principal sea afirmativa.
+- Cuando una selección padre cambie, retirar de la vista las opciones hijas que ya no
+  pertenecen a ella y limpiar selecciones incompatibles antes del autoguardado.
 
 ## Fuera de alcance
 
@@ -40,6 +45,8 @@ campos, contratos de API y validaciones existentes, con guardado automático inv
 - `bun run typecheck`
 - `bun run build`
 - Revisión visual del editor en tema oscuro y viewport móvil/desktop.
+- Pruebas de cascadas y de respuestas condicionales (`SI`, `NO`, `NO APLICA`) para evitar
+  que se registren detalles que la ficha no permite.
 
 ## Estado
 
@@ -48,5 +55,7 @@ Implementado el 20 de septiembre de 2026. El editor usa ahora un stepper compact
 del conteo. Las secciones se
 mantienen montadas para conservar el autosalvado mientras se navega; no se muestran
 botones, badges ni mensajes técnicos de persistencia, y el botón de recarga del encabezado
-fue retirado. Las verificaciones automatizadas pasan; queda pendiente únicamente la
-revisión visual manual en navegador.
+fue retirado. La captura también aplica las cascadas territoriales y de clasificación,
+filtra actividades y facilidades por su catálogo padre, limpia selecciones incompatibles y
+limita los detalles de secciones a respuestas aplicables. Las verificaciones automatizadas
+pasan; queda pendiente únicamente la revisión visual manual en navegador.
