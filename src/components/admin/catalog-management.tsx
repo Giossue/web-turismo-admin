@@ -331,12 +331,7 @@ export function CatalogManagement({
                   >
                     Color del marcador
                   </Typography>
-                  <Stack
-                    direction="row"
-                    spacing={1}
-                    useFlexGap
-                    flexWrap="wrap"
-                  >
+                  <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
                     {categoryColorOptions.map((option) => {
                       const selectedColor = color === option.value;
                       return (
@@ -350,9 +345,7 @@ export function CatalogManagement({
                             alignItems: "center",
                             backgroundColor: option.value,
                             border: "2px solid",
-                            borderColor: selectedColor
-                              ? "text.primary"
-                              : "divider",
+                            borderColor: selectedColor ? "text.primary" : "divider",
                             borderRadius: "50%",
                             display: "inline-flex",
                             height: 34,
