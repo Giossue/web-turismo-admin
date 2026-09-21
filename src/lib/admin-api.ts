@@ -295,6 +295,34 @@ export type AdminSummary = {
   }>;
 };
 
+export type AdminOpinionVersion = {
+  rating: number | null;
+  comment: string | null;
+  version: number;
+  submittedAt: string;
+};
+
+export type AdminOpinion = {
+  reviewCode: string;
+  version: number;
+  submittedAt: string;
+  authorName: string;
+  target: {
+    type: "CENTRO" | "PUNTO_INTERES";
+    code: string | null;
+    name: string;
+  };
+  proposed: AdminOpinionVersion;
+  current: AdminOpinionVersion | null;
+};
+
+export type AdminOpinionPage = {
+  items: AdminOpinion[];
+  total: number;
+  limit: number;
+  offset: number;
+};
+
 type ApiBody<T> = { data: T; error?: { message?: string } };
 
 export const apiUrl =
@@ -333,6 +361,34 @@ export async function getAdminCenters(token: string, options: AdminCentersOption
 
 export async function getAdminSummary(token: string) {
   return request<AdminSummary>("/admin/summary", token, { cache: "no-store" });
+}
+
+export async function getAdminOpinions(
+  token: string,
+  options: { limit?: number; offset?: number } = {},
+) {
+  const params = new URLSearchParams();
+  params.set("limit", String(options.limit ?? 20));
+  params.set("offset", String(options.offset ?? 0));
+  return request<AdminOpinionPage>(`/admin/opinions?${params.toString()}`, token, {
+    cache: "no-store",
+  });
+}
+
+export async function reviewAdminOpinion(
+  token: string,
+  reviewCode: string,
+  action: "APPROVE" | "REJECT",
+  reason?: string,
+) {
+  return request<{ reviewCode: string; status: "APROBADA" | "RECHAZADA" }>(
+    `/admin/opinions/${encodeURIComponent(reviewCode)}`,
+    token,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ action, reason }),
+    },
+  );
 }
 
 export async function getAdminEstablishments(
