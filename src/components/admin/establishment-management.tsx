@@ -3,7 +3,6 @@
 import AddRounded from "@mui/icons-material/AddRounded";
 import EditRounded from "@mui/icons-material/EditRounded";
 import PowerSettingsNewRounded from "@mui/icons-material/PowerSettingsNewRounded";
-import SearchRounded from "@mui/icons-material/SearchRounded";
 import {
   Button,
   CircularProgress,
@@ -48,6 +47,7 @@ import {
   type SaveEstablishmentInput,
 } from "@/lib/admin-api";
 import { webTokens } from "@/theme/tokens";
+import { ADMIN_SEARCH_DEBOUNCE_MS, useDebouncedValue } from "@/lib/use-debounced-value";
 
 type EstablishmentFormValues = {
   localityId: string;
@@ -91,7 +91,6 @@ export function EstablishmentManagement({
   onError: (message: string | null) => void;
 }) {
   const queryClient = useQueryClient();
-  const [query, setQuery] = useState("");
   const [queryDraft, setQueryDraft] = useState("");
   const [provinceId, setProvinceId] = useState("");
   const [cantonId, setCantonId] = useState("");
@@ -103,6 +102,13 @@ export function EstablishmentManagement({
   const [page, setPage] = useState(0);
   const [editing, setEditing] = useState<AdminEstablishment | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const debouncedQuery = useDebouncedValue(queryDraft.trim(), ADMIN_SEARCH_DEBOUNCE_MS);
+  const debouncedActivity = useDebouncedValue(activity.trim(), ADMIN_SEARCH_DEBOUNCE_MS);
+  const debouncedClassification = useDebouncedValue(
+    classification.trim(),
+    ADMIN_SEARCH_DEBOUNCE_MS,
+  );
+  const debouncedCategory = useDebouncedValue(category.trim(), ADMIN_SEARCH_DEBOUNCE_MS);
   const { control, register, reset, handleSubmit, formState } =
     useForm<EstablishmentFormValues>({ defaultValues: emptyValues });
 
@@ -115,22 +121,22 @@ export function EstablishmentManagement({
     queryKey: [
       "admin",
       "establishments",
-      query,
+      debouncedQuery,
       provinceId,
       cantonId,
       localityId,
-      activity,
-      classification,
-      category,
+      debouncedActivity,
+      debouncedClassification,
+      debouncedCategory,
       active,
       page,
     ],
     queryFn: () =>
       getAdminEstablishments(token, {
-        q: query,
-        activity: activity || undefined,
-        classification: classification || undefined,
-        category: category || undefined,
+        q: debouncedQuery || undefined,
+        activity: debouncedActivity || undefined,
+        classification: debouncedClassification || undefined,
+        category: debouncedCategory || undefined,
         provinceId: provinceId ? Number(provinceId) : undefined,
         cantonId: cantonId ? Number(cantonId) : undefined,
         localityId: localityId ? Number(localityId) : undefined,
@@ -220,12 +226,6 @@ export function EstablishmentManagement({
     setDialogOpen(true);
   }
 
-  function submitSearch(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setPage(0);
-    setQuery(queryDraft.trim());
-  }
-
   function submitForm(values: EstablishmentFormValues) {
     const latitude = values.latitude.trim() ? Number(values.latitude) : undefined;
     const longitude = values.longitude.trim() ? Number(values.longitude) : undefined;
@@ -263,17 +263,15 @@ export function EstablishmentManagement({
           </Button>
         }
       >
-        <Grid
-          component="form"
-          container
-          spacing={webTokens.spacing.control}
-          onSubmit={submitSearch}
-        >
+        <Grid container spacing={webTokens.spacing.control}>
           <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
             <SearchField
               label="Buscar por nombre, actividad o registro"
               value={queryDraft}
-              onChange={(event) => setQueryDraft(event.target.value)}
+              onChange={(event) => {
+                setQueryDraft(event.target.value);
+                setPage(0);
+              }}
               inputProps={{ "aria-label": "Buscar establecimientos" }}
             />
           </Grid>
@@ -348,7 +346,10 @@ export function EstablishmentManagement({
               label="Actividad"
               fullWidth
               value={activity}
-              onChange={(event) => setActivity(event.target.value)}
+              onChange={(event) => {
+                setActivity(event.target.value);
+                setPage(0);
+              }}
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6, lg: 2 }}>
@@ -356,7 +357,10 @@ export function EstablishmentManagement({
               label="Clasificación"
               fullWidth
               value={classification}
-              onChange={(event) => setClassification(event.target.value)}
+              onChange={(event) => {
+                setClassification(event.target.value);
+                setPage(0);
+              }}
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6, lg: 2 }}>
@@ -364,7 +368,10 @@ export function EstablishmentManagement({
               label="Categoría"
               fullWidth
               value={category}
-              onChange={(event) => setCategory(event.target.value)}
+              onChange={(event) => {
+                setCategory(event.target.value);
+                setPage(0);
+              }}
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6, lg: 2 }}>
@@ -384,16 +391,6 @@ export function EstablishmentManagement({
                 <MenuItem value="false">Inactivos</MenuItem>
               </Select>
             </FormControl>
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, lg: 2 }}>
-            <Button
-              type="submit"
-              variant="outlined"
-              startIcon={<SearchRounded />}
-              fullWidth
-            >
-              Buscar
-            </Button>
           </Grid>
         </Grid>
       </AdminTableToolbar>

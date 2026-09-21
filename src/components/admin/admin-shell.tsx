@@ -75,6 +75,7 @@ import {
 } from "@/lib/admin-api";
 import { AdminLogin, useAdminAuth } from "@/lib/auth";
 import { webTokens } from "@/theme/tokens";
+import { ADMIN_SEARCH_DEBOUNCE_MS, useDebouncedValue } from "@/lib/use-debounced-value";
 
 const drawerWidth = webTokens.layout.drawerWidth;
 const pageSize = 20;
@@ -159,16 +160,19 @@ export function AdminShell() {
     const value = new URLSearchParams(window.location.search).get("status");
     return value ?? "ALL";
   });
-  const [centerQuery, setCenterQuery] = useState(() => {
-    if (typeof window === "undefined") return "";
-    const value = new URLSearchParams(window.location.search).get("q") ?? "";
-    return value.length >= 2 ? value : "";
-  });
   const [queryDraft, setQueryDraft] = useState(() => {
     if (typeof window === "undefined") return "";
     const value = new URLSearchParams(window.location.search).get("q") ?? "";
     return value.length >= 2 ? value : "";
   });
+  const debouncedCenterQuery = useDebouncedValue(
+    queryDraft.trim(),
+    ADMIN_SEARCH_DEBOUNCE_MS,
+  );
+  const centerQuery =
+    queryDraft.trim().length < 2 || debouncedCenterQuery.length < 2
+      ? ""
+      : debouncedCenterQuery;
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [loadingCenters, setLoadingCenters] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -258,7 +262,6 @@ export function AdminShell() {
     if (next !== "editor") setEditorCode(null);
     if (next !== "centers") {
       setPage(0);
-      setCenterQuery("");
       setQueryDraft("");
     }
   }
@@ -269,13 +272,6 @@ export function AdminShell() {
     setOpen(false);
     setError(null);
     setNotice(null);
-  }
-
-  function submitSearch(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setPage(0);
-    const query = queryDraft.trim();
-    setCenterQuery(query.length >= 2 ? query : "");
   }
 
   async function submitReview() {
@@ -508,8 +504,10 @@ export function AdminShell() {
               page={page}
               status={centerStatus}
               query={queryDraft}
-              onQueryChange={setQueryDraft}
-              onSearch={submitSearch}
+              onQueryChange={(value) => {
+                setQueryDraft(value);
+                setPage(0);
+              }}
               onStatusChange={(value) => {
                 setCenterStatus(value);
                 setPage(0);
@@ -725,7 +723,6 @@ function CentersSection({
   status,
   query,
   onQueryChange,
-  onSearch,
   onStatusChange,
   onPageChange,
   onOpen,
@@ -737,7 +734,6 @@ function CentersSection({
   status: string;
   query: string;
   onQueryChange: (value: string) => void;
-  onSearch: (event: React.FormEvent<HTMLFormElement>) => void;
   onStatusChange: (value: string) => void;
   onPageChange: (page: number) => void;
   onOpen: (code: string) => void;
@@ -745,35 +741,35 @@ function CentersSection({
   return (
     <Stack spacing={webTokens.spacing.control}>
       <AdminTableToolbar>
-        <Box component="form" onSubmit={onSearch}>
-          <Stack
-            direction={{ xs: "column", sm: "row" }}
-            spacing={webTokens.spacing.control}
-          >
-            <SearchField
-              label="Buscar por nombre o código"
-              value={query}
-              onChange={(event) => onQueryChange(event.target.value)}
-            />
-            <FormControl sx={{ minWidth: { sm: 220 } }}>
-              <InputLabel id="center-status-label">Estado</InputLabel>
-              <Select
-                labelId="center-status-label"
-                label="Estado"
-                value={status}
-                onChange={(event) => onStatusChange(event.target.value)}
-              >
-                <MenuItem value="ALL">Todos</MenuItem>
-                <MenuItem value="BORRADOR">Borrador</MenuItem>
-                <MenuItem value="EN_REVISION">En revisión</MenuItem>
-                <MenuItem value="APROBADO">Aprobado</MenuItem>
-                <MenuItem value="PUBLICADO">Publicado</MenuItem>
-                <MenuItem value="RECHAZADO">Rechazado</MenuItem>
-                <MenuItem value="INACTIVO">Inactivo</MenuItem>
-              </Select>
-            </FormControl>
-          </Stack>
-        </Box>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={webTokens.spacing.control}
+        >
+          <SearchField
+            label="Buscar por nombre o código"
+            value={query}
+            onChange={(event) => {
+              onQueryChange(event.target.value);
+            }}
+          />
+          <FormControl sx={{ minWidth: { sm: 220 } }}>
+            <InputLabel id="center-status-label">Estado</InputLabel>
+            <Select
+              labelId="center-status-label"
+              label="Estado"
+              value={status}
+              onChange={(event) => onStatusChange(event.target.value)}
+            >
+              <MenuItem value="ALL">Todos</MenuItem>
+              <MenuItem value="BORRADOR">Borrador</MenuItem>
+              <MenuItem value="EN_REVISION">En revisión</MenuItem>
+              <MenuItem value="APROBADO">Aprobado</MenuItem>
+              <MenuItem value="PUBLICADO">Publicado</MenuItem>
+              <MenuItem value="RECHAZADO">Rechazado</MenuItem>
+              <MenuItem value="INACTIVO">Inactivo</MenuItem>
+            </Select>
+          </FormControl>
+        </Stack>
       </AdminTableToolbar>
       <CenterTable
         centers={centers}

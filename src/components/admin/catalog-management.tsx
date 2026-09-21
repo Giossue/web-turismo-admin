@@ -33,6 +33,7 @@ import {
   type CatalogOption,
 } from "@/lib/admin-api";
 import { webTokens } from "@/theme/tokens";
+import { ADMIN_SEARCH_DEBOUNCE_MS, useDebouncedValue } from "@/lib/use-debounced-value";
 
 const catalogMeta: Array<{ key: AdminCatalogKey; label: string }> = [
   { key: "ACCESSIBILITY", label: "Accesibilidad" },
@@ -56,6 +57,7 @@ export function CatalogManagement({
   const [name, setName] = useState("");
   const [active, setActive] = useState(true);
   const [working, setWorking] = useState(false);
+  const debouncedSearch = useDebouncedValue(search.trim(), ADMIN_SEARCH_DEBOUNCE_MS);
   const catalogsQuery = useQuery({
     queryKey: ["admin", "catalogs", "management"],
     queryFn: () => getAdminCatalogs(token, true),
@@ -80,11 +82,11 @@ export function CatalogManagement({
         : selected === "ACTIVITY"
           ? catalogsQuery.data.activities
           : catalogsQuery.data.facilities;
-    const normalized = search.trim().toLocaleLowerCase();
+    const normalized = (search.trim() ? debouncedSearch : "").toLocaleLowerCase();
     return normalized
       ? source.filter((item) => item.name.toLocaleLowerCase().includes(normalized))
       : source;
-  }, [catalogsQuery.data, search, selected]);
+  }, [catalogsQuery.data, debouncedSearch, search, selected]);
 
   function openEdit(option: CatalogOption) {
     setEditing(option);
