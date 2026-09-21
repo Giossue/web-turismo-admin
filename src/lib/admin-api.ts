@@ -320,6 +320,7 @@ export type AdminOpinionVersion = {
 
 export type AdminOpinion = {
   reviewCode: string;
+  status: "PENDIENTE" | "APROBADA";
   version: number;
   submittedAt: string;
   authorName: string;

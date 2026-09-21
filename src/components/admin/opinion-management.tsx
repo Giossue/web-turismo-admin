@@ -25,6 +25,7 @@ import {
   ADMIN_TABLE_PAGE_SIZE,
 } from "@/components/ui/admin-table";
 import { getAdminOpinions, reviewAdminOpinion, type AdminOpinion } from "@/lib/admin-api";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { webTokens } from "@/theme/tokens";
 
 const pageSize = ADMIN_TABLE_PAGE_SIZE;
@@ -124,11 +125,11 @@ export function OpinionManagement({
   return (
     <Stack spacing={webTokens.spacing.control}>
       <AdminTable
-        ariaLabel="Opiniones pendientes de moderación"
-        minWidth={1240}
+        ariaLabel="Opiniones de visitantes"
+        minWidth={1320}
         loading={loading && items.length === 0}
         empty={!loading && items.length === 0}
-        emptyMessage="No hay opiniones pendientes de moderación."
+        emptyMessage="No hay opiniones pendientes ni publicadas."
         footer={
           <AdminTableFooter
             total={total}
@@ -142,6 +143,7 @@ export function OpinionManagement({
           <TableRow>
             <TableCell>Lugar</TableCell>
             <TableCell>Usuario</TableCell>
+            <TableCell>Estado</TableCell>
             <TableCell>Calificación</TableCell>
             <TableCell>Comentario propuesto</TableCell>
             <TableCell>Versión publicada</TableCell>
@@ -163,6 +165,12 @@ export function OpinionManagement({
               </TableCell>
               <TableCell>{opinion.authorName}</TableCell>
               <TableCell>
+                <StatusBadge
+                  code={opinion.status === "APROBADA" ? "PUBLICADO" : "PENDIENTE"}
+                  label={opinion.status === "APROBADA" ? "Publicada" : "Pendiente"}
+                />
+              </TableCell>
+              <TableCell>
                 <OpinionRating rating={opinion.proposed.rating} />
                 <Typography variant="caption" color="text.secondary" display="block">
                   v{opinion.proposed.version}
@@ -172,7 +180,11 @@ export function OpinionManagement({
                 <OpinionComment comment={opinion.proposed.comment} />
               </TableCell>
               <TableCell>
-                {opinion.current ? (
+                {opinion.status === "APROBADA" ? (
+                  <Typography variant="body2" color="success.main">
+                    Esta versión está publicada
+                  </Typography>
+                ) : opinion.current ? (
                   <OpinionVersionSummary version={opinion.current} />
                 ) : (
                   <Typography variant="body2" color="text.secondary">
@@ -182,29 +194,35 @@ export function OpinionManagement({
               </TableCell>
               <TableCell>{formatDate(opinion.submittedAt)}</TableCell>
               <TableCell align="right">
-                <Stack
-                  direction={{ xs: "column", sm: "row" }}
-                  spacing={webTokens.spacing.inline}
-                  justifyContent="flex-end"
-                >
-                  <Button
-                    size="small"
-                    variant="contained"
-                    disabled={workingCode !== null}
-                    onClick={() => openReview(opinion, "APPROVE")}
+                {opinion.status === "PENDIENTE" ? (
+                  <Stack
+                    direction={{ xs: "column", sm: "row" }}
+                    spacing={webTokens.spacing.inline}
+                    justifyContent="flex-end"
                   >
-                    Aprobar
-                  </Button>
-                  <Button
-                    size="small"
-                    color="error"
-                    variant="text"
-                    disabled={workingCode !== null}
-                    onClick={() => openReview(opinion, "REJECT")}
-                  >
-                    Rechazar
-                  </Button>
-                </Stack>
+                    <Button
+                      size="small"
+                      variant="contained"
+                      disabled={workingCode !== null}
+                      onClick={() => openReview(opinion, "APPROVE")}
+                    >
+                      Aprobar
+                    </Button>
+                    <Button
+                      size="small"
+                      color="error"
+                      variant="text"
+                      disabled={workingCode !== null}
+                      onClick={() => openReview(opinion, "REJECT")}
+                    >
+                      Rechazar
+                    </Button>
+                  </Stack>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    Sin acciones
+                  </Typography>
+                )}
               </TableCell>
             </TableRow>
           ))}

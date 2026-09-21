@@ -40,16 +40,10 @@ export function AdminTable({
   sx: tableSx,
   ...tableProps
 }: AdminTableProps) {
-  const showState = loading || empty;
-
   return (
     <FlatSurface sx={{ overflow: "hidden" }}>
-      {showState ? (
-        <ContentState
-          status={loading ? "loading" : "empty"}
-          label={loadingLabel}
-          message={emptyMessage}
-        />
+      {loading ? (
+        <ContentState status="loading" label={loadingLabel} message={emptyMessage} />
       ) : (
         <TableContainer
           sx={{
@@ -68,6 +62,9 @@ export function AdminTable({
           </Table>
         </TableContainer>
       )}
+      {!loading && empty ? (
+        <ContentState status="empty" label={loadingLabel} message={emptyMessage} />
+      ) : null}
       {footer}
     </FlatSurface>
   );
