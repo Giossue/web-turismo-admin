@@ -1,7 +1,16 @@
 "use client";
 
+import BusinessCenterRounded from "@mui/icons-material/BusinessCenterRounded";
+import DirectionsBusRounded from "@mui/icons-material/DirectionsBusRounded";
+import HotelRounded from "@mui/icons-material/HotelRounded";
+import LocalActivityRounded from "@mui/icons-material/LocalActivityRounded";
+import LocalCafeRounded from "@mui/icons-material/LocalCafeRounded";
+import PlaceRounded from "@mui/icons-material/PlaceRounded";
+import RestaurantRounded from "@mui/icons-material/RestaurantRounded";
+import StorefrontRounded from "@mui/icons-material/StorefrontRounded";
 import EditRounded from "@mui/icons-material/EditRounded";
 import {
+  Box,
   Button,
   Dialog,
   DialogActions,
@@ -12,6 +21,9 @@ import {
   Stack,
   Switch,
   Tab,
+  ToggleButton,
+  ToggleButtonGroup,
+  Typography,
   Tabs,
   TableBody,
   TableCell,
@@ -47,6 +59,19 @@ const catalogMeta: Array<{ key: AdminCatalogKey; label: string }> = [
   { key: "ESTABLISHMENT_CATEGORY", label: "Categorías de catastro" },
 ];
 
+const defaultCategoryIcon = "mapPin";
+const defaultCategoryColor = "#2563eb";
+const catalogIconOptions = [
+  { value: "mapPin", label: "Lugar", Icon: PlaceRounded },
+  { value: "hotel", label: "Hotel", Icon: HotelRounded },
+  { value: "restaurant", label: "Restaurante", Icon: RestaurantRounded },
+  { value: "coffee", label: "Cafetería", Icon: LocalCafeRounded },
+  { value: "store", label: "Comercio", Icon: StorefrontRounded },
+  { value: "bus", label: "Transporte", Icon: DirectionsBusRounded },
+  { value: "ticket", label: "Actividad", Icon: LocalActivityRounded },
+  { value: "briefcase", label: "Agencia", Icon: BusinessCenterRounded },
+] as const;
+
 export function CatalogManagement({
   token,
   onNotice,
@@ -62,6 +87,8 @@ export function CatalogManagement({
   const [editing, setEditing] = useState<CatalogOption | null>(null);
   const [name, setName] = useState("");
   const [active, setActive] = useState(true);
+  const [icon, setIcon] = useState(defaultCategoryIcon);
+  const [color, setColor] = useState(defaultCategoryColor);
   const [working, setWorking] = useState(false);
   const [page, setPage] = useState(0);
   const debouncedSearch = useDebouncedValue(search.trim(), ADMIN_SEARCH_DEBOUNCE_MS);
@@ -111,6 +138,8 @@ export function CatalogManagement({
     setEditing(option);
     setName(option.name);
     setActive(option.active !== false);
+    setIcon(option.icon ?? defaultCategoryIcon);
+    setColor(option.color ?? defaultCategoryColor);
     onError(null);
   }
 
@@ -125,6 +154,7 @@ export function CatalogManagement({
       await updateAdminCatalog(token, selected, editing.id, {
         name: name.trim(),
         active,
+        ...(selected === "ESTABLISHMENT_CATEGORY" ? { icon, color } : {}),
       });
       await queryClient.invalidateQueries({ queryKey: ["admin", "catalogs"] });
       setEditing(null);
@@ -254,6 +284,53 @@ export function CatalogManagement({
               autoFocus
               disabled={working}
             />
+            {selected === "ESTABLISHMENT_CATEGORY" ? (
+              <Stack spacing={1}>
+                <Typography variant="body2">Icono del marcador</Typography>
+                <ToggleButtonGroup
+                  aria-label="Icono del marcador"
+                  exclusive
+                  value={icon}
+                  onChange={(_, value: string | null) => {
+                    if (value) setIcon(value);
+                  }}
+                  sx={{ flexWrap: "wrap", gap: 1 }}
+                >
+                  {catalogIconOptions.map(({ value, label, Icon }) => (
+                    <ToggleButton
+                      aria-label={label}
+                      key={value}
+                      value={value}
+                      sx={{
+                        border: 1,
+                        borderColor: "divider",
+                        borderRadius: 1,
+                        gap: 0.75,
+                        minHeight: 42,
+                        textTransform: "none",
+                      }}
+                    >
+                      <Icon fontSize="small" />
+                      <Box
+                        component="span"
+                        sx={{ display: { xs: "none", sm: "inline" } }}
+                      >
+                        {label}
+                      </Box>
+                    </ToggleButton>
+                  ))}
+                </ToggleButtonGroup>
+                <TextField
+                  label="Color del marcador"
+                  type="color"
+                  value={color}
+                  onChange={(event) => setColor(event.target.value)}
+                  fullWidth
+                  disabled={working}
+                  slotProps={{ inputLabel: { shrink: true } }}
+                />
+              </Stack>
+            ) : null}
             <FormControlLabel
               control={
                 <Switch

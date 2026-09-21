@@ -133,6 +133,8 @@ export type CatalogOption = {
   unit1?: string;
   unit2?: string;
   unit3?: string;
+  icon?: string;
+  color?: string;
 };
 export type AdminCatalogKey =
   "ACCESSIBILITY" | "ACTIVITY" | "FACILITY" | "ESTABLISHMENT_CATEGORY";
@@ -504,7 +506,12 @@ export async function updateAdminCatalog(
   token: string,
   catalog: AdminCatalogKey,
   id: number,
-  input: { name?: string; active?: boolean },
+  input: {
+    name?: string;
+    active?: boolean;
+    icon?: string;
+    color?: string;
+  },
 ) {
   return request<{
     catalog: AdminCatalogKey;
@@ -512,6 +519,8 @@ export async function updateAdminCatalog(
     code: string;
     name: string;
     active: boolean;
+    icon?: string;
+    color?: string;
   }>(`/admin/catalogs/${catalog}/${id}`, token, {
     method: "PATCH",
     body: JSON.stringify(input),
