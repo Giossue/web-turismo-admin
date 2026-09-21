@@ -520,6 +520,16 @@ export function CenterEditor({
         onSelect={selectStep}
       />
 
+      <Box sx={{ display: activeSectionCode === "anexos" ? "block" : "none" }}>
+        <MediaManager
+          token={token}
+          code={effectiveCode}
+          canEdit={canEdit || state === "APROBADO"}
+          onNotice={onNotice}
+          onError={reportError}
+        />
+      </Box>
+
       <ContinuousCenterSectionWorkflow
         token={token}
         code={effectiveCode}
@@ -578,7 +588,7 @@ export function CenterEditor({
                   }}
                 />
               </Grid>
-              <Grid size={{ xs: 12, md: 4 }}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <CatalogSelect
                   label="Tipo"
                   name="typeId"
@@ -589,23 +599,13 @@ export function CenterEditor({
                   onValueChange={() => setValue("subtypeId", "")}
                 />
               </Grid>
-              <Grid size={{ xs: 12, md: 4 }}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <CatalogSelect
                   label="Subtipo"
                   name="subtypeId"
                   options={subtypeOptions}
                   register={register}
                   disabled={!canEdit || !typeId}
-                  required
-                />
-              </Grid>
-              <Grid size={{ xs: 12, md: 4 }}>
-                <CatalogSelect
-                  label="Zona turística"
-                  name="touristZoneId"
-                  options={zoneOptions}
-                  register={register}
-                  disabled={!canEdit || !cantonId}
                   required
                 />
               </Grid>
@@ -646,6 +646,16 @@ export function CenterEditor({
               </Grid>
               <Grid size={{ xs: 12, md: 4 }}>
                 <CatalogSelect
+                  label="Zona turística"
+                  name="touristZoneId"
+                  options={zoneOptions}
+                  register={register}
+                  disabled={!canEdit || !cantonId}
+                  required
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <CatalogSelect
                   label="Línea de producto"
                   name="productLineId"
                   options={catalogs?.lines ?? []}
@@ -664,15 +674,6 @@ export function CenterEditor({
                   required
                 />
               </Grid>
-              <Grid size={{ xs: 12, md: 4 }}>
-                <CatalogSelect
-                  label="Jerarquía calculada"
-                  name="hierarchyId"
-                  options={catalogs?.hierarchies ?? []}
-                  register={register}
-                  disabled
-                />
-              </Grid>
             </Grid>
           </Stack>
         </FlatSurface>
@@ -689,35 +690,6 @@ export function CenterEditor({
               description="La API sincroniza las coordenadas con PostGIS."
             />
             <Grid container spacing={webTokens.spacing.control}>
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <TextField
-                  label="Latitud"
-                  type="number"
-                  fullWidth
-                  required
-                  disabled={!canEdit}
-                  {...register("latitude", { required: "La latitud es obligatoria" })}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <TextField
-                  label="Longitud"
-                  type="number"
-                  fullWidth
-                  required
-                  disabled={!canEdit}
-                  {...register("longitude", { required: "La longitud es obligatoria" })}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <TextField
-                  label="Altitud (msnm)"
-                  type="number"
-                  fullWidth
-                  disabled={!canEdit}
-                  {...register("altitudeMeters")}
-                />
-              </Grid>
               <Grid size={{ xs: 12, sm: 8 }}>
                 <TextField
                   label="Barrio, sector o comuna"
@@ -748,6 +720,35 @@ export function CenterEditor({
                   fullWidth
                   disabled={!canEdit}
                   {...register("address.crossStreet")}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  label="Latitud"
+                  type="number"
+                  fullWidth
+                  required
+                  disabled={!canEdit}
+                  {...register("latitude", { required: "La latitud es obligatoria" })}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  label="Longitud"
+                  type="number"
+                  fullWidth
+                  required
+                  disabled={!canEdit}
+                  {...register("longitude", { required: "La longitud es obligatoria" })}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 4 }}>
+                <TextField
+                  label="Altitud (msnm)"
+                  type="number"
+                  fullWidth
+                  disabled={!canEdit}
+                  {...register("altitudeMeters")}
                 />
               </Grid>
             </Grid>
@@ -876,15 +877,6 @@ export function CenterEditor({
                 />
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <CatalogSelect
-                  label="Modalidad de atención"
-                  name="admission.attentionModeId"
-                  options={catalogs?.attentionModes ?? []}
-                  register={register}
-                  disabled={!canEdit}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   label="Hora de ingreso"
                   type="time"
@@ -902,6 +894,27 @@ export function CenterEditor({
                   disabled={!canEdit}
                   InputLabelProps={{ shrink: true }}
                   {...register("admission.closesAt")}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <CatalogSelect
+                  label="Modalidad de atención"
+                  name="admission.attentionModeId"
+                  options={catalogs?.attentionModes ?? []}
+                  register={register}
+                  disabled={!canEdit}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      disabled={!canEdit}
+                      {...register("admission.reservations")}
+                    />
+                  }
+                  label="Maneja un sistema de reservas"
+                  sx={{ minHeight: 56, alignItems: "center" }}
                 />
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
@@ -1001,15 +1014,6 @@ export function CenterEditor({
             />
           </Stack>
         </FlatSurface>
-        <Box sx={{ display: activeSectionCode === "anexos" ? "block" : "none" }}>
-          <MediaManager
-            token={token}
-            code={effectiveCode}
-            canEdit={canEdit || state === "APROBADO"}
-            onNotice={onNotice}
-            onError={reportError}
-          />
-        </Box>
       </Box>
 
       {isSummaryStep ? <CenterSummaryStep detail={detail} catalogs={catalogs} /> : null}

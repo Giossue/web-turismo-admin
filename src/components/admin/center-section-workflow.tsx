@@ -3732,47 +3732,6 @@ function PromotionSectionFields({
               </Select>
             </FormControl>
           </Grid>
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <FormControl fullWidth disabled={!canEdit}>
-              <InputLabel id="promotion-package">¿Forma parte de un paquete?</InputLabel>
-              <Select
-                labelId="promotion-package"
-                label="¿Forma parte de un paquete?"
-                defaultValue={EMPTY_RESPONSE}
-                {...register("promotion.partOfPackage")}
-              >
-                {SECTION_RESPONSE_OPTIONS.map((option) => (
-                  <MenuItem key={option.value} value={option.value}>
-                    {option.label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid size={12}>
-            <TextField
-              label="Detalle del paquete"
-              fullWidth
-              multiline
-              minRows={2}
-              disabled={!canEdit || promotion?.partOfPackage !== "SI"}
-              {...register("promotion.packageDetail", {
-                maxLength: { value: 1_000, message: "Máximo 1.000 caracteres" },
-              })}
-            />
-          </Grid>
-          <Grid size={12}>
-            <TextField
-              label="Observación de promoción"
-              fullWidth
-              multiline
-              minRows={2}
-              disabled={!canEdit}
-              {...register("promotion.observation", {
-                maxLength: { value: 1_000, message: "Máximo 1.000 caracteres" },
-              })}
-            />
-          </Grid>
         </Grid>
       </FlatSurface>
 
@@ -3940,6 +3899,52 @@ function PromotionSectionFields({
           </Stack>
         )}
       </Stack>
+
+      <FlatSurface padding="compact" tone="subtle">
+        <Grid container spacing={webTokens.spacing.control}>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <FormControl fullWidth disabled={!canEdit}>
+              <InputLabel id="promotion-package">¿Forma parte de un paquete?</InputLabel>
+              <Select
+                labelId="promotion-package"
+                label="¿Forma parte de un paquete?"
+                defaultValue={EMPTY_RESPONSE}
+                {...register("promotion.partOfPackage")}
+              >
+                {SECTION_RESPONSE_OPTIONS.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid size={12}>
+            <TextField
+              label="Detalle del paquete"
+              fullWidth
+              multiline
+              minRows={2}
+              disabled={!canEdit || promotion?.partOfPackage !== "SI"}
+              {...register("promotion.packageDetail", {
+                maxLength: { value: 1_000, message: "Máximo 1.000 caracteres" },
+              })}
+            />
+          </Grid>
+          <Grid size={12}>
+            <TextField
+              label="Observación de promoción"
+              fullWidth
+              multiline
+              minRows={2}
+              disabled={!canEdit}
+              {...register("promotion.observation", {
+                maxLength: { value: 1_000, message: "Máximo 1.000 caracteres" },
+              })}
+            />
+          </Grid>
+        </Grid>
+      </FlatSurface>
     </Stack>
   );
 }
