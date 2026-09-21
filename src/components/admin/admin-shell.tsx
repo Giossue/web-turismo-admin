@@ -58,6 +58,7 @@ import {
   AdminTable,
   AdminTableFooter,
   AdminTableToolbar,
+  ADMIN_TABLE_PAGE_SIZE,
 } from "@/components/ui/admin-table";
 import { MetricCard } from "@/components/ui/metric-card";
 import { PageHeader } from "@/components/ui/page-header";
@@ -83,7 +84,7 @@ import { webTokens } from "@/theme/tokens";
 import { ADMIN_SEARCH_DEBOUNCE_MS, useDebouncedValue } from "@/lib/use-debounced-value";
 
 const drawerWidth = webTokens.layout.drawerWidth;
-const pageSize = 20;
+const pageSize = ADMIN_TABLE_PAGE_SIZE;
 
 type AdminSection =
   | "summary"
@@ -193,6 +194,7 @@ export function AdminShell() {
   const [workingCode, setWorkingCode] = useState<string | null>(null);
   const [reviewIntent, setReviewIntent] = useState<ReviewIntent | null>(null);
   const [observation, setObservation] = useState("");
+  const centersRequestId = useRef(0);
 
   const loadSummary = useCallback(async (token: string) => {
     setLoadingSummary(true);
@@ -208,6 +210,7 @@ export function AdminShell() {
 
   const loadCenters = useCallback(
     async (token: string, status: string, q: string, offset: number) => {
+      const requestId = ++centersRequestId.current;
       setLoadingCenters(true);
       setError(null);
       try {
@@ -217,14 +220,16 @@ export function AdminShell() {
           limit: pageSize,
           offset,
         });
+        if (requestId !== centersRequestId.current) return;
         setCenters(result.items);
         setTotal(result.total);
       } catch (cause) {
+        if (requestId !== centersRequestId.current) return;
         setError(
           cause instanceof Error ? cause.message : "No se pudieron cargar las fichas.",
         );
       } finally {
-        setLoadingCenters(false);
+        if (requestId === centersRequestId.current) setLoadingCenters(false);
       }
     },
     [],
@@ -908,7 +913,7 @@ function CenterTable({
         <TableRow>
           <TableCell>Ficha</TableCell>
           <TableCell>Estado</TableCell>
-          <TableCell>Actividad</TableCell>
+          <TableCell>Estado operativo</TableCell>
           <TableCell>Solicitó</TableCell>
           <TableCell>Actualizada</TableCell>
           {reviewable || onOpen ? <TableCell align="right">Acciones</TableCell> : null}

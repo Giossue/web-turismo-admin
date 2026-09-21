@@ -15,6 +15,8 @@ import { ContentState } from "@/components/ui/content-state";
 import { FlatSurface } from "@/components/ui/flat-surface";
 import { webTokens } from "@/theme/tokens";
 
+export const ADMIN_TABLE_PAGE_SIZE = 20;
+
 type AdminTableProps = Omit<TableProps, "aria-label" | "children"> & {
   ariaLabel: string;
   children: React.ReactNode;

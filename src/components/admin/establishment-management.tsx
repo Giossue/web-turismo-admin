@@ -40,6 +40,7 @@ import {
   AdminTable,
   AdminTableFooter,
   AdminTableToolbar,
+  ADMIN_TABLE_PAGE_SIZE,
 } from "@/components/ui/admin-table";
 import { CatalogSelect } from "@/components/ui/catalog-select";
 import { SearchField } from "@/components/ui/search-field";
@@ -93,7 +94,7 @@ const emptyValues: EstablishmentFormValues = {
   longitude: "",
 };
 
-const pageSize = 20;
+const pageSize = ADMIN_TABLE_PAGE_SIZE;
 
 export type EstablishmentManagementRef = {
   openCreate: () => void;

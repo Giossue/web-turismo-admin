@@ -19,11 +19,15 @@ import {
 } from "@mui/material";
 import { useCallback, useEffect, useState } from "react";
 
-import { AdminTable, AdminTableFooter } from "@/components/ui/admin-table";
+import {
+  AdminTable,
+  AdminTableFooter,
+  ADMIN_TABLE_PAGE_SIZE,
+} from "@/components/ui/admin-table";
 import { getAdminOpinions, reviewAdminOpinion, type AdminOpinion } from "@/lib/admin-api";
 import { webTokens } from "@/theme/tokens";
 
-const pageSize = 20;
+const pageSize = ADMIN_TABLE_PAGE_SIZE;
 
 type ReviewIntent = {
   opinion: AdminOpinion;
@@ -121,7 +125,7 @@ export function OpinionManagement({
     <Stack spacing={webTokens.spacing.control}>
       <AdminTable
         ariaLabel="Opiniones pendientes de moderación"
-        minWidth={1100}
+        minWidth={1240}
         loading={loading && items.length === 0}
         empty={!loading && items.length === 0}
         emptyMessage="No hay opiniones pendientes de moderación."
@@ -138,7 +142,8 @@ export function OpinionManagement({
           <TableRow>
             <TableCell>Lugar</TableCell>
             <TableCell>Usuario</TableCell>
-            <TableCell>Versión propuesta</TableCell>
+            <TableCell>Calificación</TableCell>
+            <TableCell>Comentario propuesto</TableCell>
             <TableCell>Versión publicada</TableCell>
             <TableCell>Enviada</TableCell>
             <TableCell align="right">Acciones</TableCell>
@@ -158,7 +163,13 @@ export function OpinionManagement({
               </TableCell>
               <TableCell>{opinion.authorName}</TableCell>
               <TableCell>
-                <OpinionVersionSummary version={opinion.proposed} />
+                <OpinionRating rating={opinion.proposed.rating} />
+                <Typography variant="caption" color="text.secondary" display="block">
+                  v{opinion.proposed.version}
+                </Typography>
+              </TableCell>
+              <TableCell>
+                <OpinionComment comment={opinion.proposed.comment} />
               </TableCell>
               <TableCell>
                 {opinion.current ? (
@@ -301,6 +312,37 @@ function OpinionVersionSummary({
         </Typography>
       )}
     </Stack>
+  );
+}
+
+function OpinionRating({ rating }: { rating: number | null }) {
+  return (
+    <Typography variant="body2" fontWeight={700} whiteSpace="nowrap">
+      {rating === null ? "Sin calificación" : `${"★".repeat(rating)}${"☆".repeat(5 - rating)}`}
+    </Typography>
+  );
+}
+
+function OpinionComment({ comment }: { comment: string | null }) {
+  return comment ? (
+    <Typography
+      variant="body2"
+      color="text.secondary"
+      sx={{
+        display: "-webkit-box",
+        overflow: "hidden",
+        WebkitBoxOrient: "vertical",
+        WebkitLineClamp: 3,
+        minWidth: 220,
+        maxWidth: 360,
+      }}
+    >
+      {comment}
+    </Typography>
+  ) : (
+    <Typography variant="caption" color="text.secondary">
+      Sin comentario
+    </Typography>
   );
 }
 

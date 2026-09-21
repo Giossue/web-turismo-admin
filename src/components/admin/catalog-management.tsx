@@ -23,7 +23,12 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 
-import { AdminTable, AdminTableToolbar } from "@/components/ui/admin-table";
+import {
+  AdminTable,
+  AdminTableFooter,
+  AdminTableToolbar,
+  ADMIN_TABLE_PAGE_SIZE,
+} from "@/components/ui/admin-table";
 import { SearchField } from "@/components/ui/search-field";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
@@ -58,6 +63,7 @@ export function CatalogManagement({
   const [name, setName] = useState("");
   const [active, setActive] = useState(true);
   const [working, setWorking] = useState(false);
+  const [page, setPage] = useState(0);
   const debouncedSearch = useDebouncedValue(search.trim(), ADMIN_SEARCH_DEBOUNCE_MS);
   const catalogsQuery = useQuery({
     queryKey: ["admin", "catalogs", "management"],
@@ -94,6 +100,19 @@ export function CatalogManagement({
         )
       : source;
   }, [catalogsQuery.data, debouncedSearch, search, selected]);
+  const visibleOptions = options.slice(
+    page * ADMIN_TABLE_PAGE_SIZE,
+    (page + 1) * ADMIN_TABLE_PAGE_SIZE,
+  );
+
+  useEffect(() => {
+    setPage((current) =>
+      Math.min(
+        current,
+        Math.max(Math.ceil(options.length / ADMIN_TABLE_PAGE_SIZE) - 1, 0),
+      ),
+    );
+  }, [options.length]);
 
   function openEdit(option: CatalogOption) {
     setEditing(option);
@@ -135,6 +154,7 @@ export function CatalogManagement({
             onChange={(_, value: AdminCatalogKey) => {
               setSelected(value);
               setSearch("");
+              setPage(0);
             }}
             variant="scrollable"
             allowScrollButtonsMobile
@@ -147,7 +167,10 @@ export function CatalogManagement({
           <SearchField
             label="Buscar opción"
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) => {
+              setSearch(event.target.value);
+              setPage(0);
+            }}
             sx={{ width: { xs: "100%", sm: 360 } }}
           />
         </Stack>
@@ -166,6 +189,14 @@ export function CatalogManagement({
             ? "No se pudieron cargar los catálogos."
             : "No hay opciones que coincidan con la búsqueda."
         }
+        footer={
+          <AdminTableFooter
+            total={options.length}
+            page={page}
+            pageSize={ADMIN_TABLE_PAGE_SIZE}
+            onPageChange={setPage}
+          />
+        }
       >
         <TableHead>
           <TableRow>
@@ -181,7 +212,7 @@ export function CatalogManagement({
           </TableRow>
         </TableHead>
         <TableBody>
-          {options.map((option) => (
+          {visibleOptions.map((option) => (
             <TableRow key={option.id} hover>
               <TableCell component="th" scope="row">
                 {option.name}
