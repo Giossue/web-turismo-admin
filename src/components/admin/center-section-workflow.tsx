@@ -667,7 +667,10 @@ export function CenterSectionWorkflow({
   const annexMedia = mediaQuery.data?.items ?? [];
   const sectionData = sectionsQuery.data;
   const sections = useMemo(
-    () => sectionData?.sections ?? detail?.draft?.sections ?? {},
+    () => ({
+      ...(detail?.draft?.sections ?? {}),
+      ...(sectionData?.sections ?? {}),
+    }),
     [detail?.draft?.sections, sectionData?.sections],
   );
   const definition =
@@ -6286,7 +6289,10 @@ export function ContinuousCenterSectionWorkflow({
   }, [onError, sectionsQuery.error]);
   const sectionData = sectionsQuery.data;
   const sections = useMemo(
-    () => sectionData?.sections ?? detail?.draft?.sections ?? {},
+    () => ({
+      ...(detail?.draft?.sections ?? {}),
+      ...(sectionData?.sections ?? {}),
+    }),
     [detail?.draft?.sections, sectionData?.sections],
   );
   const coreCompletion = useMemo(() => getCoreCompletion(detail), [detail]);

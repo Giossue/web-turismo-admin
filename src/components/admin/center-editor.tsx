@@ -30,7 +30,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   useController,
   useForm,
@@ -203,7 +203,11 @@ export function CenterEditor({
     enabled: token.length > 0 && code !== null,
   });
   const catalogs = catalogsQuery.data ?? null;
-  const detail = detailOverride ?? centerQuery.data ?? null;
+  const rawDetail = detailOverride ?? centerQuery.data ?? null;
+  const detail = useMemo(
+    () => (rawDetail ? withEditorDraft(rawDetail) : null),
+    [rawDetail],
+  );
   const loading = catalogsQuery.isLoading || centerQuery.isLoading;
   const effectiveCode = detail?.code ?? code;
   const isNew = effectiveCode === null;
@@ -221,10 +225,10 @@ export function CenterEditor({
   );
 
   useEffect(() => {
-    if (centerQuery.data && catalogs && !isDirty) {
-      reset(toFormValues(centerQuery.data.draft ?? centerQuery.data.published, catalogs));
+    if (detail && catalogs && !isDirty) {
+      reset(toFormValues(detail.draft ?? detail.published, catalogs));
     }
-  }, [centerQuery.data, catalogs, isDirty, reset]);
+  }, [catalogs, detail, isDirty, reset]);
 
   const queryError = catalogsQuery.error ?? centerQuery.error;
   const queryErrorMessage =
@@ -375,9 +379,12 @@ export function CenterEditor({
         const hasChangesSinceSubmit = latestSignature !== submittedSignature;
         setDetailOverride(saved);
         queryClient.setQueryData(["admin", "center", saved.code], saved);
+        const normalizedSaved = withEditorDraft(saved);
         if (catalogs && !hasChangesSinceSubmit) {
           skipNextAutoSaveRef.current = true;
-          reset(toFormValues(saved.draft ?? saved.published, catalogs));
+          reset(
+            toFormValues(normalizedSaved.draft ?? normalizedSaved.published, catalogs),
+          );
         } else if (hasChangesSinceSubmit) {
           pendingAutoSaveRef.current = true;
         }
@@ -494,9 +501,17 @@ export function CenterEditor({
     reportError(null);
     try {
       const published = await publishAdminCenter(token, detail.code);
+      const normalizedPublished = withEditorDraft(published);
       setDetailOverride(published);
       queryClient.setQueryData(["admin", "center", published.code], published);
-      if (catalogs) reset(toFormValues(published.draft ?? published.published, catalogs));
+      if (catalogs) {
+        reset(
+          toFormValues(
+            normalizedPublished.draft ?? normalizedPublished.published,
+            catalogs,
+          ),
+        );
+      }
       onSaved(published);
       onNotice("La ficha fue publicada en la aplicación móvil.");
     } catch (cause) {
@@ -1437,6 +1452,66 @@ function OptionGrid({
       ))}
     </Grid>
   );
+}
+
+function withEditorDraft(detail: AdminCenterDetail): AdminCenterDetail {
+  if (!detail.draft) return detail;
+
+  const sections: Record<string, unknown> = {
+    ...(detail.published.sections ?? {}),
+    ...(detail.draft.sections ?? {}),
+  };
+  const draft: CenterDraft = {
+    ...detail.published,
+    ...detail.draft,
+    sections,
+  };
+
+  if (
+    sections.identificacion === undefined &&
+    draft.name &&
+    draft.subtypeId &&
+    draft.touristZoneId &&
+    draft.parishId &&
+    draft.productLineId &&
+    draft.scenarioId
+  ) {
+    sections.identificacion = { schemaVersion: 1, response: "SI", observation: "" };
+  }
+  if (
+    sections["ubicacion-admin"] === undefined &&
+    Number.isFinite(draft.latitude) &&
+    Number.isFinite(draft.longitude)
+  ) {
+    sections["ubicacion-admin"] = {
+      schemaVersion: 1,
+      response: "SI",
+      observation: "",
+    };
+  }
+  if (sections.caracteristicas === undefined && draft.productLineId && draft.scenarioId) {
+    sections.caracteristicas = { schemaVersion: 1, response: "SI", observation: "" };
+  }
+  if (
+    sections.actividades === undefined &&
+    draft.activities?.some((activity) => activity.active)
+  ) {
+    sections.actividades = { schemaVersion: 1, response: "SI", observation: "" };
+  }
+  if (sections.descripcion === undefined && draft.description?.trim()) {
+    sections.descripcion = { schemaVersion: 1, response: "SI", observation: "" };
+  }
+  if (
+    sections.accesibilidad === undefined &&
+    draft.accessibility?.some((item) => item.applies)
+  ) {
+    sections.accesibilidad = { schemaVersion: 1, response: "SI", observation: "" };
+  }
+  if (sections.planta === undefined && draft.facilities?.length) {
+    sections.planta = { schemaVersion: 1, response: "SI", observation: "" };
+  }
+
+  return { ...detail, draft };
 }
 
 function toFormValues(
