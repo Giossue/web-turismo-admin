@@ -5,6 +5,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 
 import { FlatSurface } from "@/components/ui/flat-surface";
 import { webTokens } from "@/theme/tokens";
+import { registerAdminAccessTokenRefresh } from "./admin-api";
 
 export type AdminRole = "ADMINISTRADOR" | "TURISTA";
 
@@ -87,6 +88,37 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const refreshStarted = useRef(false);
+
+  const refreshAccessToken = useMemo(
+    () =>
+      async (expiredToken: string): Promise<string | null> => {
+        if (accessToken && accessToken !== expiredToken) {
+          return accessToken;
+        }
+
+        try {
+          const data = await refreshSession();
+          if (!data?.accessToken || !data.user) {
+            setAccessToken(null);
+            setUser(null);
+            return null;
+          }
+          setAccessToken(data.accessToken);
+          setUser(data.user);
+          return data.accessToken;
+        } catch {
+          setAccessToken(null);
+          setUser(null);
+          return null;
+        }
+      },
+    [accessToken],
+  );
+
+  useEffect(
+    () => registerAdminAccessTokenRefresh(refreshAccessToken),
+    [refreshAccessToken],
+  );
 
   useEffect(() => {
     if (refreshStarted.current) {

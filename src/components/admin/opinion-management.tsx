@@ -1,7 +1,6 @@
 "use client";
 
 import CheckCircleRounded from "@mui/icons-material/CheckCircleRounded";
-import RateReviewRounded from "@mui/icons-material/RateReviewRounded";
 import {
   Alert,
   Button,
@@ -21,7 +20,6 @@ import {
 import { useCallback, useEffect, useState } from "react";
 
 import { AdminTable, AdminTableFooter } from "@/components/ui/admin-table";
-import { FlatSurface } from "@/components/ui/flat-surface";
 import { getAdminOpinions, reviewAdminOpinion, type AdminOpinion } from "@/lib/admin-api";
 import { webTokens } from "@/theme/tokens";
 
@@ -121,23 +119,6 @@ export function OpinionManagement({
 
   return (
     <Stack spacing={webTokens.spacing.control}>
-      <FlatSurface padding="default">
-        <Stack spacing={webTokens.spacing.inline}>
-          <Stack direction="row" spacing={webTokens.spacing.inline} alignItems="center">
-            <RateReviewRounded color="primary" />
-            <Typography variant="h6">Moderación de opiniones</Typography>
-          </Stack>
-          <Typography color="text.secondary">
-            Solo las versiones aprobadas aparecen en la aplicación. Si se rechaza una
-            edición, la versión aprobada anterior permanece visible.
-          </Typography>
-          <Alert severity="info">
-            Las opiniones rechazadas no se ocultan ni se publican; quedan registradas para
-            auditoría y el visitante puede enviar otra versión.
-          </Alert>
-        </Stack>
-      </FlatSurface>
-
       <AdminTable
         ariaLabel="Opiniones pendientes de moderación"
         minWidth={1100}

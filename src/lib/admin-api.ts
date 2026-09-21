@@ -325,10 +325,30 @@ export type AdminOpinionPage = {
 
 type ApiBody<T> = { data: T; error?: { message?: string } };
 
+type AdminAccessTokenRefresh = (expiredToken: string) => Promise<string | null>;
+
+let adminAccessTokenRefresh: AdminAccessTokenRefresh | null = null;
+
+export function registerAdminAccessTokenRefresh(
+  refresh: AdminAccessTokenRefresh,
+): () => void {
+  adminAccessTokenRefresh = refresh;
+  return () => {
+    if (adminAccessTokenRefresh === refresh) {
+      adminAccessTokenRefresh = null;
+    }
+  };
+}
+
 export const apiUrl =
   process.env.NEXT_PUBLIC_TURISMO_API_URL ?? "http://localhost:3000/api/v1";
 
-async function request<T>(path: string, token: string, init?: RequestInit): Promise<T> {
+async function request<T>(
+  path: string,
+  token: string,
+  init?: RequestInit,
+  retryAfterRefresh = true,
+): Promise<T> {
   const headers = new Headers(init?.headers);
   headers.set("Accept", "application/json");
   headers.set("Authorization", `Bearer ${token}`);
@@ -339,9 +359,22 @@ async function request<T>(path: string, token: string, init?: RequestInit): Prom
     headers,
     credentials: "include",
   });
-  const body = (await response.json()) as ApiBody<T>;
+  const body = (await response.json().catch(() => null)) as ApiBody<T> | null;
+
+  if (response.status === 401 && retryAfterRefresh && adminAccessTokenRefresh) {
+    const nextToken = await adminAccessTokenRefresh(token).catch(() => null);
+    if (nextToken && nextToken !== token) {
+      return request(path, nextToken, init, false);
+    }
+  }
+
   if (!response.ok) {
-    throw new Error(body.error?.message ?? "No se pudo consultar la API administrativa.");
+    throw new Error(
+      body?.error?.message ?? "No se pudo consultar la API administrativa.",
+    );
+  }
+  if (body?.data === undefined) {
+    throw new Error("La API administrativa devolvió una respuesta incompleta.");
   }
   return body.data;
 }
