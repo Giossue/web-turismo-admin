@@ -3,7 +3,6 @@
 import EditRounded from "@mui/icons-material/EditRounded";
 import {
   Button,
-  Box,
   Dialog,
   DialogActions,
   DialogContent,
@@ -18,7 +17,6 @@ import {
   TableCell,
   TableHead,
   TableRow,
-  Typography,
   TextField,
   Tooltip,
 } from "@mui/material";
@@ -338,60 +336,14 @@ export function CatalogManagement({
               disabled={working}
             />
             {selected === "ESTABLISHMENT_CLASSIFICATION" ? (
-              <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                <CatalogIconSelect
-                  id="catalog-marker-icon"
-                  label="Icono del marcador"
-                  value={icon}
-                  options={catalogIconOptionsWithImages}
-                  onChange={setIcon}
-                  disabled={working}
-                />
-                <Box
-                  component="fieldset"
-                  sx={{
-                    border: 0,
-                    flex: { sm: "0 0 200px" },
-                    m: 0,
-                    minWidth: 0,
-                    p: 0,
-                  }}
-                >
-                  <Typography
-                    component="legend"
-                    sx={{ color: "text.secondary", fontSize: "0.75rem", mb: 1 }}
-                  >
-                    Color automático
-                  </Typography>
-                  <Stack alignItems="center" direction="row" spacing={1.25}>
-                    <Box
-                      aria-hidden
-                      sx={{
-                        backgroundColor:
-                          catalogIconOptions.find((option) => option.value === icon)
-                            ?.color ?? "#be123c",
-                        border: "2px solid",
-                        borderColor: "divider",
-                        borderRadius: "50%",
-                        height: 30,
-                        width: 30,
-                      }}
-                    />
-                    <Typography variant="body2">
-                      {catalogIconOptions.find((option) => option.value === icon)
-                        ?.color ?? "#be123c"}
-                    </Typography>
-                  </Stack>
-                  <Typography
-                    color="text.secondary"
-                    sx={{ display: "block", mt: 1 }}
-                    variant="caption"
-                  >
-                    Se asigna según el pin y se aplica a todas las categorías de este
-                    tipo.
-                  </Typography>
-                </Box>
-              </Stack>
+              <CatalogIconSelect
+                id="catalog-marker-icon"
+                label="Icono del marcador"
+                value={icon}
+                options={catalogIconOptionsWithImages}
+                onChange={setIcon}
+                disabled={working}
+              />
             ) : null}
             <FormControlLabel
               control={
