@@ -63,7 +63,7 @@ import {
 } from "@/lib/admin-api";
 import { webTokens } from "@/theme/tokens";
 
-type FormValues = {
+export type FormValues = {
   name: string;
   categoryId: string;
   typeId: string;
@@ -179,6 +179,9 @@ export function CenterEditor({
   const [detailOverride, setDetailOverride] = useState<AdminCenterDetail | null>(null);
   const [working, setWorking] = useState<"auto" | "review" | "publish" | null>(null);
   const [activeStep, setActiveStep] = useState(0);
+  const [importing, setImporting] = useState(false);
+  const [importWarnings, setImportWarnings] = useState<string[]>([]);
+  const importInputRef = useRef<HTMLInputElement | null>(null);
   const {
     control,
     register,
@@ -421,6 +424,42 @@ export function CenterEditor({
     ],
   );
 
+  const handleImportFile = useCallback(
+    async (file: File) => {
+      setImporting(true);
+      setImportWarnings([]);
+      reportError(null);
+      try {
+        const body = new FormData();
+        body.append("file", file);
+        const response = await fetch("/api/admin/ficha/import", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body,
+        });
+        const payload = (await response.json().catch(() => null)) as {
+          data?: { formulario: Partial<FormValues>; advertencias: string[] };
+          error?: { message?: string };
+        } | null;
+        if (!response.ok || !payload?.data) {
+          throw new Error(payload?.error?.message ?? "No se pudo importar la ficha.");
+        }
+        reset({ ...emptyValues, ...payload.data.formulario });
+        setImportWarnings(payload.data.advertencias);
+        onNotice(
+          "Se precargó el formulario desde la ficha. Revisa las advertencias antes de guardar.",
+        );
+      } catch (cause) {
+        reportError(
+          cause instanceof Error ? cause.message : "No se pudo importar la ficha.",
+        );
+      } finally {
+        setImporting(false);
+      }
+    },
+    [onNotice, reportError, reset, token],
+  );
+
   const scheduleAutoSave = useCallback(() => {
     if (!canEdit || working !== null || skipNextAutoSaveRef.current) return;
     const version = autoSaveVersionRef.current;
@@ -540,6 +579,18 @@ export function CenterEditor({
           </Button>
         }
         actions={[
+          canEdit ? (
+            <Button
+              key="import"
+              type="button"
+              variant="outlined"
+              startIcon={<CloudUploadRounded />}
+              onClick={() => importInputRef.current?.click()}
+              disabled={importing}
+            >
+              {importing ? "Importando…" : "Importar ficha (.xlsx / .xlsm)"}
+            </Button>
+          ) : null,
           canReview && !isNew ? (
             <Button
               key="review"
@@ -566,6 +617,31 @@ export function CenterEditor({
           ) : null,
         ]}
       />
+      <input
+        ref={importInputRef}
+        type="file"
+        accept=".xlsx,.xlsm"
+        style={{ display: "none" }}
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          event.target.value = "";
+          if (file) void handleImportFile(file);
+        }}
+      />
+      {importWarnings.length > 0 ? (
+        <Alert severity="warning" onClose={() => setImportWarnings([])}>
+          <Typography variant="subtitle2" component="p" sx={{ mb: 0.5 }}>
+            La ficha se precargó con advertencias — revísalas antes de guardar:
+          </Typography>
+          <Stack component="ul" sx={{ m: 0, pl: 2.5 }}>
+            {importWarnings.map((warning, index) => (
+              <Typography key={index} component="li" variant="body2">
+                {warning}
+              </Typography>
+            ))}
+          </Stack>
+        </Alert>
+      ) : null}
       {detail?.review?.observation ? (
         <Alert severity={state === "RECHAZADO" ? "warning" : "info"}>
           Observación: {detail.review.observation}
