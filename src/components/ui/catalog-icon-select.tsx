@@ -13,7 +13,8 @@ import type { SvgIconComponent } from "@mui/icons-material";
 export type CatalogIconSelectOption = {
   value: string;
   label: string;
-  Icon: SvgIconComponent;
+  Icon?: SvgIconComponent;
+  imageSrc?: string;
 };
 
 export function CatalogIconSelect({
@@ -46,12 +47,21 @@ export function CatalogIconSelect({
         value={value}
         onChange={handleChange}
         renderValue={() =>
-          selectedOption && SelectedIcon ? (
+          selectedOption && (SelectedIcon || selectedOption.imageSrc) ? (
             <Box
               component="span"
               sx={{ display: "inline-flex", alignItems: "center", gap: 1 }}
             >
-              <SelectedIcon fontSize="small" />
+              {selectedOption.imageSrc ? (
+                <Box
+                  component="img"
+                  src={selectedOption.imageSrc}
+                  alt=""
+                  sx={{ height: 28, width: 28 }}
+                />
+              ) : SelectedIcon ? (
+                <SelectedIcon fontSize="small" />
+              ) : null}
               {selectedOption.label}
             </Box>
           ) : (
@@ -59,14 +69,25 @@ export function CatalogIconSelect({
           )
         }
       >
-        {options.map(({ value: optionValue, label: optionLabel, Icon }) => (
+        {options.map(
+          ({ value: optionValue, label: optionLabel, Icon, imageSrc }) => (
           <MenuItem key={optionValue} value={optionValue}>
             <ListItemIcon sx={{ minWidth: 32 }}>
-              <Icon fontSize="small" />
+              {imageSrc ? (
+                <Box
+                  component="img"
+                  src={imageSrc}
+                  alt=""
+                  sx={{ height: 32, width: 32 }}
+                />
+              ) : Icon ? (
+                <Icon fontSize="small" />
+              ) : null}
             </ListItemIcon>
             <ListItemText primary={optionLabel} />
           </MenuItem>
-        ))}
+          ),
+        )}
       </Select>
     </FormControl>
   );

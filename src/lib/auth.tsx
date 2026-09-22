@@ -7,7 +7,7 @@ import { FlatSurface } from "@/components/ui/flat-surface";
 import { webTokens } from "@/theme/tokens";
 import { registerAdminAccessTokenRefresh } from "./admin-api";
 
-export type AdminRole = "ADMINISTRADOR" | "TURISTA";
+export type AdminRole = "ADMINISTRADOR" | "AGENTE_TURISTICO" | "TURISTA";
 
 export type AdminUser = {
   id: number;

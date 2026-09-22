@@ -2,6 +2,7 @@
 
 import EditRounded from "@mui/icons-material/EditRounded";
 import PowerSettingsNewRounded from "@mui/icons-material/PowerSettingsNewRounded";
+import SendRounded from "@mui/icons-material/SendRounded";
 import {
   Button,
   CircularProgress,
@@ -51,6 +52,7 @@ import {
   getAdminEstablishments,
   saveAdminEstablishment,
   setAdminEstablishmentActive,
+  submitAdminEstablishmentReview,
   type AdminCatalogs,
   type AdminEstablishment,
   type SaveEstablishmentInput,
@@ -106,8 +108,9 @@ export const EstablishmentManagement = forwardRef<
     token: string;
     onNotice: (message: string) => void;
     onError: (message: string | null) => void;
+    canManageStatus: boolean;
   }
->(function EstablishmentManagement({ token, onNotice, onError }, ref) {
+>(function EstablishmentManagement({ token, onNotice, onError, canManageStatus }, ref) {
   const queryClient = useQueryClient();
   const [queryDraft, setQueryDraft] = useState("");
   const [provinceId, setProvinceId] = useState("");
@@ -198,13 +201,31 @@ export const EstablishmentManagement = forwardRef<
       setEditing(null);
       onNotice(
         editing
-          ? "El establecimiento fue actualizado."
-          : "El establecimiento fue creado.",
+          ? canManageStatus
+            ? "El establecimiento fue actualizado."
+            : "El catastro fue guardado como borrador."
+          : canManageStatus
+            ? "El establecimiento fue creado."
+            : "El catastro fue creado como borrador.",
       );
     },
     onError: (cause) =>
       onError(
         cause instanceof Error ? cause.message : "No se pudo guardar el establecimiento.",
+      ),
+  });
+
+  const submitReviewMutation = useMutation({
+    mutationFn: (id: number) => submitAdminEstablishmentReview(token, id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["admin", "establishments"] });
+      onNotice("El catastro fue enviado a revisión.");
+    },
+    onError: (cause) =>
+      onError(
+        cause instanceof Error
+          ? cause.message
+          : "No se pudo enviar el catastro a revisión.",
       ),
   });
 
@@ -542,32 +563,54 @@ export const EstablishmentManagement = forwardRef<
               <TableCell>{item.numeroRegistro ?? "—"}</TableCell>
               <TableCell>
                 <StatusBadge
-                  code={item.active ? "ACTIVA" : "INACTIVA"}
-                  label={item.active ? "Activo" : "Inactivo"}
+                  code={item.reviewStatus}
+                  label={establishmentReviewLabel(item.reviewStatus)}
                 />
               </TableCell>
               <TableCell align="right">
                 <Tooltip title="Editar establecimiento">
-                  <IconButton
-                    aria-label={`Editar ${item.nombreComercial}`}
-                    onClick={() => openEdit(item)}
-                  >
-                    <EditRounded />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title={item.active ? "Desactivar" : "Reactivar"}>
                   <span>
                     <IconButton
-                      aria-label={`${item.active ? "Desactivar" : "Reactivar"} ${item.nombreComercial}`}
-                      onClick={() =>
-                        activeMutation.mutate({ id: item.id, next: !item.active })
+                      aria-label={`Editar ${item.nombreComercial}`}
+                      onClick={() => openEdit(item)}
+                      disabled={
+                        !canManageStatus &&
+                        !["BORRADOR", "RECHAZADO"].includes(item.reviewStatus)
                       }
-                      disabled={activeMutation.isPending}
                     >
-                      <PowerSettingsNewRounded />
+                      <EditRounded />
                     </IconButton>
                   </span>
                 </Tooltip>
+                {!canManageStatus &&
+                ["BORRADOR", "RECHAZADO"].includes(item.reviewStatus) ? (
+                  <Tooltip title="Enviar a revisión">
+                    <span>
+                      <IconButton
+                        aria-label={`Enviar a revisión ${item.nombreComercial}`}
+                        onClick={() => submitReviewMutation.mutate(item.id)}
+                        disabled={submitReviewMutation.isPending}
+                      >
+                        <SendRounded />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                ) : null}
+                {canManageStatus ? (
+                  <Tooltip title={item.active ? "Desactivar" : "Reactivar"}>
+                    <span>
+                      <IconButton
+                        aria-label={`${item.active ? "Desactivar" : "Reactivar"} ${item.nombreComercial}`}
+                        onClick={() =>
+                          activeMutation.mutate({ id: item.id, next: !item.active })
+                        }
+                        disabled={activeMutation.isPending}
+                      >
+                        <PowerSettingsNewRounded />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                ) : null}
               </TableCell>
             </TableRow>
           ))}
@@ -850,4 +893,13 @@ function findCatalogId(
 ) {
   if (!name) return null;
   return options?.find((option) => option.name === name)?.id ?? null;
+}
+
+function establishmentReviewLabel(status: AdminEstablishment["reviewStatus"]) {
+  return {
+    BORRADOR: "Borrador",
+    EN_REVISION: "En revisión",
+    PUBLICADO: "Publicado",
+    RECHAZADO: "Rechazado",
+  }[status];
 }

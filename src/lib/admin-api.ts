@@ -9,6 +9,7 @@ export type AdminCenter = {
   requestedBy: string | null;
   observation: string | null;
   active: boolean;
+  responsibleId?: number | null;
   baseStatus?: string;
   hasDraft?: boolean;
 };
@@ -274,6 +275,11 @@ export type AdminEstablishment = {
   latitude: number;
   longitude: number;
   active: boolean;
+  reviewStatus: "BORRADOR" | "EN_REVISION" | "PUBLICADO" | "RECHAZADO";
+  reviewObservation: string | null;
+  requestedAt: string | null;
+  requestedBy: string | null;
+  reviewedAt: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -305,6 +311,7 @@ export type AdminEstablishmentsOptions = {
   cantonId?: number;
   localityId?: number;
   active?: boolean;
+  reviewStatus?: "BORRADOR" | "EN_REVISION" | "PUBLICADO" | "RECHAZADO";
   limit?: number;
   offset?: number;
 };
@@ -496,6 +503,7 @@ export async function getAdminEstablishments(
   if (options.cantonId) params.set("cantonId", String(options.cantonId));
   if (options.localityId) params.set("localityId", String(options.localityId));
   if (options.active !== undefined) params.set("active", String(options.active));
+  if (options.reviewStatus) params.set("reviewStatus", options.reviewStatus);
   params.set("limit", String(options.limit ?? 20));
   params.set("offset", String(options.offset ?? 0));
   return request<{
@@ -504,6 +512,25 @@ export async function getAdminEstablishments(
     limit: number;
     offset: number;
   }>(`/admin/establishments?${params.toString()}`, token, { cache: "no-store" });
+}
+
+export async function submitAdminEstablishmentReview(token: string, id: number) {
+  return request<AdminEstablishment>(`/admin/establishments/${id}/submit-review`, token, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+export async function reviewAdminEstablishment(
+  token: string,
+  id: number,
+  action: "APPROVE" | "REJECT",
+  observation?: string,
+) {
+  return request<AdminEstablishment>(`/admin/establishments/${id}/review`, token, {
+    method: "PATCH",
+    body: JSON.stringify({ action, observation }),
+  });
 }
 
 export async function createAdminEstablishment(
@@ -552,7 +579,6 @@ export async function updateAdminCatalog(
     name?: string;
     active?: boolean;
     icon?: string;
-    color?: string;
   },
 ) {
   return request<{

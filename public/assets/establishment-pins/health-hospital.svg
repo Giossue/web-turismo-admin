@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000" viewBox="0 0 1000 1000">
+  <title>hospital-14 — Osmic pin</title>
+  <style>
+    :root {
+      --pin-color: #9f1239;
+      --inner-color: #FFFFFF;
+      --icon-color: #9f1239;
+    }
+    #pin-shape { fill: #9f1239; }
+    #inner-background { fill: #FFFFFF; }
+    /* recolor Osmic visually without touching original coordinates */
+    #osmic-icon path, #osmic-icon circle, #osmic-icon ellipse, #osmic-icon polygon,
+    #osmic-icon polyline, #osmic-icon line {
+      fill: #9f1239 !important;
+      stroke: none !important;
+    }
+    #osmic-icon rect[style*="visibility:hidden"],
+    #osmic-icon rect[style*="fill:none"],
+    #osmic-icon rect#canvas {
+      fill: none !important;
+      stroke: none !important;
+      visibility: hidden !important;
+    }
+  </style>
+  <path id="pin-shape" d="M500 34
+C304 34 148 188 148 384
+C148 551 239 653 334 767
+L475 944
+C489 962 511 962 525 944
+L666 767
+C761 653 852 551 852 384
+C852 188 696 34 500 34Z"/>
+  <circle id="inner-background" cx="500" cy="380" r="261"/>
+  <g id="osmic-icon" transform="translate(360 240) scale(20)">
+    <defs
+     id="defs6" />
+  <rect
+     width="14"
+     height="14"
+     x="0"
+     y="0"
+     id="canvas"
+     style="fill:none;stroke:none;visibility:hidden" />
+  <path
+     d="M 7,0 C 3.177512,0 0,3.0888888 0,7 c 0,3.911112 3.177512,7 7,7 3.822489,0 7,-3.088889 7,-7 C 14,3.0888888 10.822489,0 7,0 z m 0,1.0577778 c 3.389409,0 6.058296,2.7055413 6.058296,5.9422222 0,3.236682 -2.668887,5.942222 -6.058296,5.942222 C 3.610591,12.942222 0.941704,10.236682 0.941704,7 0.941704,3.7633191 3.610591,1.0577778 7,1.0577778 z m -2.008969,0.9644444 0,2.9866667 -3.013452,0 0,3.9822221 3.013452,0 0,2.986667 4.017938,0 0,-2.986667 3.013453,0 0,-3.9822221 -3.013453,0 0,-2.9866667 -4.017938,0 z"
+     id="hospital"
+     style="fill:#000000;fill-opacity:1;stroke:none" />
+  </g>
+</svg>

@@ -74,9 +74,12 @@ import {
 import { OpinionManagement } from "@/components/admin/opinion-management";
 import {
   getAdminCenters,
+  getAdminEstablishments,
   getAdminSummary,
   reviewAdminCenter,
+  reviewAdminEstablishment,
   type AdminCenter,
+  type AdminEstablishment,
   type AdminSummary,
 } from "@/lib/admin-api";
 import { AdminLogin, useAdminAuth } from "@/lib/auth";
@@ -96,6 +99,10 @@ type AdminSection =
   | "editor"
   | "settings";
 type ReviewIntent = { center: AdminCenter; action: "APPROVE" | "REJECT" };
+type EstablishmentReviewIntent = {
+  establishment: AdminEstablishment;
+  action: "APPROVE" | "REJECT";
+};
 
 const sectionMeta: Record<AdminSection, { title: string; description: string }> = {
   summary: {
@@ -150,6 +157,10 @@ function isAdminSection(value: string | null): value is AdminSection {
 
 export function AdminShell() {
   const { accessToken, ready, user, logout } = useAdminAuth();
+  const isAdmin = Boolean(user?.roles.includes("ADMINISTRADOR"));
+  const canOperate = Boolean(
+    user?.roles.some((role) => role === "ADMINISTRADOR" || role === "AGENTE_TURISTICO"),
+  );
   const [open, setOpen] = useState(false);
   const establishmentRef = useRef<EstablishmentManagementRef>(null);
   const [section, setSection] = useState<AdminSection>(() => {
@@ -157,6 +168,10 @@ export function AdminShell() {
     const fromUrl = new URLSearchParams(window.location.search).get("section");
     return isAdminSection(fromUrl) ? fromUrl : "summary";
   });
+  const effectiveSection =
+    !isAdmin && ["summary", "review", "opinions", "catalogs"].includes(section)
+      ? "centers"
+      : section;
   const [editorCode, setEditorCode] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
     return new URLSearchParams(window.location.search).get("code");
@@ -193,8 +208,39 @@ export function AdminShell() {
   const [notice, setNotice] = useState<string | null>(null);
   const [workingCode, setWorkingCode] = useState<string | null>(null);
   const [reviewIntent, setReviewIntent] = useState<ReviewIntent | null>(null);
+  const [establishmentReviewIntent, setEstablishmentReviewIntent] =
+    useState<EstablishmentReviewIntent | null>(null);
+  const [reviewEstablishments, setReviewEstablishments] = useState<AdminEstablishment[]>(
+    [],
+  );
+  const [reviewEstablishmentsTotal, setReviewEstablishmentsTotal] = useState(0);
+  const [loadingReviewEstablishments, setLoadingReviewEstablishments] = useState(false);
+  const [workingEstablishmentId, setWorkingEstablishmentId] = useState<number | null>(
+    null,
+  );
   const [observation, setObservation] = useState("");
   const centersRequestId = useRef(0);
+
+  const loadReviewEstablishments = useCallback(async (token: string, offset: number) => {
+    setLoadingReviewEstablishments(true);
+    try {
+      const result = await getAdminEstablishments(token, {
+        reviewStatus: "EN_REVISION",
+        limit: pageSize,
+        offset,
+      });
+      setReviewEstablishments(result.items);
+      setReviewEstablishmentsTotal(result.total);
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "No se pudieron cargar los catastros en revisión.",
+      );
+    } finally {
+      setLoadingReviewEstablishments(false);
+    }
+  }, []);
 
   const loadSummary = useCallback(async (token: string) => {
     setLoadingSummary(true);
@@ -236,41 +282,56 @@ export function AdminShell() {
   );
 
   useEffect(() => {
-    if (!accessToken || !user?.roles.includes("ADMINISTRADOR")) return;
+    if (!accessToken || !isAdmin) return;
     void Promise.resolve().then(() => loadSummary(accessToken));
-  }, [accessToken, loadSummary, user]);
+  }, [accessToken, isAdmin, loadSummary]);
 
   useEffect(() => {
     if (
       !accessToken ||
-      !user?.roles.includes("ADMINISTRADOR") ||
-      (section !== "review" && section !== "centers")
+      !canOperate ||
+      (effectiveSection !== "review" && effectiveSection !== "centers")
     )
       return;
-    const status = section === "review" ? "REVIEW_QUEUE" : centerStatus;
+    const status = effectiveSection === "review" ? "REVIEW_QUEUE" : centerStatus;
     void Promise.resolve().then(() =>
       loadCenters(accessToken, status, centerQuery, page * pageSize),
     );
-  }, [accessToken, centerQuery, centerStatus, loadCenters, page, section, user]);
+  }, [
+    accessToken,
+    canOperate,
+    centerQuery,
+    centerStatus,
+    effectiveSection,
+    loadCenters,
+    page,
+  ]);
+
+  useEffect(() => {
+    if (!accessToken || !isAdmin || effectiveSection !== "review") return;
+    void Promise.resolve().then(() =>
+      loadReviewEstablishments(accessToken, page * pageSize),
+    );
+  }, [accessToken, effectiveSection, isAdmin, loadReviewEstablishments, page]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    params.set("section", section);
-    if (section === "centers" && centerStatus !== "ALL")
+    params.set("section", effectiveSection);
+    if (effectiveSection === "centers" && centerStatus !== "ALL")
       params.set("status", centerStatus);
     else params.delete("status");
-    if (section === "centers" && centerQuery) params.set("q", centerQuery);
+    if (effectiveSection === "centers" && centerQuery) params.set("q", centerQuery);
     else params.delete("q");
-    if (section === "editor" && editorCode) params.set("code", editorCode);
+    if (effectiveSection === "editor" && editorCode) params.set("code", editorCode);
     else params.delete("code");
-    if (page > 0 && section !== "settings") params.set("page", String(page + 1));
+    if (page > 0 && effectiveSection !== "settings") params.set("page", String(page + 1));
     else params.delete("page");
     window.history.replaceState(
       null,
       "",
       `${window.location.pathname}?${params.toString()}`,
     );
-  }, [centerQuery, centerStatus, editorCode, page, section]);
+  }, [centerQuery, centerStatus, editorCode, effectiveSection, page]);
 
   function navigate(next: AdminSection) {
     setSection(next);
@@ -324,6 +385,34 @@ export function AdminShell() {
     }
   }
 
+  async function submitEstablishmentReview() {
+    if (!accessToken || !establishmentReviewIntent) return;
+    setWorkingEstablishmentId(establishmentReviewIntent.establishment.id);
+    setError(null);
+    try {
+      await reviewAdminEstablishment(
+        accessToken,
+        establishmentReviewIntent.establishment.id,
+        establishmentReviewIntent.action,
+        observation.trim() || undefined,
+      );
+      setEstablishmentReviewIntent(null);
+      setObservation("");
+      setNotice(
+        establishmentReviewIntent.action === "APPROVE"
+          ? "El catastro fue aprobado y publicado."
+          : "El catastro fue rechazado y la observación quedó registrada.",
+      );
+      await loadReviewEstablishments(accessToken, page * pageSize);
+    } catch (cause) {
+      setError(
+        cause instanceof Error ? cause.message : "No se pudo actualizar el catastro.",
+      );
+    } finally {
+      setWorkingEstablishmentId(null);
+    }
+  }
+
   if (!ready) {
     return (
       <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
@@ -332,21 +421,28 @@ export function AdminShell() {
     );
   }
   if (!user) return <AdminLogin />;
-  if (!user.roles.includes("ADMINISTRADOR")) {
+  if (!canOperate) {
     return <AdminAccessDenied onLogout={() => void logout()} />;
   }
 
-  const navItems: Array<{ key: AdminSection; label: string; icon: React.ReactNode }> = [
-    { key: "summary", label: "Resumen", icon: <AssessmentRounded /> },
-    { key: "review", label: "Revisión de fichas", icon: <FactCheckRounded /> },
-    { key: "opinions", label: "Opiniones", icon: <RateReviewRounded /> },
-    { key: "centers", label: "Centros turísticos", icon: <PlaceRounded /> },
-    { key: "establishments", label: "Catastro", icon: <StorefrontRounded /> },
-    { key: "catalogs", label: "Catálogos", icon: <CategoryRounded /> },
-    { key: "settings", label: "Configuración", icon: <SettingsRounded /> },
-  ];
-  const meta = sectionMeta[section];
-  const editorMode = section === "editor";
+  const navItems: Array<{ key: AdminSection; label: string; icon: React.ReactNode }> =
+    isAdmin
+      ? [
+          { key: "summary", label: "Resumen", icon: <AssessmentRounded /> },
+          { key: "review", label: "Revisión de fichas", icon: <FactCheckRounded /> },
+          { key: "opinions", label: "Opiniones", icon: <RateReviewRounded /> },
+          { key: "centers", label: "Centros turísticos", icon: <PlaceRounded /> },
+          { key: "establishments", label: "Catastro", icon: <StorefrontRounded /> },
+          { key: "catalogs", label: "Catálogos", icon: <CategoryRounded /> },
+          { key: "settings", label: "Configuración", icon: <SettingsRounded /> },
+        ]
+      : [
+          { key: "centers", label: "Mis centros turísticos", icon: <PlaceRounded /> },
+          { key: "establishments", label: "Mi catastro", icon: <StorefrontRounded /> },
+          { key: "settings", label: "Configuración", icon: <SettingsRounded /> },
+        ];
+  const meta = sectionMeta[effectiveSection];
+  const editorMode = effectiveSection === "editor";
 
   const drawer = (
     <Box
@@ -371,9 +467,9 @@ export function AdminShell() {
         {navItems.map((item) => (
           <ListItemButton
             key={item.key}
-            selected={section === item.key}
+            selected={effectiveSection === item.key}
             onClick={() => navigate(item.key)}
-            aria-current={section === item.key ? "page" : undefined}
+            aria-current={effectiveSection === item.key ? "page" : undefined}
           >
             <ListItemIcon>{item.icon}</ListItemIcon>
             <ListItemText primary={item.label} />
@@ -480,12 +576,12 @@ export function AdminShell() {
         }}
       >
         <Stack spacing={webTokens.spacing.section}>
-          {section !== "editor" ? (
+          {effectiveSection !== "editor" ? (
             <PageHeader
               title={meta.title}
               description={meta.description}
               actions={
-                section === "centers" ? (
+                effectiveSection === "centers" ? (
                   <Button
                     variant="contained"
                     startIcon={<AddRounded />}
@@ -493,7 +589,7 @@ export function AdminShell() {
                   >
                     Nueva ficha
                   </Button>
-                ) : section === "establishments" ? (
+                ) : effectiveSection === "establishments" ? (
                   <Button
                     variant="contained"
                     startIcon={<AddRounded />}
@@ -505,10 +601,10 @@ export function AdminShell() {
               }
             />
           ) : null}
-          {section === "summary" ? (
+          {effectiveSection === "summary" ? (
             <SummarySection summary={summary} loading={loadingSummary} />
           ) : null}
-          {section === "review" ? (
+          {effectiveSection === "review" ? (
             <ReviewSection
               centers={centers}
               total={total}
@@ -516,21 +612,30 @@ export function AdminShell() {
               page={page}
               onPageChange={setPage}
               workingCode={workingCode}
-              canReview={user.roles.includes("ADMINISTRADOR")}
+              canReview={isAdmin}
+              onOpen={openEditor}
+              establishments={reviewEstablishments}
+              establishmentsTotal={reviewEstablishmentsTotal}
+              loadingEstablishments={loadingReviewEstablishments}
+              workingEstablishmentId={workingEstablishmentId}
+              onReviewEstablishment={(establishment, action) => {
+                setObservation("");
+                setEstablishmentReviewIntent({ establishment, action });
+              }}
               onReview={(center, action) => {
                 setObservation("");
                 setReviewIntent({ center, action });
               }}
             />
           ) : null}
-          {section === "opinions" ? (
+          {effectiveSection === "opinions" ? (
             <OpinionManagement
               token={accessToken ?? ""}
               onNotice={setNotice}
               onError={setError}
             />
           ) : null}
-          {section === "centers" ? (
+          {effectiveSection === "centers" ? (
             <CentersSection
               centers={centers}
               total={total}
@@ -550,15 +655,16 @@ export function AdminShell() {
               onOpen={openEditor}
             />
           ) : null}
-          {section === "establishments" ? (
+          {effectiveSection === "establishments" ? (
             <EstablishmentManagement
               ref={establishmentRef}
               token={accessToken ?? ""}
               onNotice={setNotice}
               onError={setError}
+              canManageStatus={isAdmin}
             />
           ) : null}
-          {section === "editor" ? (
+          {effectiveSection === "editor" ? (
             <CenterEditor
               key={editorCode ?? "new"}
               token={accessToken ?? ""}
@@ -572,10 +678,10 @@ export function AdminShell() {
               onError={setError}
             />
           ) : null}
-          {section === "settings" ? (
+          {effectiveSection === "settings" ? (
             <SettingsSection user={user} onLogout={() => void logout()} />
           ) : null}
-          {section === "catalogs" ? (
+          {effectiveSection === "catalogs" ? (
             <CatalogManagement
               token={accessToken ?? ""}
               onNotice={setNotice}
@@ -656,6 +762,69 @@ export function AdminShell() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Dialog
+        open={establishmentReviewIntent !== null}
+        onClose={() =>
+          workingEstablishmentId === null && setEstablishmentReviewIntent(null)
+        }
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>
+          {establishmentReviewIntent?.action === "APPROVE"
+            ? "Aprobar catastro"
+            : "Rechazar catastro"}
+        </DialogTitle>
+        <DialogContent>
+          <Stack spacing={webTokens.spacing.control} sx={{ pt: 1 }}>
+            <Typography>
+              {establishmentReviewIntent?.establishment.nombreComercial ??
+                "Este catastro"}
+            </Typography>
+            <TextField
+              label="Observación"
+              value={observation}
+              onChange={(event) => setObservation(event.target.value)}
+              multiline
+              minRows={3}
+              helperText={
+                establishmentReviewIntent?.action === "REJECT"
+                  ? "Explica qué debe corregirse antes de volver a solicitar revisión."
+                  : "Opcional. Puedes dejar una nota para la auditoría."
+              }
+              autoFocus
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setEstablishmentReviewIntent(null)}
+            disabled={workingEstablishmentId !== null}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={() => void submitEstablishmentReview()}
+            variant="contained"
+            color={establishmentReviewIntent?.action === "REJECT" ? "error" : "primary"}
+            disabled={workingEstablishmentId !== null}
+            startIcon={
+              workingEstablishmentId ? (
+                <CircularProgress size={16} />
+              ) : (
+                <CheckCircleRounded />
+              )
+            }
+          >
+            {workingEstablishmentId
+              ? "Guardando…"
+              : establishmentReviewIntent?.action === "APPROVE"
+                ? "Aprobar"
+                : "Rechazar"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
@@ -703,22 +872,37 @@ function SummarySection({
 
 function ReviewSection({
   centers,
+  establishments,
+  establishmentsTotal,
   total,
   loading,
+  loadingEstablishments,
   page,
   onPageChange,
   workingCode,
+  workingEstablishmentId,
   canReview,
+  onOpen,
   onReview,
+  onReviewEstablishment,
 }: {
   centers: AdminCenter[];
+  establishments: AdminEstablishment[];
+  establishmentsTotal: number;
   total: number;
   loading: boolean;
+  loadingEstablishments: boolean;
   page: number;
   onPageChange: (page: number) => void;
   workingCode: string | null;
+  workingEstablishmentId: number | null;
   canReview: boolean;
+  onOpen: (code: string) => void;
   onReview: (center: AdminCenter, action: "APPROVE" | "REJECT") => void;
+  onReviewEstablishment: (
+    establishment: AdminEstablishment,
+    action: "APPROVE" | "REJECT",
+  ) => void;
 }) {
   return (
     <Stack spacing={webTokens.spacing.control}>
@@ -732,6 +916,7 @@ function ReviewSection({
         loading={loading}
         reviewable={canReview}
         workingCode={workingCode}
+        onOpen={onOpen}
         onReview={onReview}
         footer={
           <AdminTableFooter
@@ -742,7 +927,198 @@ function ReviewSection({
           />
         }
       />
+      <Typography variant="h6" sx={{ mt: 2 }}>
+        Catastros en revisión
+      </Typography>
+      <EstablishmentReviewTable
+        establishments={establishments}
+        total={establishmentsTotal}
+        loading={loadingEstablishments}
+        page={page}
+        onPageChange={onPageChange}
+        reviewable={canReview}
+        workingId={workingEstablishmentId}
+        onReview={onReviewEstablishment}
+      />
     </Stack>
+  );
+}
+
+function EstablishmentReviewTable({
+  establishments,
+  total,
+  loading,
+  page,
+  onPageChange,
+  reviewable,
+  workingId,
+  onReview,
+}: {
+  establishments: AdminEstablishment[];
+  total: number;
+  loading: boolean;
+  page: number;
+  onPageChange: (page: number) => void;
+  reviewable: boolean;
+  workingId: number | null;
+  onReview: (establishment: AdminEstablishment, action: "APPROVE" | "REJECT") => void;
+}) {
+  const [detail, setDetail] = useState<AdminEstablishment | null>(null);
+
+  return (
+    <>
+      <AdminTable
+        ariaLabel="Catastros en revisión"
+        minWidth={900}
+        loading={loading}
+        empty={!loading && establishments.length === 0}
+        emptyMessage="No hay catastros pendientes de revisión."
+        footer={
+          <AdminTableFooter
+            total={total}
+            page={page}
+            pageSize={pageSize}
+            onPageChange={onPageChange}
+          />
+        }
+      >
+        <TableHead>
+          <TableRow>
+            <TableCell>Establecimiento</TableCell>
+            <TableCell>Ubicación</TableCell>
+            <TableCell>Actividad / clasificación</TableCell>
+            <TableCell>Registro y RUC</TableCell>
+            <TableCell>Enviado por</TableCell>
+            <TableCell align="right">Acciones</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {establishments.map((item) => (
+            <TableRow key={item.id} hover>
+              <TableCell>
+                <Typography fontWeight={600}>{item.nombreComercial}</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {item.categoriaEtiqueta ?? item.categoria ?? "Sin categoría"}
+                </Typography>
+              </TableCell>
+              <TableCell>
+                {item.localityName}, {item.cantonName}
+              </TableCell>
+              <TableCell>
+                {item.actividad}
+                <Typography variant="caption" display="block" color="text.secondary">
+                  {item.clasificacion ?? "Sin clasificación"}
+                </Typography>
+              </TableCell>
+              <TableCell>
+                {item.numeroRegistro ?? "Sin registro"}
+                <Typography variant="caption" display="block" color="text.secondary">
+                  RUC: {item.ruc ?? "—"}
+                </Typography>
+              </TableCell>
+              <TableCell>{item.requestedBy ?? "—"}</TableCell>
+              <TableCell align="right">
+                <Button size="small" onClick={() => setDetail(item)}>
+                  Ver detalle
+                </Button>
+                {reviewable ? (
+                  <Stack direction="row" justifyContent="flex-end" spacing={0.5}>
+                    <Button
+                      size="small"
+                      color="error"
+                      onClick={() => onReview(item, "REJECT")}
+                      disabled={workingId === item.id}
+                    >
+                      Rechazar
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="contained"
+                      onClick={() => onReview(item, "APPROVE")}
+                      disabled={workingId === item.id}
+                    >
+                      Aprobar
+                    </Button>
+                  </Stack>
+                ) : null}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </AdminTable>
+      <Dialog
+        open={detail !== null}
+        onClose={() => setDetail(null)}
+        fullWidth
+        maxWidth="md"
+      >
+        <DialogTitle>Detalle completo del catastro</DialogTitle>
+        <DialogContent>
+          {detail ? (
+            <Stack spacing={1.25} sx={{ pt: 1 }}>
+              <Typography variant="h6">{detail.nombreComercial}</Typography>
+              <Typography>
+                <strong>Razón social:</strong> {detail.razonSocial ?? "—"}
+              </Typography>
+              <Typography>
+                <strong>Actividad:</strong> {detail.actividad}
+              </Typography>
+              <Typography>
+                <strong>Clasificación:</strong> {detail.clasificacion ?? "—"}
+              </Typography>
+              <Typography>
+                <strong>Categoría:</strong>{" "}
+                {detail.categoriaEtiqueta ?? detail.categoria ?? "—"}
+              </Typography>
+              <Typography>
+                <strong>Semántica:</strong> {detail.esquemaCategoria ?? "—"}
+                {detail.valorCategoria !== null && detail.valorCategoria !== undefined
+                  ? ` · valor ${detail.valorCategoria}`
+                  : ""}
+              </Typography>
+              <Typography>
+                <strong>Localidad:</strong> {detail.localityName} · {detail.localityType}
+              </Typography>
+              <Typography>
+                <strong>Cantón / provincia:</strong> {detail.cantonName} ·{" "}
+                {detail.provinceName}
+              </Typography>
+              <Typography>
+                <strong>Registro:</strong> {detail.numeroRegistro ?? "—"} ·{" "}
+                <strong>RUC:</strong> {detail.ruc ?? "—"}
+              </Typography>
+              <Typography>
+                <strong>Dirección:</strong> {detail.direccion ?? "—"}
+              </Typography>
+              <Typography>
+                <strong>Teléfono:</strong> {detail.telefono ?? "—"}
+              </Typography>
+              <Typography>
+                <strong>Coordenadas:</strong> {detail.latitude}, {detail.longitude}
+              </Typography>
+              <Typography>
+                <strong>Enviado por:</strong> {detail.requestedBy ?? "—"}
+              </Typography>
+              <Typography>
+                <strong>Estado:</strong> {reviewEstablishmentLabel(detail.reviewStatus)}
+              </Typography>
+              <Typography>
+                <strong>Fecha de envío:</strong> {formatDate(detail.requestedAt ?? "")}
+              </Typography>
+              <Typography>
+                <strong>Fecha de revisión:</strong> {formatDate(detail.reviewedAt ?? "")}
+              </Typography>
+              <Typography>
+                <strong>Observación:</strong> {detail.reviewObservation ?? "—"}
+              </Typography>
+            </Stack>
+          ) : null}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDetail(null)}>Cerrar</Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 }
 
@@ -1015,6 +1391,15 @@ function ColorModeButton() {
 function formatDate(value: string) {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? "—" : date.toLocaleDateString("es-EC");
+}
+
+function reviewEstablishmentLabel(status: AdminEstablishment["reviewStatus"]) {
+  return {
+    BORRADOR: "Borrador",
+    EN_REVISION: "En revisión",
+    PUBLICADO: "Publicado",
+    RECHAZADO: "Rechazado",
+  }[status];
 }
 
 function AdminAccessDenied({ onLogout }: { onLogout: () => void }) {

@@ -1,17 +1,8 @@
 "use client";
 
-import BusinessCenterRounded from "@mui/icons-material/BusinessCenterRounded";
-import CheckRounded from "@mui/icons-material/CheckRounded";
-import DirectionsBusRounded from "@mui/icons-material/DirectionsBusRounded";
-import HotelRounded from "@mui/icons-material/HotelRounded";
-import LocalActivityRounded from "@mui/icons-material/LocalActivityRounded";
-import LocalCafeRounded from "@mui/icons-material/LocalCafeRounded";
-import RestaurantRounded from "@mui/icons-material/RestaurantRounded";
-import StorefrontRounded from "@mui/icons-material/StorefrontRounded";
 import EditRounded from "@mui/icons-material/EditRounded";
 import {
   Button,
-  ButtonBase,
   Box,
   Dialog,
   DialogActions,
@@ -60,17 +51,51 @@ const catalogMeta: Array<{ key: AdminCatalogKey; label: string }> = [
   { key: "ESTABLISHMENT_CATEGORY", label: "Categorías de catastro" },
 ];
 
-const defaultCategoryIcon = "store";
-const defaultCategoryColor = "#c026d3";
+const defaultCategoryIcon = "shop-supermarket";
 const catalogIconOptions = [
-  { value: "hotel", label: "Hotel", Icon: HotelRounded },
-  { value: "restaurant", label: "Restaurante", Icon: RestaurantRounded },
-  { value: "coffee", label: "Cafetería", Icon: LocalCafeRounded },
-  { value: "store", label: "Comercio", Icon: StorefrontRounded },
-  { value: "bus", label: "Transporte", Icon: DirectionsBusRounded },
-  { value: "ticket", label: "Actividad", Icon: LocalActivityRounded },
-  { value: "briefcase", label: "Agencia", Icon: BusinessCenterRounded },
+  {
+    value: "accommodation-hotel",
+    label: "Hotel",
+    color: "#7a5c3e",
+  },
+  { value: "amenity-cinema", label: "Cine", color: "#7e22ce" },
+  { value: "amenity-library", label: "Biblioteca", color: "#334155" },
+  { value: "amenity-toilets", label: "Baños", color: "#64748b" },
+  { value: "eat-drink-cafe", label: "Cafetería", color: "#8b5e34" },
+  {
+    value: "eat-drink-restaurant",
+    label: "Restaurante",
+    color: "#b45309",
+  },
+  { value: "health-hospital", label: "Salud", color: "#9f1239" },
+  { value: "money-atm", label: "Cajero", color: "#475569" },
+  { value: "money-bank", label: "Banco", color: "#374151" },
+  { value: "outdoor-camping", label: "Camping", color: "#3f6212" },
+  {
+    value: "outdoor-drinking-water",
+    label: "Agua potable",
+    color: "#0f766e",
+  },
+  {
+    value: "religious-place-of-worship",
+    label: "Lugar de culto",
+    color: "#6d28d9",
+  },
+  { value: "shop-supermarket", label: "Supermercado", color: "#be123c" },
+  {
+    value: "tourism-information",
+    label: "Información turística",
+    color: "#0369a1",
+  },
+  { value: "tourism-monument", label: "Monumento", color: "#92400e" },
+  { value: "tourism-museum", label: "Museo", color: "#5b21b6" },
+  { value: "tourism-viewpoint", label: "Mirador", color: "#a16207" },
+  { value: "transport-bus-stop", label: "Parada de bus", color: "#155e75" },
 ] as const;
+const catalogIconOptionsWithImages = catalogIconOptions.map((option) => ({
+  ...option,
+  imageSrc: `/assets/establishment-pins/${option.value}.svg`,
+}));
 
 const categorySchemeLabels: Record<string, string> = {
   ESTRELLAS: "Estrellas",
@@ -83,26 +108,10 @@ const categorySchemeLabels: Record<string, string> = {
   MODALIDAD: "Modalidad",
   OTRA: "Otra",
 };
-const categoryColorOptions = [
-  { value: "#0891b2", label: "Cian", foreground: "#ffffff" },
-  { value: "#7c3aed", label: "Violeta", foreground: "#ffffff" },
-  { value: "#c026d3", label: "Fucsia", foreground: "#ffffff" },
-  { value: "#ea580c", label: "Naranja", foreground: "#ffffff" },
-  { value: "#d97706", label: "Ámbar", foreground: "#111827" },
-  { value: "#dc2626", label: "Rojo", foreground: "#ffffff" },
-  { value: "#4f46e5", label: "Índigo", foreground: "#ffffff" },
-] as const;
-
 function normalizeCategoryIcon(value?: string) {
   return catalogIconOptions.some((option) => option.value === value)
     ? value!
     : defaultCategoryIcon;
-}
-
-function normalizeCategoryColor(value?: string) {
-  return categoryColorOptions.some((option) => option.value === value)
-    ? value!
-    : defaultCategoryColor;
 }
 
 export function CatalogManagement({
@@ -121,7 +130,6 @@ export function CatalogManagement({
   const [name, setName] = useState("");
   const [active, setActive] = useState(true);
   const [icon, setIcon] = useState(defaultCategoryIcon);
-  const [color, setColor] = useState(defaultCategoryColor);
   const [working, setWorking] = useState(false);
   const [page, setPage] = useState(0);
   const debouncedSearch = useDebouncedValue(search.trim(), ADMIN_SEARCH_DEBOUNCE_MS);
@@ -174,7 +182,6 @@ export function CatalogManagement({
     setName(option.name);
     setActive(option.active !== false);
     setIcon(normalizeCategoryIcon(option.icon));
-    setColor(normalizeCategoryColor(option.color));
     onError(null);
   }
 
@@ -189,7 +196,7 @@ export function CatalogManagement({
       await updateAdminCatalog(token, selected, editing.id, {
         name: name.trim(),
         active,
-        ...(selected === "ESTABLISHMENT_CLASSIFICATION" ? { icon, color } : {}),
+        ...(selected === "ESTABLISHMENT_CLASSIFICATION" ? { icon } : {}),
       });
       await queryClient.invalidateQueries({ queryKey: ["admin", "catalogs"] });
       setEditing(null);
@@ -337,7 +344,7 @@ export function CatalogManagement({
                   id="catalog-marker-icon"
                   label="Icono del marcador"
                   value={icon}
-                  options={catalogIconOptions}
+                  options={catalogIconOptionsWithImages}
                   onChange={setIcon}
                   disabled={working}
                 />
@@ -355,63 +362,33 @@ export function CatalogManagement({
                     component="legend"
                     sx={{ color: "text.secondary", fontSize: "0.75rem", mb: 1 }}
                   >
-                    Color del marcador
+                    Color automático
                   </Typography>
-                  <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-                    {categoryColorOptions.map((option) => {
-                      const selectedColor = color === option.value;
-                      return (
-                        <ButtonBase
-                          aria-label={`Seleccionar color ${option.label}`}
-                          aria-pressed={selectedColor}
-                          disabled={working}
-                          key={option.value}
-                          onClick={() => setColor(option.value)}
-                          sx={{
-                            alignItems: "center",
-                            backgroundColor: option.value,
-                            border: "2px solid",
-                            borderColor: selectedColor ? "text.primary" : "divider",
-                            borderRadius: "50%",
-                            display: "inline-flex",
-                            height: 34,
-                            justifyContent: "center",
-                            transition: "transform 120ms ease, border-color 120ms ease",
-                            width: 34,
-                            "&:hover": {
-                              backgroundColor: option.value,
-                              opacity: 0.86,
-                              transform: "scale(1.08)",
-                            },
-                            "&:focus-visible": {
-                              outline: "3px solid",
-                              outlineColor: "primary.main",
-                              outlineOffset: 2,
-                            },
-                          }}
-                        >
-                          {selectedColor ? (
-                            <CheckRounded
-                              sx={{ color: option.foreground, fontSize: 20 }}
-                            />
-                          ) : null}
-                        </ButtonBase>
-                      );
-                    })}
+                  <Stack alignItems="center" direction="row" spacing={1.25}>
+                    <Box
+                      aria-hidden
+                      sx={{
+                        backgroundColor:
+                          catalogIconOptions.find((option) => option.value === icon)
+                            ?.color ?? "#be123c",
+                        border: "2px solid",
+                        borderColor: "divider",
+                        borderRadius: "50%",
+                        height: 30,
+                        width: 30,
+                      }}
+                    />
+                    <Typography variant="body2">
+                      {catalogIconOptions.find((option) => option.value === icon)
+                        ?.color ?? "#be123c"}
+                    </Typography>
                   </Stack>
                   <Typography
                     color="text.secondary"
                     sx={{ display: "block", mt: 1 }}
                     variant="caption"
                   >
-                    {color}
-                  </Typography>
-                  <Typography
-                    color="text.secondary"
-                    sx={{ display: "block", mt: 0.5 }}
-                    variant="caption"
-                  >
-                    Se aplica a todas las categorías de este tipo.
+                    Se asigna según el pin y se aplica a todas las categorías de este tipo.
                   </Typography>
                 </Box>
               </Stack>

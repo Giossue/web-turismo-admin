@@ -201,9 +201,13 @@ export function OpinionManagement({
               <TableCell>
                 <Button
                   size="small"
-                  variant="outlined"
+                  variant="text"
                   startIcon={<HistoryRounded />}
                   onClick={() => openHistory(opinion)}
+                  sx={{
+                    backgroundColor: "transparent",
+                    "&:hover": { backgroundColor: "action.hover" },
+                  }}
                 >
                   Ver historial
                 </Button>
