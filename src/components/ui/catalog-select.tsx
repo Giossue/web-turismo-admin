@@ -10,6 +10,7 @@ import {
 export type CatalogSelectOption = {
   id: number;
   name: string;
+  displayName?: string;
   active?: boolean;
 };
 
@@ -52,7 +53,7 @@ export function CatalogSelect({
       >
         {options.map((option) => (
           <MenuItem key={option.id} value={String(option.id)}>
-            {option.name}
+            {option.displayName ?? option.name}
           </MenuItem>
         ))}
       </Select>

@@ -135,9 +135,17 @@ export type CatalogOption = {
   unit3?: string;
   icon?: string;
   color?: string;
+  displayName?: string;
+  scheme?: string;
+  numericValue?: number | null;
+  requiresReview?: boolean;
 };
 export type AdminCatalogKey =
-  "ACCESSIBILITY" | "ACTIVITY" | "FACILITY" | "ESTABLISHMENT_CATEGORY";
+  | "ACCESSIBILITY"
+  | "ACTIVITY"
+  | "FACILITY"
+  | "ESTABLISHMENT_CLASSIFICATION"
+  | "ESTABLISHMENT_CATEGORY";
 export type AdminCatalogs = {
   establishmentActivities: CatalogOption[];
   establishmentClassifications: CatalogOption[];
@@ -256,6 +264,10 @@ export type AdminEstablishment = {
   clasificacion: string | null;
   classificationId: number | null;
   categoria: string | null;
+  categoriaEtiqueta: string | null;
+  esquemaCategoria: string | null;
+  valorCategoria: number | null;
+  categoriaRequiereRevision: boolean;
   categoryId: number | null;
   direccion: string | null;
   telefono: string | null;

@@ -533,7 +533,7 @@ export const EstablishmentManagement = forwardRef<
                 <Typography fontWeight={600}>{item.nombreComercial}</Typography>
                 {item.categoria ? (
                   <Typography variant="caption" color="text.secondary">
-                    {item.categoria}
+                    {item.categoriaEtiqueta ?? item.categoria}
                   </Typography>
                 ) : null}
               </TableCell>

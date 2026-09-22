@@ -56,11 +56,12 @@ const catalogMeta: Array<{ key: AdminCatalogKey; label: string }> = [
   { key: "ACCESSIBILITY", label: "Accesibilidad" },
   { key: "ACTIVITY", label: "Actividades" },
   { key: "FACILITY", label: "Facilidades" },
+  { key: "ESTABLISHMENT_CLASSIFICATION", label: "Tipos de establecimiento" },
   { key: "ESTABLISHMENT_CATEGORY", label: "Categorías de catastro" },
 ];
 
-const defaultCategoryIcon = "hotel";
-const defaultCategoryColor = "#7c3aed";
+const defaultCategoryIcon = "store";
+const defaultCategoryColor = "#c026d3";
 const catalogIconOptions = [
   { value: "hotel", label: "Hotel", Icon: HotelRounded },
   { value: "restaurant", label: "Restaurante", Icon: RestaurantRounded },
@@ -70,6 +71,18 @@ const catalogIconOptions = [
   { value: "ticket", label: "Actividad", Icon: LocalActivityRounded },
   { value: "briefcase", label: "Agencia", Icon: BusinessCenterRounded },
 ] as const;
+
+const categorySchemeLabels: Record<string, string> = {
+  ESTRELLAS: "Estrellas",
+  TENEDORES: "Tenedores",
+  TAZAS: "Tazas",
+  COPAS: "Copas",
+  UNICA: "Única",
+  CATEGORIA_OFICIAL: "Categoría oficial",
+  CLASE: "Clase",
+  MODALIDAD: "Modalidad",
+  OTRA: "Otra",
+};
 const categoryColorOptions = [
   { value: "#0891b2", label: "Cian", foreground: "#ffffff" },
   { value: "#7c3aed", label: "Violeta", foreground: "#ffffff" },
@@ -137,7 +150,9 @@ export function CatalogManagement({
           ? catalogsQuery.data.activities
           : selected === "FACILITY"
             ? catalogsQuery.data.facilities
-            : catalogsQuery.data.establishmentCategories;
+            : selected === "ESTABLISHMENT_CLASSIFICATION"
+              ? catalogsQuery.data.establishmentClassifications
+              : catalogsQuery.data.establishmentCategories;
     const normalized = (search.trim() ? debouncedSearch : "").toLocaleLowerCase();
     return normalized
       ? source.filter((item) =>
@@ -174,7 +189,7 @@ export function CatalogManagement({
       await updateAdminCatalog(token, selected, editing.id, {
         name: name.trim(),
         active,
-        ...(selected === "ESTABLISHMENT_CATEGORY" ? { icon, color } : {}),
+        ...(selected === "ESTABLISHMENT_CLASSIFICATION" ? { icon, color } : {}),
       });
       await queryClient.invalidateQueries({ queryKey: ["admin", "catalogs"] });
       setEditing(null);
@@ -247,8 +262,11 @@ export function CatalogManagement({
             {selected === "ESTABLISHMENT_CATEGORY" ? (
               <>
                 <TableCell>Actividad</TableCell>
-                <TableCell>Clasificación</TableCell>
+                <TableCell>Tipo</TableCell>
+                <TableCell>Sistema</TableCell>
               </>
+            ) : selected === "ESTABLISHMENT_CLASSIFICATION" ? (
+              <TableCell>Actividad</TableCell>
             ) : null}
             <TableCell>Estado</TableCell>
             <TableCell align="right">Acción</TableCell>
@@ -258,13 +276,18 @@ export function CatalogManagement({
           {visibleOptions.map((option) => (
             <TableRow key={option.id} hover>
               <TableCell component="th" scope="row">
-                {option.name}
+                {option.displayName ?? option.name}
               </TableCell>
               {selected === "ESTABLISHMENT_CATEGORY" ? (
                 <>
                   <TableCell>{option.activityName ?? "—"}</TableCell>
                   <TableCell>{option.classificationName ?? "—"}</TableCell>
+                  <TableCell>
+                    {categorySchemeLabels[option.scheme ?? ""] ?? option.scheme ?? "—"}
+                  </TableCell>
                 </>
+              ) : selected === "ESTABLISHMENT_CLASSIFICATION" ? (
+                <TableCell>{option.activityName ?? "—"}</TableCell>
               ) : null}
               <TableCell>
                 <StatusBadge
@@ -293,7 +316,11 @@ export function CatalogManagement({
         fullWidth
         maxWidth="sm"
       >
-        <DialogTitle>Editar opción de catálogo</DialogTitle>
+        <DialogTitle>
+          {selected === "ESTABLISHMENT_CLASSIFICATION"
+            ? "Editar tipo de establecimiento"
+            : "Editar opción de catálogo"}
+        </DialogTitle>
         <DialogContent>
           <Stack spacing={webTokens.spacing.control} sx={{ pt: 1 }}>
             <TextField
@@ -304,7 +331,7 @@ export function CatalogManagement({
               autoFocus
               disabled={working}
             />
-            {selected === "ESTABLISHMENT_CATEGORY" ? (
+            {selected === "ESTABLISHMENT_CLASSIFICATION" ? (
               <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                 <CatalogIconSelect
                   id="catalog-marker-icon"
@@ -378,6 +405,13 @@ export function CatalogManagement({
                     variant="caption"
                   >
                     {color}
+                  </Typography>
+                  <Typography
+                    color="text.secondary"
+                    sx={{ display: "block", mt: 0.5 }}
+                    variant="caption"
+                  >
+                    Se aplica a todas las categorías de este tipo.
                   </Typography>
                 </Box>
               </Stack>
