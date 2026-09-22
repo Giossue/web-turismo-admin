@@ -1,6 +1,7 @@
 "use client";
 
 import AddRounded from "@mui/icons-material/AddRounded";
+import AutoFixHighRounded from "@mui/icons-material/AutoFixHighRounded";
 import DeleteOutlineRounded from "@mui/icons-material/DeleteOutlineRounded";
 import FactCheckRounded from "@mui/icons-material/FactCheckRounded";
 import {
@@ -46,6 +47,7 @@ import {
   type AdminCenterValuation,
   type AdminMediaItem,
 } from "@/lib/admin-api";
+import type { SugerenciasSecciones } from "@/lib/ficha/sugerencias-secciones";
 import { webTokens } from "@/theme/tokens";
 
 export const SECTION_RESPONSE_OPTIONS = [
@@ -1246,12 +1248,19 @@ function AccessibilitySectionFields({
   control,
   register,
   setValue,
+  sugerenciaImportada,
 }: {
   catalogs: AdminCatalogs | null;
   canEdit: boolean;
   control: Control<SectionFormValues>;
   register: UseFormRegister<SectionFormValues>;
   setValue: UseFormSetValue<SectionFormValues>;
+  /**
+   * Localidad/distancia resueltas por el importador de fichas MINTUR (ver
+   * src/lib/ficha/sugerencias-secciones.ts). Nunca se aplican solas — el
+   * usuario decide con el botón "Cargar desde la ficha importada".
+   */
+  sugerenciaImportada?: { localityId: number | null; distanceKm: number | null } | null;
 }) {
   const {
     fields: roadFields,
@@ -1362,9 +1371,43 @@ function AccessibilitySectionFields({
     </FormControl>
   );
 
+  const localidadSugeridaValida =
+    sugerenciaImportada?.localityId != null &&
+    (catalogs?.localities ?? []).some(
+      (locality) => Number(locality.id) === sugerenciaImportada.localityId,
+    );
+
   return (
     <Stack spacing={webTokens.spacing.control}>
       <Typography variant="subtitle1">Referencia territorial y conectividad</Typography>
+      {localidadSugeridaValida ? (
+        <Alert
+          severity="info"
+          action={
+            <Button
+              color="inherit"
+              size="small"
+              startIcon={<AutoFixHighRounded />}
+              disabled={!canEdit}
+              onClick={() => {
+                setValue("localityId", String(sugerenciaImportada.localityId), {
+                  shouldDirty: true,
+                });
+                if (sugerenciaImportada.distanceKm != null) {
+                  setValue("distanceKm", String(sugerenciaImportada.distanceKm), {
+                    shouldDirty: true,
+                  });
+                }
+              }}
+            >
+              Cargar desde la ficha importada
+            </Button>
+          }
+        >
+          La ficha importada sugiere una localidad cercana y distancia para este
+          atractivo.
+        </Alert>
+      ) : null}
       <Grid container spacing={webTokens.spacing.control}>
         <Grid size={{ xs: 12, sm: 8 }}>
           <FormControl fullWidth disabled={!canEdit}>
@@ -6244,6 +6287,7 @@ export function ContinuousCenterSectionWorkflow({
   showOverview,
   onDetailChanged,
   onError,
+  sugerenciasImportadas,
 }: {
   token: string;
   code: string | null;
@@ -6255,6 +6299,8 @@ export function ContinuousCenterSectionWorkflow({
   showOverview: boolean;
   onDetailChanged: (detail: AdminCenterDetail) => void;
   onError: (message: string | null) => void;
+  /** Ver src/lib/ficha/sugerencias-secciones.ts. */
+  sugerenciasImportadas?: SugerenciasSecciones | null;
 }) {
   const sectionsQuery = useQuery({
     queryKey: ["admin", "center", code, "sections"],
@@ -6397,6 +6443,7 @@ export function ContinuousCenterSectionWorkflow({
           mediaItems={mediaItems}
           onDetailChanged={onDetailChanged}
           onError={onError}
+          sugerenciasImportadas={sugerenciasImportadas}
         />
       ))}
     </Stack>
@@ -6415,6 +6462,7 @@ const ContinuousSectionCard = memo(function ContinuousSectionCard({
   mediaItems,
   onDetailChanged,
   onError,
+  sugerenciasImportadas,
 }: {
   active: boolean;
   definition: SectionDefinition;
@@ -6427,6 +6475,7 @@ const ContinuousSectionCard = memo(function ContinuousSectionCard({
   mediaItems: AdminMediaItem[];
   onDetailChanged: (detail: AdminCenterDetail) => void;
   onError: (message: string | null) => void;
+  sugerenciasImportadas?: SugerenciasSecciones | null;
 }) {
   const form = useForm<SectionFormValues>({
     defaultValues: createSectionValues(definition, rawSection),
@@ -6549,6 +6598,7 @@ const ContinuousSectionCard = memo(function ContinuousSectionCard({
                 control={control}
                 register={register}
                 setValue={setValue}
+                sugerenciaImportada={sugerenciasImportadas?.accesibilidad}
               />
             ) : null}
             {definition.code === "caracteristicas" ? (

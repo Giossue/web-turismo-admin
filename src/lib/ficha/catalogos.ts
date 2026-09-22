@@ -43,6 +43,14 @@ export type CatalogosResueltos = {
   escenarioId: ResolucionCatalogo;
   climaId: ResolucionCatalogo;
   tipoIngresoId: ResolucionCatalogo;
+  /**
+   * Localidad más cercana (4.a de la ficha), acotada por cantón cuando se
+   * pudo resolver. Es la misma "Localidad cercana" del paso "Accesibilidad y
+   * conectividad" del asistente (`localityId` en `SectionFormValues`),
+   * que a su vez alimenta `centro_localidad_cercana` — el cruce con el
+   * catastro de esa localidad (hospedaje, alimentación, etc.).
+   */
+  localidadId: ResolucionCatalogo;
   /** Un id de `accessibilityTypes` por cada item marcado "SI" en 4.4. */
   accesibilidadTipoIds: number[];
   /** Un id de `activities` (acotado por categoría) por cada actividad marcada en la sección 9. */
@@ -166,6 +174,15 @@ export function resolverCatalogosFicha(
     "Tipo de ingreso",
   );
 
+  const localidadesDeCanton = cantonId.id
+    ? catalogos.localities.filter((l) => l.cantonId === cantonId.id)
+    : catalogos.localities;
+  const localidadId = resolverPorNombre(
+    localidadesDeCanton,
+    datos.accesoConectividad.ciudadPobladoCercano,
+    "Localidad cercana",
+  );
+
   const accesibilidadTipoIds = Object.entries(
     datos.accesoConectividad.accesibilidadGeneral,
   )
@@ -202,6 +219,7 @@ export function resolverCatalogosFicha(
     escenarioId,
     climaId,
     tipoIngresoId,
+    localidadId,
     accesibilidadTipoIds,
     actividadIds,
   };
@@ -220,6 +238,7 @@ export function advertenciasDeCatalogos(resueltos: CatalogosResueltos): string[]
     resueltos.escenarioId,
     resueltos.climaId,
     resueltos.tipoIngresoId,
+    resueltos.localidadId,
   ];
   return resoluciones.map((r) => r.advertencia).filter((a): a is string => a !== null);
 }
