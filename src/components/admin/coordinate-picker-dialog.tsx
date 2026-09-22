@@ -49,9 +49,7 @@ export function CoordinatePickerDialog({
   const [coordinate, setCoordinate] = useState<Coordinate | null>(() => {
     const latitude = parseCoordinate(initialLatitude);
     const longitude = parseCoordinate(initialLongitude);
-    return latitude !== null && longitude !== null
-      ? { latitude, longitude }
-      : null;
+    return latitude !== null && longitude !== null ? { latitude, longitude } : null;
   });
   const [mapError, setMapError] = useState<string | null>(null);
 
