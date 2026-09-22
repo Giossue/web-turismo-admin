@@ -4,8 +4,15 @@
  * ("Bolívar", "Manifestaciones culturales"): mayúsculas, sin tildes, guiones
  * bajos como espacios, espacios repetidos colapsados.
  * Ver docs/plans/active/importar-ficha-mintur.md sección 4.
+ *
+ * Defensivo ante `null`/`undefined`: la API real puede traer catálogos con
+ * algún elemento sin `name` (visto en producción — un `TypeError` al llamar
+ * `.normalize()` sobre `undefined` tumbaba todo el endpoint). Un nombre
+ * ausente simplemente no puede coincidir con nada, así que se normaliza a
+ * cadena vacía en vez de lanzar.
  */
-export function normalizarTextoCatalogo(valor: string): string {
+export function normalizarTextoCatalogo(valor: string | null | undefined): string {
+  if (!valor) return "";
   return valor
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")

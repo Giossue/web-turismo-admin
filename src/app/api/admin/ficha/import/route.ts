@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof FichaInvalidaError) {
       return NextResponse.json({ error: { message: error.message } }, { status: 422 });
     }
-    throw error;
+    return respuestaErrorInesperado(error, "al leer la ficha");
   }
 
   const validado = resultadoParseoFichaSchema.safeParse(resultado);
@@ -91,18 +91,39 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const catalogosResueltos = resolverCatalogosFicha(resultado.datos, catalogos);
-  const formulario = mapearFichaAFormulario(resultado.datos, catalogosResueltos);
-  const advertencias = [
-    ...resultado.advertencias,
-    ...advertenciasDeCatalogos(catalogosResueltos),
-  ];
+  // Defensa en profundidad: la API real puede traer catálogos con una forma
+  // que no coincide exactamente con lo que asumimos (ya pasó en producción —
+  // un elemento sin `name` tumbó el endpoint entero con un 500 sin cuerpo).
+  // Si algo inesperado revienta acá, el usuario debe recibir un mensaje
+  // claro, no una respuesta vacía.
+  try {
+    const catalogosResueltos = resolverCatalogosFicha(resultado.datos, catalogos);
+    const formulario = mapearFichaAFormulario(resultado.datos, catalogosResueltos);
+    const advertencias = [
+      ...resultado.advertencias,
+      ...advertenciasDeCatalogos(catalogosResueltos),
+    ];
 
-  return NextResponse.json({
-    data: {
-      formulario,
-      advertencias,
-      imagenes: resultado.imagenes,
+    return NextResponse.json({
+      data: {
+        formulario,
+        advertencias,
+        imagenes: resultado.imagenes,
+      },
+    });
+  } catch (error) {
+    return respuestaErrorInesperado(error, "al resolver los catálogos de la ficha");
+  }
+}
+
+function respuestaErrorInesperado(error: unknown, contexto: string): NextResponse {
+  console.error(`Error inesperado ${contexto}:`, error);
+  return NextResponse.json(
+    {
+      error: {
+        message: `Ocurrió un error inesperado ${contexto}. Si el problema continúa, avisa al equipo técnico.`,
+      },
     },
-  });
+    { status: 500 },
+  );
 }
