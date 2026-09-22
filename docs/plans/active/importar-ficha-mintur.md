@@ -2,14 +2,17 @@
 
 ## Estado
 
-Fase 1 (análisis) completa. Fase 2 iniciada: parser, resolución de catálogos, mapeo al
-formulario, endpoint de subida y botón "Importar ficha" implementados y probados para las
-secciones de mayor confianza (identificación, ubicación/administración,
+Fase 1 (análisis) completa. Fase 2 en curso: parser, resolución de catálogos, mapeo al
+formulario, endpoint de subida y botón "Importar ficha" implementados y probados (25 pruebas,
+`bun run verify` completo) para: identificación, ubicación/administración,
 características/ingreso, accesibilidad y conectividad, descripción, firmas, resumen
-informativo, y el detalle de `ficha_Accesibilidad`). Las 8 secciones genéricas (planta,
-conservación, higiene-seguridad, políticas, actividades, promoción, visitantes, recurso
-humano) quedan documentadas pero sin implementar — ver `docs/importar-ficha-mintur.md` y la
-sección 9 de este documento. Código en la rama `feature/importar-ficha-mintur`.
+informativo, detalle de `ficha_Accesibilidad`, políticas, actividades, promoción, visitantes y
+recurso humano. De las 8 secciones genéricas originales solo quedan sin implementar **planta,
+conservación e higiene-seguridad** — ver `docs/importar-ficha-mintur.md`. Políticas, promoción,
+visitantes y recurso humano ya se extraen pero todavía no se conectan a
+`saveAdminCenterSection` desde la UI (solo `actividades` llegó hasta el formulario, vía
+`activityIds`, porque ya tenía un campo tipado). Código en la rama
+`feature/importar-ficha-mintur`.
 
 **Decisiones ya tomadas:**
 

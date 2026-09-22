@@ -141,6 +141,72 @@ export type FichaImagenAnexo = {
   tamanoBytes: number;
 };
 
+export type FichaPolitica = {
+  codigo: string;
+  pregunta: string;
+  respuesta: "SI" | "NO" | null;
+  anioElaboracion: number | null;
+  especifique: string | null;
+};
+
+export type FichaFormacionPersonal = {
+  grupo: "EDUCACION" | "CAPACITACION" | "IDIOMA";
+  nombre: string;
+  cantidad: number | null;
+  detalleOtro: string | null;
+};
+
+export type FichaRecursoHumano = {
+  personasAdministracionOperacion: number | null;
+  personasEspecializadasTurismo: number | null;
+  formacion: FichaFormacionPersonal[];
+  observacion: string | null;
+};
+
+export type FichaMedioPromocion = {
+  nombre: string;
+  valor: string | null;
+  periodicidad: string | null;
+};
+
+export type FichaPromocion = {
+  tienePlanPromocionCantonal: "SI" | "NO" | null;
+  incluidoEnPlan: "SI" | "NO" | null;
+  medios: FichaMedioPromocion[];
+  observacionMedios: string | null;
+  formaPartePaquete: "SI" | "NO" | null;
+  detallePaquete: string | null;
+  observacion: string | null;
+};
+
+export type FichaActividad = {
+  nombre: string;
+  marcada: boolean;
+};
+
+export type FichaVisitantes = {
+  poseeRegistro: "SI" | "NO" | null;
+  tipoRegistro: "DIGITAL" | "PAPEL" | null;
+  aniosRegistro: number | null;
+  generaReportes: "SI" | "NO" | null;
+  frecuenciaReportes: string | null;
+  temporadaAlta: { marcada: boolean; meses: string | null; visitantes: number | null };
+  temporadaBaja: { marcada: boolean; meses: string | null; visitantes: number | null };
+  llegadaNacional: Array<{
+    ciudad: string;
+    llegadasMensuales: number | null;
+    totalAnual: number | null;
+  }>;
+  llegadaExtranjera: Array<{
+    pais: string;
+    llegadasMensuales: number | null;
+    totalAnual: number | null;
+  }>;
+  observacionLlegadas: string | null;
+  informanteClave: { nombre: string | null; contacto: string | null };
+  observacion: string | null;
+};
+
 /**
  * Secciones extraídas con el mismo rigor de verificación que el resto del
  * parser (coordenadas confirmadas contra el archivo real, con pruebas).
@@ -159,24 +225,23 @@ export type FichaExtraida = {
   resumenValoracion: FichaResumenValoracion;
   accesibilidadDetalle: FichaAccesibilidadDetalleItem[];
   imagenes: FichaImagenAnexo[];
+  politicas: FichaPolitica[];
+  actividades: FichaActividad[];
+  promocion: FichaPromocion;
+  visitantes: FichaVisitantes;
+  recursoHumano: FichaRecursoHumano;
   /**
    * Secciones cuyo mapeo de celdas ya está documentado en
    * docs/plans/active/importar-ficha-mintur.md (sección 3) pero cuya
    * extracción todavía no se implementó con el mismo nivel de verificación
-   * que las de arriba — planta, conservación, higiene-seguridad, políticas,
-   * actividades, promoción, visitantes, recurso humano. Quedan en `null`
-   * intencionalmente; no se debe inferir "vacío en la ficha" de un `null`
-   * aquí, sino "todavía no implementado".
+   * que las de arriba — planta, conservación e higiene-seguridad. Quedan en
+   * `null` intencionalmente; no se debe inferir "vacío en la ficha" de un
+   * `null` aquí, sino "todavía no implementado".
    */
   pendientes: {
     planta: null;
     conservacion: null;
     higieneSeguridad: null;
-    politicas: null;
-    actividades: null;
-    promocion: null;
-    visitantes: null;
-    recursoHumano: null;
   };
 };
 

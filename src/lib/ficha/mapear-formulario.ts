@@ -12,11 +12,17 @@ function idATexto(id: number | null): string {
  * exacta de `FormValues` de `center-editor.tsx`, para usar con
  * `reset(mapearFichaAFormulario(...))`. Solo cubre los campos que el parser
  * puede llenar con confianza (ver docs/plans/active/importar-ficha-mintur.md
- * sección 3): identificación, ubicación, administración, clima/ingreso y
- * accesibilidad general. `touristZoneId` y `hierarchyId` se dejan vacíos a
- * propósito — no tienen fuente en la ficha (zona turística) o se calculan
- * después (jerarquía) — y `activityIds`/`facilityIds` quedan vacíos porque
- * esas secciones todavía no están implementadas en el parser.
+ * sección 3): identificación, ubicación, administración, clima/ingreso,
+ * actividades y accesibilidad general. `touristZoneId` y `hierarchyId` se
+ * dejan vacíos a propósito — no tienen fuente en la ficha (zona turística) o
+ * se calculan después (jerarquía) — y `facilityIds` queda vacío porque la
+ * sección de planta/facilidades todavía no está implementada en el parser.
+ *
+ * Las secciones que se guardan como JSON genérico por `saveAdminCenterSection`
+ * (políticas, promoción, visitantes, recurso humano) no se mapean aquí: este
+ * mapeo es solo para el formulario principal de `center-editor.tsx`. Esas
+ * cuatro quedan disponibles en `datos` para que la UI las use en un paso
+ * posterior, todavía no conectado.
  */
 export function mapearFichaAFormulario(
   datos: FichaExtraida,
@@ -81,7 +87,7 @@ export function mapearFichaAFormulario(
           : "",
       observation: datos.caracteristicas.ingreso.observacion ?? "",
     },
-    activityIds: [],
+    activityIds: catalogos.actividadIds.map(String),
     accessibilityIds: catalogos.accesibilidadTipoIds.map(String),
     facilityIds: [],
     facilityQuantities: {},

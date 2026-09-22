@@ -6,6 +6,13 @@ import {
   leerSeleccionUnica,
 } from "./checkbox";
 import {
+  leerActividades,
+  leerPoliticas,
+  leerPromocion,
+  leerRecursoHumano,
+  leerVisitantes,
+} from "./parser-adicional";
+import {
   fechaDesdeSerial,
   horaDesdeFraccionDia,
   leerCelda,
@@ -595,15 +602,15 @@ export async function parsearFicha(
     resumenValoracion: leerResumenValoracion(workbook),
     accesibilidadDetalle: leerAccesibilidadDetalle(workbook),
     imagenes,
+    politicas: leerPoliticas(worksheet),
+    actividades: leerActividades(worksheet),
+    promocion: leerPromocion(worksheet),
+    visitantes: leerVisitantes(worksheet),
+    recursoHumano: leerRecursoHumano(worksheet),
     pendientes: {
       planta: null,
       conservacion: null,
       higieneSeguridad: null,
-      politicas: null,
-      actividades: null,
-      promocion: null,
-      visitantes: null,
-      recursoHumano: null,
     },
   };
 

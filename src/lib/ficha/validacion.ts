@@ -153,6 +153,81 @@ export const resultadoParseoFichaSchema = z.object({
     imagenes: z.array(
       z.object({ archivo: z.string(), extension: z.string(), tamanoBytes: z.number() }),
     ),
+    politicas: z.array(
+      z.object({
+        codigo: z.string(),
+        pregunta: z.string(),
+        respuesta: z.string().nullable(),
+        anioElaboracion: z.number().nullable(),
+        especifique: z.string().nullable(),
+      }),
+    ),
+    actividades: z.array(z.object({ nombre: z.string(), marcada: z.boolean() })),
+    promocion: z.object({
+      tienePlanPromocionCantonal: z.string().nullable(),
+      incluidoEnPlan: z.string().nullable(),
+      medios: z.array(
+        z.object({
+          nombre: z.string(),
+          valor: z.string().nullable(),
+          periodicidad: z.string().nullable(),
+        }),
+      ),
+      observacionMedios: z.string().nullable(),
+      formaPartePaquete: z.string().nullable(),
+      detallePaquete: z.string().nullable(),
+      observacion: z.string().nullable(),
+    }),
+    visitantes: z.object({
+      poseeRegistro: z.string().nullable(),
+      tipoRegistro: z.string().nullable(),
+      aniosRegistro: z.number().nullable(),
+      generaReportes: z.string().nullable(),
+      frecuenciaReportes: z.string().nullable(),
+      temporadaAlta: z.object({
+        marcada: z.boolean(),
+        meses: z.string().nullable(),
+        visitantes: z.number().nullable(),
+      }),
+      temporadaBaja: z.object({
+        marcada: z.boolean(),
+        meses: z.string().nullable(),
+        visitantes: z.number().nullable(),
+      }),
+      llegadaNacional: z.array(
+        z.object({
+          ciudad: z.string(),
+          llegadasMensuales: z.number().nullable(),
+          totalAnual: z.number().nullable(),
+        }),
+      ),
+      llegadaExtranjera: z.array(
+        z.object({
+          pais: z.string(),
+          llegadasMensuales: z.number().nullable(),
+          totalAnual: z.number().nullable(),
+        }),
+      ),
+      observacionLlegadas: z.string().nullable(),
+      informanteClave: z.object({
+        nombre: z.string().nullable(),
+        contacto: z.string().nullable(),
+      }),
+      observacion: z.string().nullable(),
+    }),
+    recursoHumano: z.object({
+      personasAdministracionOperacion: z.number().nullable(),
+      personasEspecializadasTurismo: z.number().nullable(),
+      formacion: z.array(
+        z.object({
+          grupo: z.string(),
+          nombre: z.string(),
+          cantidad: z.number().nullable(),
+          detalleOtro: z.string().nullable(),
+        }),
+      ),
+      observacion: z.string().nullable(),
+    }),
     pendientes: z.record(z.string(), z.null()),
   }),
   advertencias: z.array(z.string()),

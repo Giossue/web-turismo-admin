@@ -45,6 +45,8 @@ export type CatalogosResueltos = {
   tipoIngresoId: ResolucionCatalogo;
   /** Un id de `accessibilityTypes` por cada item marcado "SI" en 4.4. */
   accesibilidadTipoIds: number[];
+  /** Un id de `activities` (acotado por categoría) por cada actividad marcada en la sección 9. */
+  actividadIds: number[];
 };
 
 const NOMBRES_TIPO_INGRESO: Record<string, string> = {
@@ -178,6 +180,17 @@ export function resolverCatalogosFicha(
     )
     .filter((id): id is number => id !== null);
 
+  const actividadesDeCategoria = categoriaId.id
+    ? catalogos.activities.filter((a) => a.categoryId === categoriaId.id)
+    : catalogos.activities;
+  const actividadIds = datos.actividades
+    .filter((a) => a.marcada)
+    .map(
+      (a) =>
+        resolverPorNombre(actividadesDeCategoria, a.nombre, `Actividad: ${a.nombre}`).id,
+    )
+    .filter((id): id is number => id !== null);
+
   return {
     provinciaId,
     cantonId,
@@ -190,6 +203,7 @@ export function resolverCatalogosFicha(
     climaId,
     tipoIngresoId,
     accesibilidadTipoIds,
+    actividadIds,
   };
 }
 

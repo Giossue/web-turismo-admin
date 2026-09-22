@@ -25,6 +25,18 @@ y guarda con el flujo normal (borrador → revisión → publicación).
   ingreso/salida por tipo, formas de pago, precios, meses recomendados.
 - **Accesibilidad y conectividad**: ciudad más cercana, vías terrestres, tipos y detalle de
   transporte (cooperativas), accesibilidad general, estado de señalización de aproximación.
+- **Actividades que se practican**: las 56 opciones de las secciones 9.1 y 9.2; las marcadas
+  se resuelven contra el catálogo de actividades (acotado por categoría) y se precargan en el
+  formulario principal.
+- **Políticas y regulaciones**: las 4 preguntas SI/NO con sus códigos, año de elaboración y
+  especificación — quedan disponibles en los datos extraídos, pendiente conectarlas a
+  `saveAdminCenterSection` desde la UI (ver "Qué falta").
+- **Promoción y comercialización**: medios de promoción con dato real (se descartan los
+  placeholders de la plantilla), plan de promoción cantonal, paquete turístico.
+- **Registro de visitantes y afluencia**: registro de visitantes, temporadas alta/baja,
+  llegadas nacionales/extranjeras, informante clave.
+- **Recurso humano**: conteos de administración/operación, especialización, y formación por
+  grupo (educación, capacitación, idiomas).
 - **Descripción** del atractivo.
 - **Firmas de responsabilidad** (elaborado/validado/aprobado).
 - **Hoja `ficha_Accesibilidad`**: el detalle de criterios SI/NO por categoría de discapacidad
@@ -35,9 +47,10 @@ y guarda con el flujo normal (borrador → revisión → publicación).
   Excel.
 
 Los catálogos (provincia, cantón, parroquia, categoría, tipo, subtipo, línea de producto,
-escenario, tipo de ingreso, accesibilidad) se resuelven contra los catálogos reales de la API
-institucional. Cuando el texto de la ficha no coincide con ningún valor activo (o es ambiguo),
-el campo queda sin resolver con una advertencia — nunca se adivina ni se crea un valor nuevo.
+escenario, tipo de ingreso, accesibilidad, actividades) se resuelven contra los catálogos
+reales de la API institucional. Cuando el texto de la ficha no coincide con ningún valor
+activo (o es ambiguo), el campo queda sin resolver con una advertencia — nunca se adivina ni
+se crea un valor nuevo.
 
 ## Qué falta (documentado, no implementado)
 
@@ -49,11 +62,12 @@ está implementada con el mismo nivel de verificación que el resto:
 - Estado de conservación
 - Higiene y seguridad (servicios básicos, señalética, salud, seguridad, comunicación,
   amenazas)
-- Políticas y regulaciones
-- Actividades que se practican
-- Promoción y comercialización
-- Registro de visitantes y afluencia
-- Recurso humano
+
+Además, aunque políticas, promoción, visitantes y recurso humano **ya se extraen** del Excel,
+todavía no hay un paso en la UI que los guarde en el centro turístico (viajan como JSON
+genérico vía `saveAdminCenterSection`, no como parte del formulario principal) — por ahora
+quedan disponibles en la respuesta del endpoint, pero el editor no los usa aún para precargar
+esos pasos del asistente.
 
 Estos campos del formulario quedan vacíos tras importar; el usuario los completa a mano.
 
