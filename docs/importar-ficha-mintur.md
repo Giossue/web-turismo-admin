@@ -42,6 +42,10 @@ y guarda con el flujo normal (borrador → revisión → publicación).
   estado), y servicios complementarios.
 - **Estado de conservación**: estado del atractivo y del entorno, los 21 factores de
   alteración por componente (naturales, antrópicos y "otro"), y la declaratoria asociada.
+- **Higiene y seguridad**: servicios básicos (agua/energía/saneamiento/desechos, valor y
+  proveedor), señalética (23 items con cantidad por material y estado bueno/regular/malo),
+  salud, seguridad, telefonía/internet, radio portátil y multiamenazas con plan de
+  contingencia.
 - **Descripción** del atractivo.
 - **Firmas de responsabilidad** (elaborado/validado/aprobado).
 - **Hoja `ficha_Accesibilidad`**: el detalle de criterios SI/NO por categoría de discapacidad
@@ -57,23 +61,18 @@ reales de la API institucional. Cuando el texto de la ficha no coincide con ning
 activo (o es ambiguo), el campo queda sin resolver con una advertencia — nunca se adivina ni
 se crea un valor nuevo.
 
-## Qué falta (documentado, no implementado)
+## Qué falta
 
-Esta sección tiene su mapeo de celdas y su forma de `content` documentados en
-`docs/plans/active/importar-ficha-mintur.md` (secciones 3 y 3.1), pero su extracción todavía no
-está implementada con el mismo nivel de verificación que el resto:
+Las 14 secciones de la ficha ya se extraen. Lo que falta es conectar 6 de ellas (políticas,
+promoción, visitantes, recurso humano, planta, conservación e higiene-seguridad) a la UI: hoy
+viajan como JSON genérico (la forma de `content` para `saveAdminCenterSection` ya está
+documentada en `docs/plans/active/importar-ficha-mintur.md` sección 3.1), pero el editor
+todavía no las usa para precargar esos pasos del asistente — solo quedan disponibles en la
+respuesta del endpoint. La excepción es `actividades`, que sí llega al formulario principal vía
+`activityIds` porque `CenterDraft` ya tenía un campo tipado para eso.
 
-- Higiene y seguridad (servicios básicos, señalética, salud, seguridad, comunicación,
-  amenazas)
-
-Además, aunque políticas, promoción, visitantes, recurso humano, planta y conservación **ya
-se extraen** del Excel, todavía no hay un paso en la UI que los guarde en el centro turístico
-(viajan como JSON genérico vía `saveAdminCenterSection`, no como parte del formulario
-principal) — por ahora quedan disponibles en la respuesta del endpoint, pero el editor no los
-usa aún para precargar esos pasos del asistente. La excepción es `actividades`, que sí llega
-al formulario principal vía `activityIds`.
-
-Estos campos del formulario quedan vacíos tras importar; el usuario los completa a mano.
+Esos 6 pasos del asistente quedan vacíos tras importar; el usuario los completa a mano
+mientras no se conecte ese paso adicional.
 
 ## Limitaciones conocidas
 

@@ -1,5 +1,6 @@
 import type { RespuestaSeccion } from "./checkbox";
 import type { FichaConservacion } from "./tipos-conservacion";
+import type { FichaHigieneSeguridad } from "./tipos-higiene";
 import type { FichaPlanta } from "./tipos-planta";
 
 /** Un valor de catálogo leído de la ficha, aún sin resolver contra la base. */
@@ -234,17 +235,7 @@ export type FichaExtraida = {
   recursoHumano: FichaRecursoHumano;
   planta: FichaPlanta;
   conservacion: FichaConservacion;
-  /**
-   * Secciones cuyo mapeo de celdas ya está documentado en
-   * docs/plans/active/importar-ficha-mintur.md (sección 3) pero cuya
-   * extracción todavía no se implementó con el mismo nivel de verificación
-   * que las de arriba — higiene-seguridad. Queda en `null` intencionalmente;
-   * no se debe inferir "vacío en la ficha" de un `null` aquí, sino "todavía
-   * no implementado".
-   */
-  pendientes: {
-    higieneSeguridad: null;
-  };
+  higieneSeguridad: FichaHigieneSeguridad;
 };
 
 export type ResultadoParseoFicha = {

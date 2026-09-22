@@ -14,6 +14,7 @@ import {
 } from "./parser-adicional";
 import { leerConservacion } from "./parser-conservacion";
 import { parsearCoordenadaPar } from "./parser-comun";
+import { leerHigieneSeguridad } from "./parser-higiene";
 import { leerPlanta } from "./parser-planta";
 import {
   fechaDesdeSerial,
@@ -590,9 +591,7 @@ export async function parsearFicha(
     recursoHumano: leerRecursoHumano(worksheet),
     planta: leerPlanta(worksheet),
     conservacion: leerConservacion(worksheet),
-    pendientes: {
-      higieneSeguridad: null,
-    },
+    higieneSeguridad: leerHigieneSeguridad(worksheet),
   };
 
   if (datos.resumenValoracion.totalInformativo !== null) {

@@ -296,7 +296,70 @@ export const resultadoParseoFichaSchema = z.object({
         observacion: z.string().nullable(),
       }),
     }),
-    pendientes: z.record(z.string(), z.null()),
+    higieneSeguridad: z.object({
+      serviciosBasicos: z.array(
+        z.object({
+          tipo: z.string(),
+          valorAtractivo: z.string().nullable(),
+          proveedorAtractivo: z.string().nullable(),
+          valorCiudad: z.string().nullable(),
+          proveedorCiudad: z.string().nullable(),
+        }),
+      ),
+      observacionServiciosBasicos: z.string().nullable(),
+      senaletica: z.array(
+        z.object({
+          ambiente: z.string(),
+          nombre: z.string(),
+          cantidadMadera: z.number().nullable(),
+          cantidadAluminio: z.number().nullable(),
+          cantidadOtro: z.number().nullable(),
+          especifiqueOtro: z.string().nullable(),
+          estado: z.string().nullable(),
+        }),
+      ),
+      observacionSenaletica: z.string().nullable(),
+      salud: z.array(
+        z.object({
+          nombre: z.string(),
+          cantidadAtractivo: z.number().nullable(),
+          cantidadCiudad: z.number().nullable(),
+        }),
+      ),
+      observacionSalud: z.string().nullable(),
+      seguridad: z.array(
+        z.object({ nombre: z.string(), detalle: z.string().nullable() }),
+      ),
+      observacionSeguridad: z.string().nullable(),
+      telefoniaInternet: z.array(
+        z.object({
+          scope: z.string(),
+          fija: z.boolean(),
+          movil: z.boolean(),
+          satelital: z.boolean(),
+          lineaTelefonica: z.boolean(),
+          satelite: z.boolean(),
+          telefoniaMovil: z.boolean(),
+          fibraOptica: z.boolean(),
+          redesInalambricas: z.boolean(),
+        }),
+      ),
+      observacionComunicacion: z.string().nullable(),
+      radioPortatil: z.object({
+        usoVisitante: z.boolean(),
+        usoInterno: z.boolean(),
+        usoEmergencia: z.boolean(),
+      }),
+      observacionRadioPortatil: z.string().nullable(),
+      amenazas: z.array(z.object({ nombre: z.string(), marcada: z.boolean() })),
+      contingencia: z.object({
+        existe: z.boolean(),
+        institucion: z.string().nullable(),
+        nombreDocumento: z.string().nullable(),
+        anioElaboracion: z.number().nullable(),
+      }),
+      observacionMultiamenazas: z.string().nullable(),
+    }),
   }),
   advertencias: z.array(z.string()),
   imagenes: z.array(

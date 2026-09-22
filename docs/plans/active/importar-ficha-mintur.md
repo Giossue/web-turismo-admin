@@ -2,17 +2,19 @@
 
 ## Estado
 
-Fase 1 (análisis) completa. Fase 2 en curso: parser, resolución de catálogos, mapeo al
-formulario, endpoint de subida y botón "Importar ficha" implementados y probados (25 pruebas,
-`bun run verify` completo) para: identificación, ubicación/administración,
-características/ingreso, accesibilidad y conectividad, descripción, firmas, resumen
-informativo, detalle de `ficha_Accesibilidad`, políticas, actividades, promoción, visitantes y
-recurso humano. De las 8 secciones genéricas originales solo quedan sin implementar **planta,
-conservación e higiene-seguridad** — ver `docs/importar-ficha-mintur.md`. Políticas, promoción,
-visitantes y recurso humano ya se extraen pero todavía no se conectan a
-`saveAdminCenterSection` desde la UI (solo `actividades` llegó hasta el formulario, vía
-`activityIds`, porque ya tenía un campo tipado). Código en la rama
-`feature/importar-ficha-mintur`.
+Fase 1 (análisis) completa. Fase 2: **las 14 secciones de la ficha están extraídas y
+probadas** (41 pruebas, `bun run verify` completo en cada commit) — parser, resolución de
+catálogos, mapeo al formulario, endpoint de subida y botón "Importar ficha" funcionando de
+punta a punta para identificación, ubicación/administración, características/ingreso,
+accesibilidad y conectividad, planta turística, estado de conservación, higiene-seguridad,
+políticas, actividades, promoción, visitantes, recurso humano, descripción, firmas, resumen
+informativo (solo informativo) y el detalle de `ficha_Accesibilidad`.
+
+Lo que queda: conectar 6 secciones (políticas, promoción, visitantes, recurso humano, planta,
+conservación e higiene-seguridad) a `saveAdminCenterSection` desde la UI — hoy se extraen pero
+el editor no las usa todavía para precargar esos pasos del asistente (solo `actividades` llegó
+al formulario principal, vía `activityIds`). Ver `docs/importar-ficha-mintur.md`. Código en la
+rama `feature/importar-ficha-mintur`, sin push todavía.
 
 **Decisiones ya tomadas:**
 
@@ -449,3 +451,10 @@ pendientes:
    (2 fotos, mapa, y una imagen adicional). ¿El botón de importación debe sugerir las 3-4
    imágenes automáticamente, o solo las que superen cierto tamaño mínimo (para descartar
    logos/decoración de plantilla)?
+5. **¿Cómo quieres que la UI use los datos de las 6 secciones que ya se extraen pero no se
+   guardan** (políticas, promoción, visitantes, recurso humano, planta, conservación)? Opciones:
+   (a) llamar a `saveAdminCenterSection` automáticamente por cada una justo después de crear el
+   borrador con `createAdminCenter`, antes de mostrarle el formulario al usuario; o (b) esperar
+   a que el usuario llegue a cada paso del asistente y ofrecer un botón "precargar desde la
+   ficha importada" paso por paso. La opción (a) es más simple de implementar pero guarda datos
+   sin que el usuario los haya visto todavía (aunque siguen en estado borrador, editables).
