@@ -69,8 +69,7 @@ export function CatalogIconSelect({
           )
         }
       >
-        {options.map(
-          ({ value: optionValue, label: optionLabel, Icon, imageSrc }) => (
+        {options.map(({ value: optionValue, label: optionLabel, Icon, imageSrc }) => (
           <MenuItem key={optionValue} value={optionValue}>
             <ListItemIcon sx={{ minWidth: 32 }}>
               {imageSrc ? (
@@ -86,8 +85,7 @@ export function CatalogIconSelect({
             </ListItemIcon>
             <ListItemText primary={optionLabel} />
           </MenuItem>
-          ),
-        )}
+        ))}
       </Select>
     </FormControl>
   );

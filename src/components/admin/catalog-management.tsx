@@ -87,7 +87,6 @@ const catalogIconOptions = [
     label: "Información turística",
     color: "#0369a1",
   },
-  { value: "tourism-monument", label: "Monumento", color: "#92400e" },
   { value: "tourism-museum", label: "Museo", color: "#5b21b6" },
   { value: "tourism-viewpoint", label: "Mirador", color: "#a16207" },
   { value: "transport-bus-stop", label: "Parada de bus", color: "#155e75" },
@@ -388,7 +387,8 @@ export function CatalogManagement({
                     sx={{ display: "block", mt: 1 }}
                     variant="caption"
                   >
-                    Se asigna según el pin y se aplica a todas las categorías de este tipo.
+                    Se asigna según el pin y se aplica a todas las categorías de este
+                    tipo.
                   </Typography>
                 </Box>
               </Stack>
