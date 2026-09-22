@@ -2,8 +2,14 @@
 
 ## Estado
 
-Fase 1 (análisis) completa, incluida la profundización pedida sobre las 8 secciones
-genéricas. Pendiente de aprobación antes de escribir código.
+Fase 1 (análisis) completa. Fase 2 iniciada: parser, resolución de catálogos, mapeo al
+formulario, endpoint de subida y botón "Importar ficha" implementados y probados para las
+secciones de mayor confianza (identificación, ubicación/administración,
+características/ingreso, accesibilidad y conectividad, descripción, firmas, resumen
+informativo, y el detalle de `ficha_Accesibilidad`). Las 8 secciones genéricas (planta,
+conservación, higiene-seguridad, políticas, actividades, promoción, visitantes, recurso
+humano) quedan documentadas pero sin implementar — ver `docs/importar-ficha-mintur.md` y la
+sección 9 de este documento. Código en la rama `feature/importar-ficha-mintur`.
 
 **Decisiones ya tomadas:**
 
