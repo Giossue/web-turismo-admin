@@ -352,6 +352,27 @@ export type AdminOpinionPage = {
   offset: number;
 };
 
+export type AdminOpinionHistory = {
+  reviewCode: string;
+  authorName: string;
+  target: AdminOpinion["target"];
+  versions: Array<{
+    reviewCode: string;
+    version: number;
+    rating: number | null;
+    comment: string | null;
+    status: "PENDIENTE" | "APROBADA" | "RECHAZADA" | "REEMPLAZADA";
+    submittedAt: string;
+    reviewedAt: string | null;
+    moderations: Array<{
+      action: "APROBAR" | "RECHAZAR";
+      moderatorName: string;
+      reason: string | null;
+      createdAt: string;
+    }>;
+  }>;
+};
+
 type ApiBody<T> = { data: T; error?: { message?: string } };
 
 type AdminAccessTokenRefresh = (expiredToken: string) => Promise<string | null>;
@@ -435,6 +456,14 @@ export async function getAdminOpinions(
   return request<AdminOpinionPage>(`/admin/opinions?${params.toString()}`, token, {
     cache: "no-store",
   });
+}
+
+export async function getAdminOpinionHistory(token: string, reviewCode: string) {
+  return request<AdminOpinionHistory>(
+    `/admin/opinions/${encodeURIComponent(reviewCode)}/history`,
+    token,
+    { cache: "no-store" },
+  );
 }
 
 export async function reviewAdminOpinion(

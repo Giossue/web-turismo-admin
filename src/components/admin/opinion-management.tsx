@@ -1,6 +1,7 @@
 "use client";
 
 import CheckCircleRounded from "@mui/icons-material/CheckCircleRounded";
+import HistoryRounded from "@mui/icons-material/HistoryRounded";
 import {
   Alert,
   Button,
@@ -9,6 +10,7 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  Divider,
   Stack,
   TableBody,
   TableCell,
@@ -17,6 +19,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 
 import {
@@ -24,7 +27,13 @@ import {
   AdminTableFooter,
   ADMIN_TABLE_PAGE_SIZE,
 } from "@/components/ui/admin-table";
-import { getAdminOpinions, reviewAdminOpinion, type AdminOpinion } from "@/lib/admin-api";
+import {
+  getAdminOpinionHistory,
+  getAdminOpinions,
+  reviewAdminOpinion,
+  type AdminOpinion,
+  type AdminOpinionHistory,
+} from "@/lib/admin-api";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { webTokens } from "@/theme/tokens";
 
@@ -50,7 +59,23 @@ export function OpinionManagement({
   const [loading, setLoading] = useState(false);
   const [workingCode, setWorkingCode] = useState<string | null>(null);
   const [reviewIntent, setReviewIntent] = useState<ReviewIntent | null>(null);
+  const [historyOpinion, setHistoryOpinion] = useState<AdminOpinion | null>(null);
   const [reason, setReason] = useState("");
+  const historyQuery = useQuery({
+    queryKey: ["admin", "opinion-history", historyOpinion?.reviewCode],
+    queryFn: () => getAdminOpinionHistory(token, historyOpinion?.reviewCode ?? ""),
+    enabled: Boolean(token && historyOpinion),
+  });
+
+  useEffect(() => {
+    if (historyQuery.error) {
+      onError(
+        historyQuery.error instanceof Error
+          ? historyQuery.error.message
+          : "No se pudo cargar el historial de la opinión.",
+      );
+    }
+  }, [historyQuery.error, onError]);
 
   const load = useCallback(
     async (nextPage: number) => {
@@ -83,7 +108,13 @@ export function OpinionManagement({
 
   function openReview(opinion: AdminOpinion, action: "APPROVE" | "REJECT") {
     setReason("");
+    setHistoryOpinion(null);
     setReviewIntent({ opinion, action });
+  }
+
+  function openHistory(opinion: AdminOpinion) {
+    onError(null);
+    setHistoryOpinion(opinion);
   }
 
   async function submitReview() {
@@ -126,7 +157,7 @@ export function OpinionManagement({
     <Stack spacing={webTokens.spacing.control}>
       <AdminTable
         ariaLabel="Opiniones de visitantes"
-        minWidth={1320}
+        minWidth={760}
         loading={loading && items.length === 0}
         empty={!loading && items.length === 0}
         emptyMessage="No hay opiniones pendientes ni publicadas."
@@ -145,9 +176,6 @@ export function OpinionManagement({
             <TableCell>Usuario</TableCell>
             <TableCell>Estado</TableCell>
             <TableCell>Calificación</TableCell>
-            <TableCell>Comentario propuesto</TableCell>
-            <TableCell>Versión publicada</TableCell>
-            <TableCell>Enviada</TableCell>
             <TableCell align="right">Acciones</TableCell>
           </TableRow>
         </TableHead>
@@ -171,63 +199,62 @@ export function OpinionManagement({
                 />
               </TableCell>
               <TableCell>
-                <OpinionRating rating={opinion.proposed.rating} />
-                <Typography variant="caption" color="text.secondary" display="block">
-                  v{opinion.proposed.version}
-                </Typography>
-              </TableCell>
-              <TableCell>
-                <OpinionComment comment={opinion.proposed.comment} />
-              </TableCell>
-              <TableCell>
-                {opinion.status === "APROBADA" ? (
-                  <Typography variant="body2" color="success.main">
-                    Esta versión está publicada
-                  </Typography>
-                ) : opinion.current ? (
-                  <OpinionVersionSummary version={opinion.current} />
-                ) : (
-                  <Typography variant="body2" color="text.secondary">
-                    Nueva opinión
-                  </Typography>
-                )}
-              </TableCell>
-              <TableCell>{formatDate(opinion.submittedAt)}</TableCell>
-              <TableCell align="right">
-                {opinion.status === "PENDIENTE" ? (
-                  <Stack
-                    direction={{ xs: "column", sm: "row" }}
-                    spacing={webTokens.spacing.inline}
-                    justifyContent="flex-end"
-                  >
-                    <Button
-                      size="small"
-                      variant="contained"
-                      disabled={workingCode !== null}
-                      onClick={() => openReview(opinion, "APPROVE")}
-                    >
-                      Aprobar
-                    </Button>
-                    <Button
-                      size="small"
-                      color="error"
-                      variant="text"
-                      disabled={workingCode !== null}
-                      onClick={() => openReview(opinion, "REJECT")}
-                    >
-                      Rechazar
-                    </Button>
-                  </Stack>
-                ) : (
-                  <Typography variant="body2" color="text.secondary">
-                    Sin acciones
-                  </Typography>
-                )}
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<HistoryRounded />}
+                  onClick={() => openHistory(opinion)}
+                >
+                  Ver historial
+                </Button>
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </AdminTable>
+
+      <Dialog
+        open={historyOpinion !== null}
+        onClose={() => setHistoryOpinion(null)}
+        fullWidth
+        maxWidth="md"
+      >
+        <DialogTitle>Historial de la opinión</DialogTitle>
+        <DialogContent dividers>
+          {historyQuery.isPending ? (
+            <Stack alignItems="center" spacing={webTokens.spacing.inline} sx={{ py: 5 }}>
+              <CircularProgress size={28} />
+              <Typography color="text.secondary">Cargando historial…</Typography>
+            </Stack>
+          ) : historyQuery.data ? (
+            <OpinionHistoryDetail history={historyQuery.data} />
+          ) : (
+            <Alert severity="info">No hay información histórica disponible.</Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setHistoryOpinion(null)}>Cerrar</Button>
+          {historyOpinion?.status === "PENDIENTE" ? (
+            <>
+              <Button
+                color="error"
+                onClick={() => openReview(historyOpinion, "REJECT")}
+                disabled={workingCode !== null}
+              >
+                Rechazar
+              </Button>
+              <Button
+                variant="contained"
+                onClick={() => openReview(historyOpinion, "APPROVE")}
+                disabled={workingCode !== null}
+                startIcon={<CheckCircleRounded />}
+              >
+                Aprobar
+              </Button>
+            </>
+          ) : null}
+        </DialogActions>
+      </Dialog>
 
       <Dialog
         open={reviewIntent !== null}
@@ -297,6 +324,98 @@ export function OpinionManagement({
   );
 }
 
+function OpinionHistoryDetail({ history }: { history: AdminOpinionHistory }) {
+  return (
+    <Stack spacing={webTokens.spacing.control}>
+      <Stack spacing={0.5}>
+        <Typography variant="h6">{history.target.name}</Typography>
+        <Typography color="text.secondary" variant="body2">
+          {history.target.type === "CENTRO" ? "Centro turístico" : "Punto de interés"}
+          {history.target.code ? ` · ${history.target.code}` : ""}
+        </Typography>
+        <Typography variant="body2">
+          Autor: <strong>{history.authorName}</strong>
+        </Typography>
+      </Stack>
+      <Divider />
+      <Stack spacing={webTokens.spacing.control}>
+        {history.versions.map((version) => (
+          <Stack
+            key={version.reviewCode}
+            spacing={webTokens.spacing.inline}
+            sx={{
+              border: "1px solid",
+              borderColor: "divider",
+              borderRadius: 2,
+              p: 2,
+            }}
+          >
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              spacing={webTokens.spacing.inline}
+              alignItems={{ sm: "center" }}
+              justifyContent="space-between"
+            >
+              <Typography fontWeight={700}>Versión {version.version}</Typography>
+              <OpinionHistoryStatus status={version.status} />
+            </Stack>
+            <OpinionRating rating={version.rating} />
+            <Typography variant="body2">{version.comment || "Sin comentario"}</Typography>
+            <Typography color="text.secondary" variant="caption">
+              Enviada: {formatDate(version.submittedAt)}
+              {version.reviewedAt ? ` · Revisada: ${formatDate(version.reviewedAt)}` : ""}
+            </Typography>
+            {version.moderations.length > 0 ? (
+              <Stack spacing={webTokens.spacing.inline} sx={{ pt: 1 }}>
+                <Typography fontWeight={700} variant="body2">
+                  Moderación
+                </Typography>
+                {version.moderations.map((moderation, index) => (
+                  <Stack key={`${version.reviewCode}-${moderation.createdAt}-${index}`}>
+                    <Typography variant="body2">
+                      {moderation.action === "APROBAR" ? "Aprobada" : "Rechazada"} por{" "}
+                      <strong>{moderation.moderatorName}</strong>
+                    </Typography>
+                    <Typography color="text.secondary" variant="caption">
+                      {formatDate(moderation.createdAt)}
+                      {moderation.reason ? ` · Motivo: ${moderation.reason}` : ""}
+                    </Typography>
+                  </Stack>
+                ))}
+              </Stack>
+            ) : null}
+          </Stack>
+        ))}
+      </Stack>
+    </Stack>
+  );
+}
+
+function OpinionHistoryStatus({
+  status,
+}: {
+  status: AdminOpinionHistory["versions"][number]["status"];
+}) {
+  const labels: Record<typeof status, string> = {
+    PENDIENTE: "Pendiente",
+    APROBADA: "Publicada",
+    RECHAZADA: "Rechazada",
+    REEMPLAZADA: "Reemplazada",
+  };
+  return (
+    <StatusBadge
+      code={
+        status === "APROBADA"
+          ? "PUBLICADO"
+          : status === "REEMPLAZADA"
+            ? "INACTIVO"
+            : status
+      }
+      label={labels[status]}
+    />
+  );
+}
+
 function OpinionVersionSummary({
   expanded = false,
   version,
@@ -339,29 +458,6 @@ function OpinionRating({ rating }: { rating: number | null }) {
       {rating === null
         ? "Sin calificación"
         : `${"★".repeat(rating)}${"☆".repeat(5 - rating)}`}
-    </Typography>
-  );
-}
-
-function OpinionComment({ comment }: { comment: string | null }) {
-  return comment ? (
-    <Typography
-      variant="body2"
-      color="text.secondary"
-      sx={{
-        display: "-webkit-box",
-        overflow: "hidden",
-        WebkitBoxOrient: "vertical",
-        WebkitLineClamp: 3,
-        minWidth: 220,
-        maxWidth: 360,
-      }}
-    >
-      {comment}
-    </Typography>
-  ) : (
-    <Typography variant="caption" color="text.secondary">
-      Sin comentario
     </Typography>
   );
 }
