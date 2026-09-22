@@ -4,6 +4,7 @@ import { getAdminCatalogs } from "@/lib/admin-api";
 import { advertenciasDeCatalogos, resolverCatalogosFicha } from "@/lib/ficha/catalogos";
 import { mapearFichaAFormulario } from "@/lib/ficha/mapear-formulario";
 import { FichaInvalidaError, parsearFicha } from "@/lib/ficha/parser";
+import { mapearSugerenciasSecciones } from "@/lib/ficha/sugerencias-secciones";
 import { resultadoParseoFichaSchema } from "@/lib/ficha/validacion";
 
 // exceljs necesita APIs de Node (Buffer, zlib) que no existen en el runtime Edge.
@@ -99,6 +100,10 @@ export async function POST(request: NextRequest) {
   try {
     const catalogosResueltos = resolverCatalogosFicha(resultado.datos, catalogos);
     const formulario = mapearFichaAFormulario(resultado.datos, catalogosResueltos);
+    const sugerenciasSecciones = mapearSugerenciasSecciones(
+      resultado.datos,
+      catalogosResueltos,
+    );
     const advertencias = [
       ...resultado.advertencias,
       ...advertenciasDeCatalogos(catalogosResueltos),
@@ -107,6 +112,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       data: {
         formulario,
+        sugerenciasSecciones,
         advertencias,
         imagenes: resultado.imagenes,
       },

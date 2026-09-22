@@ -61,6 +61,7 @@ import {
   type CenterDraft,
   type SaveCenterInput,
 } from "@/lib/admin-api";
+import type { SugerenciasSecciones } from "@/lib/ficha/sugerencias-secciones";
 import { webTokens } from "@/theme/tokens";
 
 export type FormValues = {
@@ -181,6 +182,8 @@ export function CenterEditor({
   const [activeStep, setActiveStep] = useState(0);
   const [importing, setImporting] = useState(false);
   const [importWarnings, setImportWarnings] = useState<string[]>([]);
+  const [sugerenciasImportadas, setSugerenciasImportadas] =
+    useState<SugerenciasSecciones | null>(null);
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const {
     control,
@@ -438,7 +441,11 @@ export function CenterEditor({
           body,
         });
         const payload = (await response.json().catch(() => null)) as {
-          data?: { formulario: Partial<FormValues>; advertencias: string[] };
+          data?: {
+            formulario: Partial<FormValues>;
+            sugerenciasSecciones?: SugerenciasSecciones;
+            advertencias: string[];
+          };
           error?: { message?: string };
         } | null;
         if (!response.ok || !payload?.data) {
@@ -446,6 +453,7 @@ export function CenterEditor({
         }
         reset({ ...emptyValues, ...payload.data.formulario });
         setImportWarnings(payload.data.advertencias);
+        setSugerenciasImportadas(payload.data.sugerenciasSecciones ?? null);
         onNotice(
           "Se precargó el formulario desde la ficha. Revisa las advertencias antes de guardar.",
         );
@@ -681,6 +689,7 @@ export function CenterEditor({
         showOverview={false}
         onDetailChanged={handleDetailChanged}
         onError={reportError}
+        sugerenciasImportadas={sugerenciasImportadas}
       />
 
       <Box sx={{ display: isSectionStep ? "block" : "none" }}>
