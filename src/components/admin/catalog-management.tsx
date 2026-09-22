@@ -192,12 +192,12 @@ export function CatalogManagement({
           : "Tipo de establecimiento";
   const parentOptions =
     selected === "ACTIVITY"
-      ? catalogsQuery.data?.activityGroups ?? []
+      ? (catalogsQuery.data?.activityGroups ?? [])
       : selected === "FACILITY"
-        ? catalogsQuery.data?.facilityCategories ?? []
+        ? (catalogsQuery.data?.facilityCategories ?? [])
         : selected === "ESTABLISHMENT_CLASSIFICATION"
-          ? catalogsQuery.data?.establishmentActivities ?? []
-          : catalogsQuery.data?.establishmentClassifications ?? [];
+          ? (catalogsQuery.data?.establishmentActivities ?? [])
+          : (catalogsQuery.data?.establishmentClassifications ?? []);
 
   function resetEditor() {
     setEditing(null);
@@ -225,12 +225,12 @@ export function CatalogManagement({
     setParentId(
       String(
         selected === "ACTIVITY"
-          ? option.groupId ?? ""
+          ? (option.groupId ?? "")
           : selected === "FACILITY"
-            ? option.categoryId ?? ""
+            ? (option.categoryId ?? "")
             : selected === "ESTABLISHMENT_CLASSIFICATION"
-              ? option.activityId ?? ""
-              : option.classificationId ?? "",
+              ? (option.activityId ?? "")
+              : (option.classificationId ?? ""),
       ),
     );
     setScheme(option.scheme ?? "OTRA");
@@ -252,7 +252,9 @@ export function CatalogManagement({
       creating &&
       selected === "ESTABLISHMENT_CATEGORY" &&
       parsedNumericValue !== undefined &&
-      (!Number.isInteger(parsedNumericValue) || parsedNumericValue < 1 || parsedNumericValue > 99)
+      (!Number.isInteger(parsedNumericValue) ||
+        parsedNumericValue < 1 ||
+        parsedNumericValue > 99)
     ) {
       onError("El valor numérico debe ser un entero entre 1 y 99.");
       return;
@@ -284,7 +286,9 @@ export function CatalogManagement({
       }
       await queryClient.invalidateQueries({ queryKey: ["admin", "catalogs"] });
       resetEditor();
-      onNotice(creating ? "Opción creada y auditada." : "Catálogo actualizado y auditado.");
+      onNotice(
+        creating ? "Opción creada y auditada." : "Catálogo actualizado y auditado.",
+      );
     } catch (cause) {
       onError(
         cause instanceof Error ? cause.message : "No se pudo actualizar el catálogo.",
