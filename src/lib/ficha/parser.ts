@@ -12,6 +12,9 @@ import {
   leerRecursoHumano,
   leerVisitantes,
 } from "./parser-adicional";
+import { leerConservacion } from "./parser-conservacion";
+import { parsearCoordenadaPar } from "./parser-comun";
+import { leerPlanta } from "./parser-planta";
 import {
   fechaDesdeSerial,
   horaDesdeFraccionDia,
@@ -315,28 +318,6 @@ function leerViasTerrestres(
   return vias;
 }
 
-/**
- * Las coordenadas de "inicio"/"fin" de vías vienen como un solo texto con lat
- * y long separadas por espacios (ej. "-1.67041   -79.06123"). Se valida como
- * bloque: si el formato es irreconocible, se advierte y no se separan valores.
- */
-function parsearCoordenadaPar(
-  crudo: string,
-  etiqueta: string,
-): { advertencia: string | null } {
-  const texto = crudo.trim();
-  if (texto === "" || texto === "0") return { advertencia: null };
-  const partes = texto.split(/\s+/).filter(Boolean);
-  if (partes.length !== 2) {
-    return { advertencia: `${etiqueta}: formato irreconocible ("${crudo}")` };
-  }
-  const lat = parsearCoordenada(partes[0], RANGO_LATITUD_ECUADOR, etiqueta);
-  const lon = parsearCoordenada(partes[1], RANGO_LONGITUD_ECUADOR, etiqueta);
-  if (!lat.ok) return { advertencia: lat.advertencia };
-  if (!lon.ok) return { advertencia: lon.advertencia };
-  return { advertencia: null };
-}
-
 const TIPOS_TRANSPORTE: Array<{ nombre: string; refEtiqueta: string }> = [
   { nombre: "Bus", refEtiqueta: "B55:C55" },
   { nombre: "Buseta", refEtiqueta: "E55:F55" },
@@ -607,9 +588,9 @@ export async function parsearFicha(
     promocion: leerPromocion(worksheet),
     visitantes: leerVisitantes(worksheet),
     recursoHumano: leerRecursoHumano(worksheet),
+    planta: leerPlanta(worksheet),
+    conservacion: leerConservacion(worksheet),
     pendientes: {
-      planta: null,
-      conservacion: null,
       higieneSeguridad: null,
     },
   };

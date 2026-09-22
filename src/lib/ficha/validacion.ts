@@ -15,6 +15,31 @@ const advertenciaSchema = z.object({
 
 const valorCrudoSchema = z.object({ texto: z.string().nullable() });
 
+const plantaConteoSchema = z.object({
+  nombre: z.string(),
+  establecimientosAtractivo: z.number().nullable(),
+  segundaMetricaAtractivo: z.number().nullable(),
+  terceraMetricaAtractivo: z.number().nullable(),
+  establecimientosCiudad: z.number().nullable(),
+  segundaMetricaCiudad: z.number().nullable(),
+  terceraMetricaCiudad: z.number().nullable(),
+});
+
+const guiaMetricaSchema = z.object({
+  atractivo: z.number().nullable(),
+  ciudad: z.number().nullable(),
+});
+
+const componenteConservacionSchema = z.object({
+  estado: z.string().nullable(),
+  observacionEstado: z.string().nullable(),
+  factores: z.array(
+    z.object({ origen: z.string(), nombre: z.string(), marcado: z.boolean() }),
+  ),
+  otroDetalle: z.string().nullable(),
+  observacionFactores: z.string().nullable(),
+});
+
 export const resultadoParseoFichaSchema = z.object({
   datos: z.object({
     identificacion: z.object({
@@ -227,6 +252,49 @@ export const resultadoParseoFichaSchema = z.object({
         }),
       ),
       observacion: z.string().nullable(),
+    }),
+    planta: z.object({
+      alojamiento: z.array(plantaConteoSchema),
+      alimentosBebidas: z.array(plantaConteoSchema),
+      agenciasViaje: z.array(plantaConteoSchema),
+      guia: z.object({
+        local: guiaMetricaSchema,
+        nacional: guiaMetricaSchema,
+        nacionalEspecializado: guiaMetricaSchema,
+        cultura: guiaMetricaSchema,
+        aventura: guiaMetricaSchema,
+      }),
+      observacionPlantaAtractivo: z.string().nullable(),
+      observacionPlantaCiudad: z.string().nullable(),
+      facilidadesEntorno: z.array(
+        z.object({
+          categoria: z.string(),
+          nombre: z.string(),
+          cantidad: z.number().nullable(),
+          coordenadas: z
+            .object({ crudo: z.string(), advertencia: z.string().nullable() })
+            .nullable(),
+          administrador: z.string().nullable(),
+          accesibilidadUniversal: z.boolean().nullable(),
+          estado: z.string().nullable(),
+        }),
+      ),
+      observacionFacilidades: z.string().nullable(),
+      complementarios: z.array(
+        z.object({ nombre: z.string(), enAtractivo: z.boolean(), enCiudad: z.boolean() }),
+      ),
+      observacionComplementarios: z.string().nullable(),
+    }),
+    conservacion: z.object({
+      atractivo: componenteConservacionSchema,
+      entorno: componenteConservacionSchema,
+      declaratoria: z.object({
+        declarante: z.string().nullable(),
+        denominacion: z.string().nullable(),
+        fechaDeclaracion: z.string().nullable(),
+        alcance: z.string().nullable(),
+        observacion: z.string().nullable(),
+      }),
     }),
     pendientes: z.record(z.string(), z.null()),
   }),

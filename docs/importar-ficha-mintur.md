@@ -37,6 +37,11 @@ y guarda con el flujo normal (borrador → revisión → publicación).
   llegadas nacionales/extranjeras, informante clave.
 - **Recurso humano**: conteos de administración/operación, especialización, y formación por
   grupo (educación, capacitación, idiomas).
+- **Planta turística y complementarios**: conteos de alojamiento, alimentos y bebidas,
+  agencias de viaje y guías (atractivo/ciudad), facilidades del entorno (con coordenadas y
+  estado), y servicios complementarios.
+- **Estado de conservación**: estado del atractivo y del entorno, los 21 factores de
+  alteración por componente (naturales, antrópicos y "otro"), y la declaratoria asociada.
 - **Descripción** del atractivo.
 - **Firmas de responsabilidad** (elaborado/validado/aprobado).
 - **Hoja `ficha_Accesibilidad`**: el detalle de criterios SI/NO por categoría de discapacidad
@@ -54,20 +59,19 @@ se crea un valor nuevo.
 
 ## Qué falta (documentado, no implementado)
 
-Estas secciones tienen su mapeo de celdas y su forma de `content` documentados en
+Esta sección tiene su mapeo de celdas y su forma de `content` documentados en
 `docs/plans/active/importar-ficha-mintur.md` (secciones 3 y 3.1), pero su extracción todavía no
 está implementada con el mismo nivel de verificación que el resto:
 
-- Planta turística y complementarios
-- Estado de conservación
 - Higiene y seguridad (servicios básicos, señalética, salud, seguridad, comunicación,
   amenazas)
 
-Además, aunque políticas, promoción, visitantes y recurso humano **ya se extraen** del Excel,
-todavía no hay un paso en la UI que los guarde en el centro turístico (viajan como JSON
-genérico vía `saveAdminCenterSection`, no como parte del formulario principal) — por ahora
-quedan disponibles en la respuesta del endpoint, pero el editor no los usa aún para precargar
-esos pasos del asistente.
+Además, aunque políticas, promoción, visitantes, recurso humano, planta y conservación **ya
+se extraen** del Excel, todavía no hay un paso en la UI que los guarde en el centro turístico
+(viajan como JSON genérico vía `saveAdminCenterSection`, no como parte del formulario
+principal) — por ahora quedan disponibles en la respuesta del endpoint, pero el editor no los
+usa aún para precargar esos pasos del asistente. La excepción es `actividades`, que sí llega
+al formulario principal vía `activityIds`.
 
 Estos campos del formulario quedan vacíos tras importar; el usuario los completa a mano.
 
