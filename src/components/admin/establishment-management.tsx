@@ -856,6 +856,7 @@ export const EstablishmentManagement = forwardRef<
         </DialogActions>
       </Dialog>
       <CoordinatePickerDialog
+        key={coordinatePickerOpen ? "coordinate-picker-open" : "coordinate-picker-closed"}
         initialLatitude={latitude}
         initialLongitude={longitude}
         onClose={() => setCoordinatePickerOpen(false)}

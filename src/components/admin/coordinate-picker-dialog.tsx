@@ -14,7 +14,8 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import maplibregl, { type Map as MapLibreMap } from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
+import type { Map as MapLibreMap } from "maplibre-gl";
 import { useEffect, useRef, useState } from "react";
 
 const mapStyleUrl =
@@ -45,18 +46,14 @@ export function CoordinatePickerDialog({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);
-  const [coordinate, setCoordinate] = useState<Coordinate | null>(null);
-  const [mapError, setMapError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
+  const [coordinate, setCoordinate] = useState<Coordinate | null>(() => {
     const latitude = parseCoordinate(initialLatitude);
     const longitude = parseCoordinate(initialLongitude);
-    setCoordinate(
-      latitude !== null && longitude !== null ? { latitude, longitude } : null,
-    );
-    setMapError(null);
-  }, [initialLatitude, initialLongitude, open]);
+    return latitude !== null && longitude !== null
+      ? { latitude, longitude }
+      : null;
+  });
+  const [mapError, setMapError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open || !containerRef.current) return;
@@ -64,15 +61,13 @@ export function CoordinatePickerDialog({
     const latitude = parseCoordinate(initialLatitude);
     const longitude = parseCoordinate(initialLongitude);
     const initialCenter: [number, number] =
-      latitude !== null && longitude !== null
-        ? [longitude, latitude]
-        : defaultCenter;
+      latitude !== null && longitude !== null ? [longitude, latitude] : defaultCenter;
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: mapStyleUrl,
       center: initialCenter,
       zoom: latitude !== null && longitude !== null ? 16 : 13,
-      attributionControl: true,
+      attributionControl: {},
     });
     mapRef.current = map;
 
@@ -91,7 +86,9 @@ export function CoordinatePickerDialog({
       setMarker(event.lngLat.lng, event.lngLat.lat);
     });
     map.on("error", () => {
-      setMapError("No se pudo cargar el mapa. Revisa la conexión o el estilo configurado.");
+      setMapError(
+        "No se pudo cargar el mapa. Revisa la conexión o el estilo configurado.",
+      );
     });
     requestAnimationFrame(() => map.resize());
 
@@ -124,8 +121,8 @@ export function CoordinatePickerDialog({
       <DialogContent dividers>
         <Stack spacing={2}>
           <Typography color="text.secondary" variant="body2">
-            Haz clic en el mapa para marcar el punto exacto. Solo se guardarán la latitud y la
-            longitud seleccionadas.
+            Haz clic en el mapa para marcar el punto exacto. Solo se guardarán la latitud
+            y la longitud seleccionadas.
           </Typography>
           <Box
             aria-label="Mapa para seleccionar coordenadas"
@@ -141,10 +138,7 @@ export function CoordinatePickerDialog({
             }}
           />
           {mapError ? <Alert severity="warning">{mapError}</Alert> : null}
-          <Alert
-            icon={<LocationOnRounded />}
-            severity={coordinate ? "success" : "info"}
-          >
+          <Alert icon={<LocationOnRounded />} severity={coordinate ? "success" : "info"}>
             {coordinate
               ? `Latitud ${coordinate.latitude.toFixed(6)} · Longitud ${coordinate.longitude.toFixed(6)}`
               : "Selecciona un punto en el mapa para continuar."}

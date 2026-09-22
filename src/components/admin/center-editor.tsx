@@ -1186,6 +1186,7 @@ export function CenterEditor({
         onNext={() => void goNext()}
       />
       <CoordinatePickerDialog
+        key={coordinatePickerOpen ? "coordinate-picker-open" : "coordinate-picker-closed"}
         initialLatitude={latitude}
         initialLongitude={longitude}
         onClose={() => setCoordinatePickerOpen(false)}
