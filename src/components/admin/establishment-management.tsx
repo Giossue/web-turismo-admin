@@ -1,6 +1,7 @@
 "use client";
 
 import EditRounded from "@mui/icons-material/EditRounded";
+import LocationOnRounded from "@mui/icons-material/LocationOnRounded";
 import PowerSettingsNewRounded from "@mui/icons-material/PowerSettingsNewRounded";
 import SendRounded from "@mui/icons-material/SendRounded";
 import {
@@ -44,6 +45,7 @@ import {
   ADMIN_TABLE_PAGE_SIZE,
 } from "@/components/ui/admin-table";
 import { CatalogSelect } from "@/components/ui/catalog-select";
+import { CoordinatePickerDialog } from "@/components/admin/coordinate-picker-dialog";
 import { SearchField } from "@/components/ui/search-field";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
@@ -123,6 +125,7 @@ export const EstablishmentManagement = forwardRef<
   const [page, setPage] = useState(0);
   const [editing, setEditing] = useState<AdminEstablishment | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [coordinatePickerOpen, setCoordinatePickerOpen] = useState(false);
   const debouncedQuery = useDebouncedValue(queryDraft.trim(), ADMIN_SEARCH_DEBOUNCE_MS);
   const debouncedActivity = useDebouncedValue(activity.trim(), ADMIN_SEARCH_DEBOUNCE_MS);
   const debouncedClassification = useDebouncedValue(
@@ -134,6 +137,8 @@ export const EstablishmentManagement = forwardRef<
     useForm<EstablishmentFormValues>({ defaultValues: emptyValues });
   const formActivityId = useWatch({ control, name: "activityId" });
   const formClassificationId = useWatch({ control, name: "classificationId" });
+  const latitude = useWatch({ control, name: "latitude" });
+  const longitude = useWatch({ control, name: "longitude" });
 
   const catalogsQuery = useQuery({
     queryKey: ["admin", "catalogs"],
@@ -820,6 +825,16 @@ export const EstablishmentManagement = forwardRef<
                   })}
                 />
               </Grid>
+              <Grid size={{ xs: 12 }}>
+                <Button
+                  onClick={() => setCoordinatePickerOpen(true)}
+                  startIcon={<LocationOnRounded />}
+                  type="button"
+                  variant="outlined"
+                >
+                  Seleccionar coordenadas en el mapa
+                </Button>
+              </Grid>
             </Grid>
           </Stack>
         </DialogContent>
@@ -840,6 +855,18 @@ export const EstablishmentManagement = forwardRef<
           </Button>
         </DialogActions>
       </Dialog>
+      <CoordinatePickerDialog
+        initialLatitude={latitude}
+        initialLongitude={longitude}
+        onClose={() => setCoordinatePickerOpen(false)}
+        onConfirm={({ latitude: nextLatitude, longitude: nextLongitude }) => {
+          setValue("latitude", String(nextLatitude), { shouldDirty: true });
+          setValue("longitude", String(nextLongitude), { shouldDirty: true });
+          setCoordinatePickerOpen(false);
+          onNotice("Coordenadas seleccionadas en el mapa.");
+        }}
+        open={coordinatePickerOpen}
+      />
     </Stack>
   );
 });

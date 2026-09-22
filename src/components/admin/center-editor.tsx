@@ -41,6 +41,7 @@ import {
 
 import { FlatSurface } from "@/components/ui/flat-surface";
 import { ContentState } from "@/components/ui/content-state";
+import { CoordinatePickerDialog } from "@/components/admin/coordinate-picker-dialog";
 import { MediaManager } from "@/components/admin/media-manager";
 import { CenterReviewDiff } from "@/components/admin/center-review-diff";
 import {
@@ -184,6 +185,7 @@ export function CenterEditor({
   const [importWarnings, setImportWarnings] = useState<string[]>([]);
   const [sugerenciasImportadas, setSugerenciasImportadas] =
     useState<SugerenciasSecciones | null>(null);
+  const [coordinatePickerOpen, setCoordinatePickerOpen] = useState(false);
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const {
     control,
@@ -256,6 +258,8 @@ export function CenterEditor({
   const parishId = useWatch({ control, name: "parishId" });
   const activityIds = useWatch({ control, name: "activityIds" });
   const selectedFacilityIds = useWatch({ control, name: "facilityIds" }) ?? [];
+  const latitude = useWatch({ control, name: "latitude" });
+  const longitude = useWatch({ control, name: "longitude" });
   const typeOptions = (catalogs?.types ?? []).filter(
     (option) => Boolean(categoryId) && Number(option.categoryId) === Number(categoryId),
   );
@@ -887,6 +891,17 @@ export function CenterEditor({
                   {...register("longitude", { required: "La longitud es obligatoria" })}
                 />
               </Grid>
+              <Grid size={{ xs: 12 }}>
+                <Button
+                  disabled={!canEdit}
+                  onClick={() => setCoordinatePickerOpen(true)}
+                  startIcon={<MapRounded />}
+                  type="button"
+                  variant="outlined"
+                >
+                  Seleccionar coordenadas en el mapa
+                </Button>
+              </Grid>
               <Grid size={{ xs: 12, sm: 4 }}>
                 <TextField
                   label="Altitud (msnm)"
@@ -1169,6 +1184,24 @@ export function CenterEditor({
         working={working !== null}
         onPrevious={goPrevious}
         onNext={() => void goNext()}
+      />
+      <CoordinatePickerDialog
+        initialLatitude={latitude}
+        initialLongitude={longitude}
+        onClose={() => setCoordinatePickerOpen(false)}
+        onConfirm={({ latitude: nextLatitude, longitude: nextLongitude }) => {
+          setValue("latitude", String(nextLatitude), {
+            shouldDirty: true,
+            shouldValidate: true,
+          });
+          setValue("longitude", String(nextLongitude), {
+            shouldDirty: true,
+            shouldValidate: true,
+          });
+          setCoordinatePickerOpen(false);
+          onNotice("Coordenadas seleccionadas en el mapa.");
+        }}
+        open={coordinatePickerOpen}
       />
     </Stack>
   );

@@ -595,6 +595,32 @@ export async function updateAdminCatalog(
   });
 }
 
+export async function createAdminCatalog(
+  token: string,
+  catalog: AdminCatalogKey,
+  input: {
+    name: string;
+    active?: boolean;
+    icon?: string;
+    parentId?: number;
+    scheme?: string;
+    numericValue?: number;
+  },
+) {
+  return request<{
+    catalog: AdminCatalogKey;
+    id: number;
+    code: string;
+    name: string;
+    active: boolean;
+    icon?: string;
+    color?: string;
+  }>(`/admin/catalogs/${catalog}`, token, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
 export async function getAdminCenter(token: string, code: string) {
   return request<AdminCenterDetail>(`/admin/centers/${encodeURIComponent(code)}`, token, {
     cache: "no-store",

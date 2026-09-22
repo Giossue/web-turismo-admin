@@ -1,6 +1,7 @@
 "use client";
 
 import EditRounded from "@mui/icons-material/EditRounded";
+import AddRounded from "@mui/icons-material/AddRounded";
 import {
   Button,
   Dialog,
@@ -9,6 +10,7 @@ import {
   DialogTitle,
   FormControlLabel,
   IconButton,
+  MenuItem,
   Stack,
   Switch,
   Tab,
@@ -34,6 +36,7 @@ import { SearchField } from "@/components/ui/search-field";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
   getAdminCatalogs,
+  createAdminCatalog,
   updateAdminCatalog,
   type AdminCatalogKey,
   type CatalogOption,
@@ -124,9 +127,13 @@ export function CatalogManagement({
   const [selected, setSelected] = useState<AdminCatalogKey>("ACCESSIBILITY");
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<CatalogOption | null>(null);
+  const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
   const [active, setActive] = useState(true);
   const [icon, setIcon] = useState(defaultCategoryIcon);
+  const [parentId, setParentId] = useState("");
+  const [scheme, setScheme] = useState("OTRA");
+  const [numericValue, setNumericValue] = useState("");
   const [working, setWorking] = useState(false);
   const [page, setPage] = useState(0);
   const debouncedSearch = useDebouncedValue(search.trim(), ADMIN_SEARCH_DEBOUNCE_MS);
@@ -174,30 +181,110 @@ export function CatalogManagement({
     (visiblePage + 1) * ADMIN_TABLE_PAGE_SIZE,
   );
 
+  const requiresParent = selected !== "ACCESSIBILITY";
+  const parentLabel =
+    selected === "ACTIVITY"
+      ? "Grupo de actividad"
+      : selected === "FACILITY"
+        ? "Categoría de facilidad"
+        : selected === "ESTABLISHMENT_CLASSIFICATION"
+          ? "Actividad del catastro"
+          : "Tipo de establecimiento";
+  const parentOptions =
+    selected === "ACTIVITY"
+      ? catalogsQuery.data?.activityGroups ?? []
+      : selected === "FACILITY"
+        ? catalogsQuery.data?.facilityCategories ?? []
+        : selected === "ESTABLISHMENT_CLASSIFICATION"
+          ? catalogsQuery.data?.establishmentActivities ?? []
+          : catalogsQuery.data?.establishmentClassifications ?? [];
+
+  function resetEditor() {
+    setEditing(null);
+    setCreating(false);
+    setName("");
+    setActive(true);
+    setIcon(defaultCategoryIcon);
+    setParentId("");
+    setScheme("OTRA");
+    setNumericValue("");
+  }
+
+  function openCreate() {
+    resetEditor();
+    setCreating(true);
+    onError(null);
+  }
+
   function openEdit(option: CatalogOption) {
+    setCreating(false);
     setEditing(option);
     setName(option.name);
     setActive(option.active !== false);
     setIcon(normalizeCategoryIcon(option.icon));
+    setParentId(
+      String(
+        selected === "ACTIVITY"
+          ? option.groupId ?? ""
+          : selected === "FACILITY"
+            ? option.categoryId ?? ""
+            : selected === "ESTABLISHMENT_CLASSIFICATION"
+              ? option.activityId ?? ""
+              : option.classificationId ?? "",
+      ),
+    );
+    setScheme(option.scheme ?? "OTRA");
+    setNumericValue(option.numericValue == null ? "" : String(option.numericValue));
     onError(null);
   }
 
   async function save() {
-    if (!editing || name.trim().length < 2) {
+    if ((!editing && !creating) || name.trim().length < 2) {
       onError("El nombre debe tener al menos 2 caracteres.");
+      return;
+    }
+    if (creating && requiresParent && !parentId) {
+      onError(`Selecciona ${parentLabel.toLocaleLowerCase()}.`);
+      return;
+    }
+    const parsedNumericValue = numericValue.trim() ? Number(numericValue) : undefined;
+    if (
+      creating &&
+      selected === "ESTABLISHMENT_CATEGORY" &&
+      parsedNumericValue !== undefined &&
+      (!Number.isInteger(parsedNumericValue) || parsedNumericValue < 1 || parsedNumericValue > 99)
+    ) {
+      onError("El valor numérico debe ser un entero entre 1 y 99.");
       return;
     }
     setWorking(true);
     onError(null);
     try {
-      await updateAdminCatalog(token, selected, editing.id, {
-        name: name.trim(),
-        active,
-        ...(selected === "ESTABLISHMENT_CLASSIFICATION" ? { icon } : {}),
-      });
+      if (creating) {
+        await createAdminCatalog(token, selected, {
+          name: name.trim(),
+          active,
+          ...(selected === "ESTABLISHMENT_CLASSIFICATION" ? { icon } : {}),
+          ...(requiresParent ? { parentId: Number(parentId) } : {}),
+          ...(selected === "ESTABLISHMENT_CATEGORY"
+            ? {
+                scheme,
+                ...(parsedNumericValue !== undefined
+                  ? { numericValue: parsedNumericValue }
+                  : {}),
+              }
+            : {}),
+        });
+      } else {
+        await updateAdminCatalog(token, selected, editing!.id, {
+          name: name.trim(),
+          active,
+          ...(selected === "ESTABLISHMENT_CLASSIFICATION" ? { icon } : {}),
+        });
+      }
       await queryClient.invalidateQueries({ queryKey: ["admin", "catalogs"] });
-      setEditing(null);
-      onNotice("Catálogo actualizado y auditado.");
+      resetEditor();
+      onNotice(creating ? "Opción creada y auditada." : "Catálogo actualizado y auditado.");
     } catch (cause) {
       onError(
         cause instanceof Error ? cause.message : "No se pudo actualizar el catálogo.",
@@ -209,7 +296,19 @@ export function CatalogManagement({
 
   return (
     <Stack spacing={webTokens.spacing.control}>
-      <AdminTableToolbar>
+      <AdminTableToolbar
+        actions={
+          <Button
+            variant="contained"
+            startIcon={<AddRounded />}
+            onClick={openCreate}
+            disabled={catalogsQuery.isLoading}
+            aria-label={`Agregar opción de ${catalogMeta.find((item) => item.key === selected)?.label ?? "catálogo"}`}
+          >
+            Agregar
+          </Button>
+        }
+      >
         <Stack spacing={webTokens.spacing.control}>
           <Tabs
             value={selected}
@@ -315,15 +414,17 @@ export function CatalogManagement({
       </AdminTable>
 
       <Dialog
-        open={editing !== null}
-        onClose={() => !working && setEditing(null)}
+        open={editing !== null || creating}
+        onClose={() => !working && resetEditor()}
         fullWidth
         maxWidth="sm"
       >
         <DialogTitle>
-          {selected === "ESTABLISHMENT_CLASSIFICATION"
-            ? "Editar tipo de establecimiento"
-            : "Editar opción de catálogo"}
+          {creating
+            ? `Agregar ${selected === "ESTABLISHMENT_CLASSIFICATION" ? "tipo de establecimiento" : selected === "ESTABLISHMENT_CATEGORY" ? "categoría de catastro" : "opción de catálogo"}`
+            : selected === "ESTABLISHMENT_CLASSIFICATION"
+              ? "Editar tipo de establecimiento"
+              : "Editar opción de catálogo"}
         </DialogTitle>
         <DialogContent>
           <Stack spacing={webTokens.spacing.control} sx={{ pt: 1 }}>
@@ -335,6 +436,24 @@ export function CatalogManagement({
               autoFocus
               disabled={working}
             />
+            {creating && requiresParent ? (
+              <TextField
+                select
+                label={parentLabel}
+                value={parentId}
+                onChange={(event) => setParentId(event.target.value)}
+                fullWidth
+                disabled={working}
+                required
+                helperText="La opción quedará vinculada a este catálogo superior."
+              >
+                {parentOptions.map((option) => (
+                  <MenuItem key={option.id} value={option.id}>
+                    {option.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+            ) : null}
             {selected === "ESTABLISHMENT_CLASSIFICATION" ? (
               <CatalogIconSelect
                 id="catalog-marker-icon"
@@ -344,6 +463,33 @@ export function CatalogManagement({
                 onChange={setIcon}
                 disabled={working}
               />
+            ) : null}
+            {creating && selected === "ESTABLISHMENT_CATEGORY" ? (
+              <>
+                <TextField
+                  select
+                  label="Sistema de clasificación"
+                  value={scheme}
+                  onChange={(event) => setScheme(event.target.value)}
+                  fullWidth
+                  disabled={working}
+                >
+                  {Object.entries(categorySchemeLabels).map(([value, label]) => (
+                    <MenuItem key={value} value={value}>
+                      {label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                <TextField
+                  label="Valor numérico (opcional)"
+                  type="number"
+                  value={numericValue}
+                  onChange={(event) => setNumericValue(event.target.value)}
+                  inputProps={{ min: 1, max: 99, step: 1 }}
+                  fullWidth
+                  disabled={working}
+                />
+              </>
             ) : null}
             <FormControlLabel
               control={
@@ -362,7 +508,7 @@ export function CatalogManagement({
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setEditing(null)} disabled={working}>
+          <Button onClick={resetEditor} disabled={working}>
             Cancelar
           </Button>
           <Button variant="contained" onClick={() => void save()} disabled={working}>
