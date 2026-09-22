@@ -13,10 +13,10 @@ import {
   IconButton,
   Stack,
   Typography,
+  useTheme,
 } from "@mui/material";
 import * as maplibregl from "maplibre-gl";
-import type { Map as MapLibreMap } from "maplibre-gl";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 const mapStyleUrl =
   process.env.NEXT_PUBLIC_TILESERVER_STYLE_URL ??
@@ -30,73 +30,88 @@ function parseCoordinate(value: string | number | null | undefined): number | nu
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function toCoordinate(
+  latitude: string | number | null | undefined,
+  longitude: string | number | null | undefined,
+): Coordinate | null {
+  const parsedLatitude = parseCoordinate(latitude);
+  const parsedLongitude = parseCoordinate(longitude);
+  return parsedLatitude !== null && parsedLongitude !== null
+    ? { latitude: parsedLatitude, longitude: parsedLongitude }
+    : null;
+}
+
+/**
+ * Selector de coordenadas sobre un mapa MapLibre. Debe renderizarse de forma
+ * condicional (`{open && <CoordinatePickerDialog … />}`): el mapa se crea al
+ * montar el contenido del diálogo y se destruye al cerrarlo.
+ */
 export function CoordinatePickerDialog({
   initialLatitude,
   initialLongitude,
   onClose,
   onConfirm,
-  open,
+  open = true,
 }: Readonly<{
   initialLatitude?: string | number | null;
   initialLongitude?: string | number | null;
   onClose: () => void;
   onConfirm: (coordinate: Coordinate) => void;
-  open: boolean;
+  open?: boolean;
 }>) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<MapLibreMap | null>(null);
-  const markerRef = useRef<maplibregl.Marker | null>(null);
-  const [coordinate, setCoordinate] = useState<Coordinate | null>(() => {
-    const latitude = parseCoordinate(initialLatitude);
-    const longitude = parseCoordinate(initialLongitude);
-    return latitude !== null && longitude !== null ? { latitude, longitude } : null;
-  });
+  // Color concreto (no una variable CSS): MapLibre lo aplica como atributo SVG.
+  const markerColor = useTheme().palette.primary.main;
+  // El `Portal` de MUI monta el contenido en un segundo commit: un ref de
+  // objeto seguiría en `null` cuando corre el efecto. Con un callback ref en
+  // estado, el efecto se ejecuta cuando el contenedor ya existe.
+  const [container, setContainer] = useState<HTMLDivElement | null>(null);
+  const [initialCoordinate] = useState(() =>
+    toCoordinate(initialLatitude, initialLongitude),
+  );
+  const [coordinate, setCoordinate] = useState<Coordinate | null>(initialCoordinate);
   const [mapError, setMapError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!open || !containerRef.current) return;
+    if (!container) return;
 
-    const latitude = parseCoordinate(initialLatitude);
-    const longitude = parseCoordinate(initialLongitude);
-    const initialCenter: [number, number] =
-      latitude !== null && longitude !== null ? [longitude, latitude] : defaultCenter;
     const map = new maplibregl.Map({
-      container: containerRef.current,
+      container,
       style: mapStyleUrl,
-      center: initialCenter,
-      zoom: latitude !== null && longitude !== null ? 16 : 13,
+      center: initialCoordinate
+        ? [initialCoordinate.longitude, initialCoordinate.latitude]
+        : defaultCenter,
+      zoom: initialCoordinate ? 16 : 13,
       attributionControl: {},
     });
-    mapRef.current = map;
+    let marker: maplibregl.Marker | null = null;
 
-    const setMarker = (longitudeValue: number, latitudeValue: number) => {
-      markerRef.current?.remove();
-      markerRef.current = new maplibregl.Marker({ color: "#22c55e" })
-        .setLngLat([longitudeValue, latitudeValue])
+    const setMarker = (longitude: number, latitude: number) => {
+      marker?.remove();
+      marker = new maplibregl.Marker({ color: markerColor })
+        .setLngLat([longitude, latitude])
         .addTo(map);
-      setCoordinate({ latitude: latitudeValue, longitude: longitudeValue });
     };
 
-    if (latitude !== null && longitude !== null) {
-      setMarker(longitude, latitude);
+    if (initialCoordinate) {
+      setMarker(initialCoordinate.longitude, initialCoordinate.latitude);
     }
     map.on("click", (event) => {
       setMarker(event.lngLat.lng, event.lngLat.lat);
+      setCoordinate({ latitude: event.lngLat.lat, longitude: event.lngLat.lng });
     });
     map.on("error", () => {
       setMapError(
         "No se pudo cargar el mapa. Revisa la conexión o el estilo configurado.",
       );
     });
-    requestAnimationFrame(() => map.resize());
+    const resizeFrame = requestAnimationFrame(() => map.resize());
 
     return () => {
-      markerRef.current?.remove();
-      markerRef.current = null;
+      cancelAnimationFrame(resizeFrame);
+      marker?.remove();
       map.remove();
-      mapRef.current = null;
     };
-  }, [initialLatitude, initialLongitude, open]);
+  }, [container, initialCoordinate, markerColor]);
 
   return (
     <Dialog
@@ -123,8 +138,9 @@ export function CoordinatePickerDialog({
             y la longitud seleccionadas.
           </Typography>
           <Box
+            role="region"
             aria-label="Mapa para seleccionar coordenadas"
-            ref={containerRef}
+            ref={setContainer}
             sx={{
               bgcolor: "background.default",
               border: 1,

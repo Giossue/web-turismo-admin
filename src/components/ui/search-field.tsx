@@ -1,7 +1,13 @@
 import { TextField, type TextFieldProps } from "@mui/material";
 
-export function SearchField({ inputProps, ...props }: TextFieldProps) {
+import { withHtmlInputDefaults } from "@/components/ui/text-field-slot-props";
+
+export function SearchField({ slotProps, ...props }: TextFieldProps) {
   return (
-    <TextField {...props} fullWidth inputProps={{ maxLength: 180, ...inputProps }} />
+    <TextField
+      {...props}
+      fullWidth
+      slotProps={withHtmlInputDefaults(slotProps, { maxLength: 180 })}
+    />
   );
 }

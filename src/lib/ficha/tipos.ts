@@ -4,7 +4,7 @@ import type { FichaHigieneSeguridad } from "./tipos-higiene";
 import type { FichaPlanta } from "./tipos-planta";
 
 /** Un valor de catálogo leído de la ficha, aún sin resolver contra la base. */
-export type ValorCrudo = {
+type ValorCrudo = {
   texto: string | null;
 };
 
@@ -16,7 +16,7 @@ export type FichaIdentificacion = {
   codigoAtractivo: string | null;
 };
 
-export type FichaAdministracion = {
+type FichaAdministracion = {
   tipo: string | null;
   institucion: string | null;
   nombre: string | null;
@@ -40,7 +40,7 @@ export type FichaUbicacion = {
   administracion: FichaAdministracion;
 };
 
-export type FichaClima = {
+type FichaClima = {
   texto: string | null;
   temperaturaMinC: number | null;
   temperaturaMaxC: number | null;
@@ -48,7 +48,7 @@ export type FichaClima = {
   precipitacionMaxMm: number | null;
 };
 
-export type FichaIngresoHorario = {
+type FichaIngresoHorario = {
   tipo: "LIBRE" | "RESTRINGIDO" | "PAGADO";
   horaIngreso: string | null;
   horaSalida: string | null;
@@ -118,7 +118,7 @@ export type FichaResponsableFirma = {
   fecha: string | null;
 };
 
-export type FichaCriterioValoracion = {
+type FichaCriterioValoracion = {
   codigo: string;
   nombre: string;
   puntajeMaximo: number;
@@ -166,7 +166,7 @@ export type FichaRecursoHumano = {
   observacion: string | null;
 };
 
-export type FichaMedioPromocion = {
+type FichaMedioPromocion = {
   nombre: string;
   valor: string | null;
   periodicidad: string | null;

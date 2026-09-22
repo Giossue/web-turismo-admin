@@ -1,5 +1,7 @@
 import type ExcelJS from "exceljs";
 
+import type { SectionResponse } from "@/lib/center-sections/options";
+
 import {
   columnaANumero,
   encontrarMerge,
@@ -62,26 +64,11 @@ export function leerMarcaJuntoAEtiqueta(
 }
 
 /**
- * Grupo de casillas SI/NO/S-I: la app internamente usa un enum de 4 estados
- * (`SectionResponse` en `center-section-workflow.tsx`), no un booleano.
- * Cuando la ficha declara una cabecera "SI / NO / S/I" para una pregunta hay
- * que leer las tres celdas del grupo, no solo "SI". Acepta tanto posiciones
- * directas (`leerMarcaDirecta`) como junto a una etiqueta combinada, según
- * cuál corresponda en cada bloque de la ficha — por eso recibe las
- * referencias ya resueltas, no las infiere.
+ * Respuesta de sección (SI / NO / SIN_INFORMACION / NO_APLICA): la app usa un
+ * enum de 4 estados, no un booleano, y la ausencia de dato nunca equivale a
+ * "NO". Es el mismo tipo que `SectionResponse` del editor de secciones.
  */
-export type RespuestaSeccion = "SI" | "NO" | "SIN_INFORMACION" | "NO_APLICA";
-
-export function interpretarSiNoSi(
-  si: boolean | null,
-  no: boolean | null,
-  sinInformacion?: boolean | null,
-): RespuestaSeccion | null {
-  if (si) return "SI";
-  if (no) return "NO";
-  if (sinInformacion) return "SIN_INFORMACION";
-  return null;
-}
+export type RespuestaSeccion = SectionResponse;
 
 /**
  * Grupo de selección única (ej. línea de producto Cultura/Naturaleza/Aventura,

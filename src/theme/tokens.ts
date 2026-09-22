@@ -120,6 +120,8 @@ export const webTokens = {
     hero: { xs: 7, md: 11 },
     publicSection: { xs: 8, md: 11 },
   },
+  /** Borde fino estándar de superficies, tablas y controles. */
+  border: "1px solid var(--mui-palette-divider)",
   shape: {
     radius: 10,
     navigation: 0,
@@ -136,5 +138,3 @@ export const webTokens = {
     inputPaddingBottom: 8,
   },
 } as const;
-
-export type WebTokens = typeof webTokens;

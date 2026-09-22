@@ -40,7 +40,7 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           boxShadow: "none",
-          border: "1px solid var(--mui-palette-divider)",
+          border: webTokens.border,
           borderRadius: webTokens.shape.radius,
         },
       },
@@ -63,7 +63,7 @@ const theme = createTheme({
     MuiCard: {
       styleOverrides: {
         root: {
-          border: "1px solid var(--mui-palette-divider)",
+          border: webTokens.border,
           boxShadow: "none",
           borderRadius: webTokens.shape.radius,
         },
@@ -75,7 +75,7 @@ const theme = createTheme({
         root: {
           boxShadow: "none",
           border: 0,
-          borderBottom: "1px solid var(--mui-palette-divider)",
+          borderBottom: webTokens.border,
           borderRadius: webTokens.shape.navigation,
         },
       },
@@ -85,7 +85,7 @@ const theme = createTheme({
         paper: {
           boxShadow: "none",
           border: 0,
-          borderRight: "1px solid var(--mui-palette-divider)",
+          borderRight: webTokens.border,
           borderRadius: webTokens.shape.navigation,
         },
       },
@@ -103,7 +103,7 @@ const theme = createTheme({
           minHeight: webTokens.form.controlHeight,
           backgroundColor: "var(--mui-palette-action-hover)",
           "& .MuiOutlinedInput-notchedOutline": {
-            border: "1px solid var(--mui-palette-divider)",
+            border: webTokens.border,
           },
           "&:hover .MuiOutlinedInput-notchedOutline": {
             borderColor: "var(--mui-palette-text-secondary)",
@@ -121,7 +121,7 @@ const theme = createTheme({
           borderRadius: webTokens.shape.radius,
           minHeight: webTokens.form.controlHeight,
           backgroundColor: "var(--mui-palette-action-hover)",
-          border: "1px solid var(--mui-palette-divider)",
+          border: webTokens.border,
           "&:before, &:after": { display: "none" },
           "& input.MuiFilledInput-input": {
             paddingTop: webTokens.form.inputPaddingTop,
@@ -143,7 +143,7 @@ const theme = createTheme({
     MuiChip: {
       styleOverrides: {
         root: {
-          border: "1px solid var(--mui-palette-divider)",
+          border: webTokens.border,
           borderRadius: webTokens.shape.pill,
           fontWeight: 600,
         },
@@ -151,7 +151,7 @@ const theme = createTheme({
     },
     MuiTableCell: {
       styleOverrides: {
-        root: { borderBottom: "1px solid var(--mui-palette-divider)" },
+        root: { borderBottom: webTokens.border },
         head: {
           fontWeight: 700,
           backgroundColor: "var(--mui-palette-action-hover)",

@@ -51,7 +51,7 @@ export type FichaRadioPortatil = {
 
 export type FichaAmenaza = { nombre: string; marcada: boolean };
 
-export type FichaContingencia = {
+type FichaContingencia = {
   existe: boolean;
   institucion: string | null;
   nombreDocumento: string | null;

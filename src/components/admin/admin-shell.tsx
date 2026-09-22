@@ -29,16 +29,12 @@ import {
   DialogTitle,
   Divider,
   Drawer,
-  FormControl,
   IconButton,
-  InputLabel,
   LinearProgress,
   List,
   ListItemButton,
   ListItemIcon,
   ListItemText,
-  MenuItem,
-  Select,
   Snackbar,
   Stack,
   TableBody,
@@ -56,10 +52,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { FlatSurface } from "@/components/ui/flat-surface";
 import {
   AdminTable,
-  AdminTableFooter,
   AdminTableToolbar,
   ADMIN_TABLE_PAGE_SIZE,
+  type AdminTablePagination,
 } from "@/components/ui/admin-table";
+import { SelectField } from "@/components/ui/form/select-field";
 import { MetricCard } from "@/components/ui/metric-card";
 import { PageHeader } from "@/components/ui/page-header";
 import { SearchField } from "@/components/ui/search-field";
@@ -81,8 +78,16 @@ import {
   type AdminCenter,
   type AdminEstablishment,
   type AdminSummary,
+  type ReviewAction,
 } from "@/lib/admin-api";
+import {
+  activeLabel,
+  centerStatusTone,
+  establishmentReviewStatusLabel,
+} from "@/lib/admin-labels";
 import { AdminLogin, useAdminAuth } from "@/lib/auth";
+import { errorMessage } from "@/lib/errors";
+import { formatDate } from "@/lib/format";
 import { webTokens } from "@/theme/tokens";
 import { ADMIN_SEARCH_DEBOUNCE_MS, useDebouncedValue } from "@/lib/use-debounced-value";
 
@@ -98,11 +103,21 @@ type AdminSection =
   | "catalogs"
   | "editor"
   | "settings";
-type ReviewIntent = { center: AdminCenter; action: "APPROVE" | "REJECT" };
+type ReviewIntent = { center: AdminCenter; action: ReviewAction };
 type EstablishmentReviewIntent = {
   establishment: AdminEstablishment;
-  action: "APPROVE" | "REJECT";
+  action: ReviewAction;
 };
+
+const CENTER_STATUS_FILTER_OPTIONS = [
+  { value: "ALL", label: "Todos" },
+  { value: "BORRADOR", label: "Borrador" },
+  { value: "EN_REVISION", label: "En revisión" },
+  { value: "APROBADO", label: "Aprobado" },
+  { value: "PUBLICADO", label: "Publicado" },
+  { value: "RECHAZADO", label: "Rechazado" },
+  { value: "INACTIVO", label: "Inactivo" },
+];
 
 const sectionMeta: Record<AdminSection, { title: string; description: string }> = {
   summary: {
@@ -232,11 +247,7 @@ export function AdminShell() {
       setReviewEstablishments(result.items);
       setReviewEstablishmentsTotal(result.total);
     } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "No se pudieron cargar los catastros en revisión.",
-      );
+      setError(errorMessage(cause, "No se pudieron cargar los catastros en revisión."));
     } finally {
       setLoadingReviewEstablishments(false);
     }
@@ -248,7 +259,7 @@ export function AdminShell() {
     try {
       setSummary(await getAdminSummary(token));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "No se pudo cargar el resumen.");
+      setError(errorMessage(cause, "No se pudo cargar el resumen."));
     } finally {
       setLoadingSummary(false);
     }
@@ -271,9 +282,7 @@ export function AdminShell() {
         setTotal(result.total);
       } catch (cause) {
         if (requestId !== centersRequestId.current) return;
-        setError(
-          cause instanceof Error ? cause.message : "No se pudieron cargar las fichas.",
-        );
+        setError(errorMessage(cause, "No se pudieron cargar las fichas."));
       } finally {
         if (requestId === centersRequestId.current) setLoadingCenters(false);
       }
@@ -377,9 +386,7 @@ export function AdminShell() {
       ]);
       setPage(0);
     } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "No se pudo actualizar la ficha.",
-      );
+      setError(errorMessage(cause, "No se pudo actualizar la ficha."));
     } finally {
       setWorkingCode(null);
     }
@@ -405,9 +412,7 @@ export function AdminShell() {
       );
       await loadReviewEstablishments(accessToken, page * pageSize);
     } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "No se pudo actualizar el catastro.",
-      );
+      setError(errorMessage(cause, "No se pudo actualizar el catastro."));
     } finally {
       setWorkingEstablishmentId(null);
     }
@@ -898,10 +903,10 @@ function ReviewSection({
   workingEstablishmentId: number | null;
   canReview: boolean;
   onOpen: (code: string) => void;
-  onReview: (center: AdminCenter, action: "APPROVE" | "REJECT") => void;
+  onReview: (center: AdminCenter, action: ReviewAction) => void;
   onReviewEstablishment: (
     establishment: AdminEstablishment,
-    action: "APPROVE" | "REJECT",
+    action: ReviewAction,
   ) => void;
 }) {
   return (
@@ -918,14 +923,7 @@ function ReviewSection({
         workingCode={workingCode}
         onOpen={onOpen}
         onReview={onReview}
-        footer={
-          <AdminTableFooter
-            total={total}
-            page={page}
-            pageSize={pageSize}
-            onPageChange={onPageChange}
-          />
-        }
+        pagination={{ page, total, pageSize, onPageChange }}
       />
       <Typography variant="h6" sx={{ mt: 2 }}>
         Catastros en revisión
@@ -961,7 +959,7 @@ function EstablishmentReviewTable({
   onPageChange: (page: number) => void;
   reviewable: boolean;
   workingId: number | null;
-  onReview: (establishment: AdminEstablishment, action: "APPROVE" | "REJECT") => void;
+  onReview: (establishment: AdminEstablishment, action: ReviewAction) => void;
 }) {
   const [detail, setDetail] = useState<AdminEstablishment | null>(null);
 
@@ -971,16 +969,9 @@ function EstablishmentReviewTable({
         ariaLabel="Catastros en revisión"
         minWidth={900}
         loading={loading}
-        empty={!loading && establishments.length === 0}
+        empty={establishments.length === 0}
         emptyMessage="No hay catastros pendientes de revisión."
-        footer={
-          <AdminTableFooter
-            total={total}
-            page={page}
-            pageSize={pageSize}
-            onPageChange={onPageChange}
-          />
-        }
+        pagination={{ page, total, pageSize, onPageChange }}
       >
         <TableHead>
           <TableRow>
@@ -1100,13 +1091,14 @@ function EstablishmentReviewTable({
                 <strong>Enviado por:</strong> {detail.requestedBy ?? "—"}
               </Typography>
               <Typography>
-                <strong>Estado:</strong> {reviewEstablishmentLabel(detail.reviewStatus)}
+                <strong>Estado:</strong>{" "}
+                {establishmentReviewStatusLabel(detail.reviewStatus)}
               </Typography>
               <Typography>
-                <strong>Fecha de envío:</strong> {formatDate(detail.requestedAt ?? "")}
+                <strong>Fecha de envío:</strong> {formatDate(detail.requestedAt)}
               </Typography>
               <Typography>
-                <strong>Fecha de revisión:</strong> {formatDate(detail.reviewedAt ?? "")}
+                <strong>Fecha de revisión:</strong> {formatDate(detail.reviewedAt)}
               </Typography>
               <Typography>
                 <strong>Observación:</strong> {detail.reviewObservation ?? "—"}
@@ -1159,37 +1151,22 @@ function CentersSection({
               onQueryChange(event.target.value);
             }}
           />
-          <FormControl sx={{ minWidth: { sm: 220 } }}>
-            <InputLabel id="center-status-label">Estado</InputLabel>
-            <Select
-              labelId="center-status-label"
-              label="Estado"
-              value={status}
-              onChange={(event) => onStatusChange(event.target.value)}
-            >
-              <MenuItem value="ALL">Todos</MenuItem>
-              <MenuItem value="BORRADOR">Borrador</MenuItem>
-              <MenuItem value="EN_REVISION">En revisión</MenuItem>
-              <MenuItem value="APROBADO">Aprobado</MenuItem>
-              <MenuItem value="PUBLICADO">Publicado</MenuItem>
-              <MenuItem value="RECHAZADO">Rechazado</MenuItem>
-              <MenuItem value="INACTIVO">Inactivo</MenuItem>
-            </Select>
-          </FormControl>
+          <SelectField
+            id="center-status"
+            label="Estado"
+            value={status}
+            options={CENTER_STATUS_FILTER_OPTIONS}
+            onChange={(value) => onStatusChange(value || "ALL")}
+            fullWidth={false}
+            sx={{ minWidth: { sm: 220 } }}
+          />
         </Stack>
       </AdminTableToolbar>
       <CenterTable
         centers={centers}
         loading={loading}
         onOpen={onOpen}
-        footer={
-          <AdminTableFooter
-            total={total}
-            page={page}
-            pageSize={pageSize}
-            onPageChange={onPageChange}
-          />
-        }
+        pagination={{ page, total, pageSize, onPageChange }}
       />
     </Stack>
   );
@@ -1266,24 +1243,24 @@ function CenterTable({
   workingCode,
   onReview,
   onOpen,
-  footer,
+  pagination,
 }: {
   centers: AdminCenter[];
   loading: boolean;
   reviewable?: boolean;
   workingCode?: string | null;
-  onReview?: (center: AdminCenter, action: "APPROVE" | "REJECT") => void;
+  onReview?: (center: AdminCenter, action: ReviewAction) => void;
   onOpen?: (code: string) => void;
-  footer?: React.ReactNode;
+  pagination?: AdminTablePagination;
 }) {
   return (
     <AdminTable
       ariaLabel="Centros turísticos"
       minWidth={reviewable ? 860 : 760}
       loading={loading && centers.length === 0}
-      empty={!loading && centers.length === 0}
+      empty={centers.length === 0}
       emptyMessage="No hay fichas para mostrar."
-      footer={footer}
+      pagination={pagination}
     >
       <TableHead>
         <TableRow>
@@ -1305,9 +1282,12 @@ function CenterTable({
               </Typography>
             </TableCell>
             <TableCell>
-              <StatusBadge code={center.status.code} label={center.status.name} />
+              <StatusBadge
+                label={center.status.name}
+                tone={centerStatusTone(center.status.code)}
+              />
             </TableCell>
-            <TableCell>{center.active ? "Activa" : "Inactiva"}</TableCell>
+            <TableCell>{activeLabel(center.active)}</TableCell>
             <TableCell>{center.requestedBy ?? "—"}</TableCell>
             <TableCell>{formatDate(center.updatedAt)}</TableCell>
             {reviewable && onReview ? (
@@ -1386,20 +1366,6 @@ function ColorModeButton() {
       </span>
     </Tooltip>
   );
-}
-
-function formatDate(value: string) {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleDateString("es-EC");
-}
-
-function reviewEstablishmentLabel(status: AdminEstablishment["reviewStatus"]) {
-  return {
-    BORRADOR: "Borrador",
-    EN_REVISION: "En revisión",
-    PUBLICADO: "Publicado",
-    RECHAZADO: "Rechazado",
-  }[status];
 }
 
 function AdminAccessDenied({ onLogout }: { onLogout: () => void }) {

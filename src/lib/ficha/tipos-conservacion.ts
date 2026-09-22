@@ -1,5 +1,7 @@
-export type FichaEstadoConservacion =
-  "CONSERVADO" | "ALTERADO" | "EN_PROCESO_DETERIORO" | "DETERIORADO";
+import type { ConservationState } from "@/lib/center-sections/options";
+
+/** Mismos códigos que valida la API para `conservation.*.state`. */
+export type FichaEstadoConservacion = ConservationState;
 
 export type FichaFactorAlteracion = {
   origen: "NATURAL" | "ANTROPICO";
@@ -15,7 +17,7 @@ export type FichaComponenteConservacion = {
   observacionFactores: string | null;
 };
 
-export type FichaDeclaratoria = {
+type FichaDeclaratoria = {
   declarante: string | null;
   denominacion: string | null;
   fechaDeclaracion: string | null;

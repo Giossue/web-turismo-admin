@@ -1,4 +1,4 @@
-import type { FormValues } from "@/components/admin/center-editor";
+import type { CenterFormValues } from "@/lib/center-form";
 
 import type { CatalogosResueltos } from "./catalogos";
 import type { FichaExtraida } from "./tipos";
@@ -8,26 +8,26 @@ function idATexto(id: number | null): string {
 }
 
 /**
- * Convierte la ficha ya extraída + los catálogos ya resueltos a la forma
- * exacta de `FormValues` de `center-editor.tsx`, para usar con
- * `reset(mapearFichaAFormulario(...))`. Solo cubre los campos que el parser
- * puede llenar con confianza (ver docs/plans/active/importar-ficha-mintur.md
- * sección 3): identificación, ubicación, administración, clima/ingreso,
- * actividades y accesibilidad general. `touristZoneId` y `hierarchyId` se
- * dejan vacíos a propósito — no tienen fuente en la ficha (zona turística) o
- * se calculan después (jerarquía) — y `facilityIds` queda vacío porque la
- * sección de planta/facilidades todavía no está implementada en el parser.
+ * Convierte la ficha ya extraída + los catálogos ya resueltos a los valores
+ * del formulario principal (`CenterFormValues`, ver `src/lib/center-form.ts`).
+ * Solo cubre los campos que el parser puede llenar con confianza (ver
+ * docs/plans/active/importar-ficha-mintur.md sección 3): identificación,
+ * ubicación, administración, clima/ingreso, actividades y accesibilidad
+ * general. `touristZoneId` y `hierarchyId` se omiten a propósito — no tienen
+ * fuente en la ficha (zona turística) o se calculan después (jerarquía) — y
+ * `facilityIds` queda vacío: el parser sí lee la planta (`datos.planta`), pero
+ * sus filas todavía no se resuelven contra el catálogo de facilidades.
  *
  * Las secciones que se guardan como JSON genérico por `saveAdminCenterSection`
  * (políticas, promoción, visitantes, recurso humano) no se mapean aquí: este
- * mapeo es solo para el formulario principal de `center-editor.tsx`. Esas
- * cuatro quedan disponibles en `datos` para que la UI las use en un paso
- * posterior, todavía no conectado.
+ * mapeo es solo para el formulario principal del editor. Esas cuatro quedan
+ * disponibles en `datos` para que la UI las use en un paso posterior,
+ * todavía no conectado.
  */
 export function mapearFichaAFormulario(
   datos: FichaExtraida,
   catalogos: CatalogosResueltos,
-): Partial<FormValues> {
+): Partial<CenterFormValues> {
   const horarioSeleccionado = datos.caracteristicas.ingreso.tipoSeleccionado.valor
     ? datos.caracteristicas.ingreso.horarios.find(
         (h) => h.tipo === datos.caracteristicas.ingreso.tipoSeleccionado.valor,

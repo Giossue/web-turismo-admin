@@ -1,3 +1,5 @@
+import { apiEndpoint, sendApiRequest } from "./http";
+
 export type PublishedCenter = {
   code: string;
   name: string;
@@ -5,22 +7,16 @@ export type PublishedCenter = {
   province?: string | null;
 };
 
-type ApiResponse<T> = { data: T };
-
-const apiUrl = process.env.TURISMO_API_URL ?? "http://localhost:3000/api/v1";
-
 async function get<T>(path: string): Promise<T> {
-  const response = await fetch(`${apiUrl}${path}`, {
+  const { response, body } = await sendApiRequest<T>(apiEndpoint(path), {
     next: { revalidate: 60 },
-    headers: { Accept: "application/json" },
   });
 
-  if (!response.ok) {
+  if (!response.ok || body === null) {
     throw new Error(`No se pudo consultar el servicio turístico (${response.status}).`);
   }
 
-  const body = (await response.json()) as ApiResponse<T>;
-  return body.data;
+  return body.data as T;
 }
 
 export async function getPublishedCenters(): Promise<PublishedCenter[]> {

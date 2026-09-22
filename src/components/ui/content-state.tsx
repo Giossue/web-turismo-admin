@@ -7,7 +7,7 @@ export function ContentState({
   message,
   label,
 }: {
-  status: "loading" | "empty";
+  status: "loading" | "empty" | "error";
   message?: string;
   label?: string;
 }) {
@@ -15,6 +15,19 @@ export function ContentState({
     return (
       <Box sx={{ display: "grid", placeItems: "center", py: webTokens.spacing.state }}>
         <CircularProgress aria-label={label ?? "Cargando"} />
+      </Box>
+    );
+  }
+
+  if (status === "error") {
+    return (
+      <Box
+        role="alert"
+        sx={{ p: webTokens.spacing.surface, pt: webTokens.spacing.stateInset }}
+      >
+        <Typography color="error">
+          {message ?? "No se pudo cargar la información."}
+        </Typography>
       </Box>
     );
   }

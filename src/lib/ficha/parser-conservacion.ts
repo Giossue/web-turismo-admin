@@ -12,7 +12,7 @@ import type {
 const OPCIONES_ESTADO: Array<{ valor: FichaEstadoConservacion; refEtiqueta: string }> = [
   { valor: "CONSERVADO", refEtiqueta: "B{f}:D{f}" },
   { valor: "ALTERADO", refEtiqueta: "G{f}:I{f}" },
-  { valor: "EN_PROCESO_DETERIORO", refEtiqueta: "L{f}:O{f}" },
+  { valor: "EN_PROCESO_DE_DETERIORO", refEtiqueta: "L{f}:O{f}" },
   { valor: "DETERIORADO", refEtiqueta: "R{f}:T{f}" },
 ];
 

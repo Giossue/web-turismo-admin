@@ -1,4 +1,21 @@
-import type { AdminUser } from "./auth";
+import type { CenterSectionCode, SectionProgress } from "./center-sections/definitions";
+import type { mapearFichaAFormulario } from "./ficha/mapear-formulario";
+import type { SugerenciasSecciones } from "./ficha/sugerencias-secciones";
+import type { FichaImagenAnexo } from "./ficha/tipos";
+import { ApiError, apiEndpoint, sendApiRequest, toApiError, toQueryString } from "./http";
+
+/** Página de resultados de un listado administrativo. */
+export type Page<T> = { items: T[]; total: number; limit: number; offset: number };
+
+/** Acción de revisión para fichas, catastros y opiniones. */
+export type ReviewAction = "APPROVE" | "REJECT";
+
+export type EstablishmentReviewStatus =
+  "BORRADOR" | "EN_REVISION" | "PUBLICADO" | "RECHAZADO";
+
+export type OpinionStatus = "PENDIENTE" | "APROBADA" | "RECHAZADA" | "REEMPLAZADA";
+
+export type OpinionTargetType = "CENTRO" | "PUNTO_INTERES";
 
 export type AdminCenter = {
   code: string;
@@ -200,32 +217,11 @@ export type AdminCatalogs = {
 
 export type SaveCenterInput = Partial<CenterDraft> & { version?: number };
 
-export const adminCenterSectionCodes = [
-  "identificacion",
-  "ubicacion-admin",
-  "caracteristicas",
-  "accesibilidad",
-  "planta",
-  "conservacion",
-  "higiene-seguridad",
-  "politicas",
-  "actividades",
-  "promocion",
-  "visitantes",
-  "recurso-humano",
-  "descripcion",
-  "anexos",
-] as const;
-export type AdminCenterSectionCode = (typeof adminCenterSectionCodes)[number];
-
 export type AdminCenterSections = {
   code: string;
   version: number;
-  sections: Partial<Record<AdminCenterSectionCode, Record<string, unknown>>>;
-  progress?: Array<{
-    code: AdminCenterSectionCode;
-    status: "SIN_INICIAR" | "INCOMPLETA" | "COMPLETA" | "CON_ERRORES" | "NO_APLICA";
-  }>;
+  sections: Partial<Record<CenterSectionCode, Record<string, unknown>>>;
+  progress?: Array<{ code: CenterSectionCode; status: SectionProgress }>;
 };
 
 export type AdminCenterValuation = {
@@ -275,7 +271,7 @@ export type AdminEstablishment = {
   latitude: number;
   longitude: number;
   active: boolean;
-  reviewStatus: "BORRADOR" | "EN_REVISION" | "PUBLICADO" | "RECHAZADO";
+  reviewStatus: EstablishmentReviewStatus;
   reviewObservation: string | null;
   requestedAt: string | null;
   requestedBy: string | null;
@@ -311,7 +307,7 @@ export type AdminEstablishmentsOptions = {
   cantonId?: number;
   localityId?: number;
   active?: boolean;
-  reviewStatus?: "BORRADOR" | "EN_REVISION" | "PUBLICADO" | "RECHAZADO";
+  reviewStatus?: EstablishmentReviewStatus;
   limit?: number;
   offset?: number;
 };
@@ -339,24 +335,17 @@ export type AdminOpinionVersion = {
 
 export type AdminOpinion = {
   reviewCode: string;
-  status: "PENDIENTE" | "APROBADA";
+  status: Extract<OpinionStatus, "PENDIENTE" | "APROBADA">;
   version: number;
   submittedAt: string;
   authorName: string;
   target: {
-    type: "CENTRO" | "PUNTO_INTERES";
+    type: OpinionTargetType;
     code: string | null;
     name: string;
   };
   proposed: AdminOpinionVersion;
   current: AdminOpinionVersion | null;
-};
-
-export type AdminOpinionPage = {
-  items: AdminOpinion[];
-  total: number;
-  limit: number;
-  offset: number;
 };
 
 export type AdminOpinionHistory = {
@@ -368,7 +357,7 @@ export type AdminOpinionHistory = {
     version: number;
     rating: number | null;
     comment: string | null;
-    status: "PENDIENTE" | "APROBADA" | "RECHAZADA" | "REEMPLAZADA";
+    status: OpinionStatus;
     submittedAt: string;
     reviewedAt: string | null;
     moderations: Array<{
@@ -380,7 +369,23 @@ export type AdminOpinionHistory = {
   }>;
 };
 
-type ApiBody<T> = { data: T; error?: { message?: string } };
+export type CatalogMutationResult = {
+  catalog: AdminCatalogKey;
+  id: number;
+  code: string;
+  name: string;
+  active: boolean;
+  icon?: string;
+  color?: string;
+};
+
+/** Resultado de `/api/admin/ficha/import` (ruta interna de este portal). */
+type FichaImportResult = {
+  formulario: ReturnType<typeof mapearFichaAFormulario>;
+  sugerenciasSecciones: SugerenciasSecciones;
+  advertencias: string[];
+  imagenes: FichaImagenAnexo[];
+};
 
 type AdminAccessTokenRefresh = (expiredToken: string) => Promise<string | null>;
 
@@ -397,139 +402,157 @@ export function registerAdminAccessTokenRefresh(
   };
 }
 
-export const apiUrl =
-  process.env.NEXT_PUBLIC_TURISMO_API_URL ?? "http://localhost:3000/api/v1";
+const ADMIN_API_FALLBACK_MESSAGE = "No se pudo consultar la API administrativa.";
+const FICHA_IMPORT_URL = "/api/admin/ficha/import";
 
-async function request<T>(
-  path: string,
+/**
+ * Solicitud autenticada con el access token en memoria. Ante un 401 pide un
+ * token nuevo al proveedor de sesión y reintenta una sola vez.
+ */
+async function authorizedRequest<T>(
+  url: string,
   token: string,
-  init?: RequestInit,
+  init: RequestInit,
+  fallbackMessage = ADMIN_API_FALLBACK_MESSAGE,
   retryAfterRefresh = true,
 ): Promise<T> {
-  const headers = new Headers(init?.headers);
-  headers.set("Accept", "application/json");
+  const headers = new Headers(init.headers);
   headers.set("Authorization", `Bearer ${token}`);
-  const isFormData = typeof FormData !== "undefined" && init?.body instanceof FormData;
-  if (!isFormData) headers.set("Content-Type", "application/json");
-  const response = await fetch(`${apiUrl}${path}`, {
+  const result = await sendApiRequest<T>(url, {
     ...init,
     headers,
     credentials: "include",
   });
-  const body = (await response.json().catch(() => null)) as ApiBody<T> | null;
 
-  if (response.status === 401 && retryAfterRefresh && adminAccessTokenRefresh) {
+  if (result.response.status === 401 && retryAfterRefresh && adminAccessTokenRefresh) {
     const nextToken = await adminAccessTokenRefresh(token).catch(() => null);
     if (nextToken && nextToken !== token) {
-      return request(path, nextToken, init, false);
+      return authorizedRequest(url, nextToken, init, fallbackMessage, false);
     }
   }
 
-  if (!response.ok) {
-    throw new Error(
-      body?.error?.message ?? "No se pudo consultar la API administrativa.",
+  if (!result.response.ok) {
+    throw toApiError(result, fallbackMessage);
+  }
+  if (result.body?.data === undefined) {
+    throw new ApiError(
+      "La API administrativa devolvió una respuesta incompleta.",
+      result.response.status,
     );
   }
-  if (body?.data === undefined) {
-    throw new Error("La API administrativa devolvió una respuesta incompleta.");
-  }
-  return body.data;
+  return result.body.data;
+}
+
+function toRequestBody(body: unknown): BodyInit | undefined {
+  if (body === undefined) return undefined;
+  if (typeof FormData !== "undefined" && body instanceof FormData) return body;
+  return JSON.stringify(body);
+}
+
+function get<T>(path: string, token: string): Promise<T> {
+  return authorizedRequest<T>(apiEndpoint(path), token, { cache: "no-store" });
+}
+
+function post<T>(path: string, token: string, body: unknown = {}): Promise<T> {
+  return authorizedRequest<T>(apiEndpoint(path), token, {
+    method: "POST",
+    body: toRequestBody(body),
+  });
+}
+
+function patch<T>(path: string, token: string, body: unknown): Promise<T> {
+  return authorizedRequest<T>(apiEndpoint(path), token, {
+    method: "PATCH",
+    body: toRequestBody(body),
+  });
+}
+
+function del<T>(path: string, token: string): Promise<T> {
+  return authorizedRequest<T>(apiEndpoint(path), token, { method: "DELETE" });
+}
+
+function centerPath(code: string, suffix?: string): string {
+  const base = `/admin/centers/${encodeURIComponent(code)}`;
+  return suffix ? `${base}/${suffix}` : base;
 }
 
 export async function getAdminCenters(token: string, options: AdminCentersOptions = {}) {
-  const params = new URLSearchParams();
-  if (options.status && options.status !== "ALL") params.set("status", options.status);
-  if (options.q?.trim()) params.set("q", options.q.trim());
-  params.set("limit", String(options.limit ?? 25));
-  params.set("offset", String(options.offset ?? 0));
-  return request<{ items: AdminCenter[]; total: number; limit: number; offset: number }>(
-    `/admin/centers?${params.toString()}`,
-    token,
-    { cache: "no-store" },
-  );
+  const query = toQueryString({
+    status: options.status === "ALL" ? undefined : options.status,
+    q: options.q,
+    limit: options.limit ?? 25,
+    offset: options.offset ?? 0,
+  });
+  return get<Page<AdminCenter>>(`/admin/centers${query}`, token);
 }
 
 export async function getAdminSummary(token: string) {
-  return request<AdminSummary>("/admin/summary", token, { cache: "no-store" });
+  return get<AdminSummary>("/admin/summary", token);
 }
 
 export async function getAdminOpinions(
   token: string,
   options: { limit?: number; offset?: number } = {},
 ) {
-  const params = new URLSearchParams();
-  params.set("limit", String(options.limit ?? 20));
-  params.set("offset", String(options.offset ?? 0));
-  return request<AdminOpinionPage>(`/admin/opinions?${params.toString()}`, token, {
-    cache: "no-store",
+  const query = toQueryString({
+    limit: options.limit ?? 20,
+    offset: options.offset ?? 0,
   });
+  return get<Page<AdminOpinion>>(`/admin/opinions${query}`, token);
 }
 
 export async function getAdminOpinionHistory(token: string, reviewCode: string) {
-  return request<AdminOpinionHistory>(
+  return get<AdminOpinionHistory>(
     `/admin/opinions/${encodeURIComponent(reviewCode)}/history`,
     token,
-    { cache: "no-store" },
   );
 }
 
 export async function reviewAdminOpinion(
   token: string,
   reviewCode: string,
-  action: "APPROVE" | "REJECT",
+  action: ReviewAction,
   reason?: string,
 ) {
-  return request<{ reviewCode: string; status: "APROBADA" | "RECHAZADA" }>(
-    `/admin/opinions/${encodeURIComponent(reviewCode)}`,
-    token,
-    {
-      method: "PATCH",
-      body: JSON.stringify({ action, reason }),
-    },
-  );
+  return patch<{
+    reviewCode: string;
+    status: Extract<OpinionStatus, "APROBADA" | "RECHAZADA">;
+  }>(`/admin/opinions/${encodeURIComponent(reviewCode)}`, token, { action, reason });
 }
 
 export async function getAdminEstablishments(
   token: string,
   options: AdminEstablishmentsOptions = {},
 ) {
-  const params = new URLSearchParams();
-  if (options.q?.trim()) params.set("q", options.q.trim());
-  if (options.activity?.trim()) params.set("activity", options.activity.trim());
-  if (options.classification?.trim())
-    params.set("classification", options.classification.trim());
-  if (options.category?.trim()) params.set("category", options.category.trim());
-  if (options.provinceId) params.set("provinceId", String(options.provinceId));
-  if (options.cantonId) params.set("cantonId", String(options.cantonId));
-  if (options.localityId) params.set("localityId", String(options.localityId));
-  if (options.active !== undefined) params.set("active", String(options.active));
-  if (options.reviewStatus) params.set("reviewStatus", options.reviewStatus);
-  params.set("limit", String(options.limit ?? 20));
-  params.set("offset", String(options.offset ?? 0));
-  return request<{
-    items: AdminEstablishment[];
-    total: number;
-    limit: number;
-    offset: number;
-  }>(`/admin/establishments?${params.toString()}`, token, { cache: "no-store" });
+  const query = toQueryString({
+    q: options.q,
+    activity: options.activity,
+    classification: options.classification,
+    category: options.category,
+    provinceId: options.provinceId || undefined,
+    cantonId: options.cantonId || undefined,
+    localityId: options.localityId || undefined,
+    active: options.active,
+    reviewStatus: options.reviewStatus,
+    limit: options.limit ?? 20,
+    offset: options.offset ?? 0,
+  });
+  return get<Page<AdminEstablishment>>(`/admin/establishments${query}`, token);
 }
 
 export async function submitAdminEstablishmentReview(token: string, id: number) {
-  return request<AdminEstablishment>(`/admin/establishments/${id}/submit-review`, token, {
-    method: "POST",
-    body: JSON.stringify({}),
-  });
+  return post<AdminEstablishment>(`/admin/establishments/${id}/submit-review`, token);
 }
 
 export async function reviewAdminEstablishment(
   token: string,
   id: number,
-  action: "APPROVE" | "REJECT",
+  action: ReviewAction,
   observation?: string,
 ) {
-  return request<AdminEstablishment>(`/admin/establishments/${id}/review`, token, {
-    method: "PATCH",
-    body: JSON.stringify({ action, observation }),
+  return patch<AdminEstablishment>(`/admin/establishments/${id}/review`, token, {
+    action,
+    observation,
   });
 }
 
@@ -537,10 +560,7 @@ export async function createAdminEstablishment(
   token: string,
   input: SaveEstablishmentInput,
 ) {
-  return request<AdminEstablishment>("/admin/establishments", token, {
-    method: "POST",
-    body: JSON.stringify(input),
-  });
+  return post<AdminEstablishment>("/admin/establishments", token, input);
 }
 
 export async function saveAdminEstablishment(
@@ -548,10 +568,7 @@ export async function saveAdminEstablishment(
   id: number,
   input: Partial<SaveEstablishmentInput>,
 ) {
-  return request<AdminEstablishment>(`/admin/establishments/${id}`, token, {
-    method: "PATCH",
-    body: JSON.stringify(input),
-  });
+  return patch<AdminEstablishment>(`/admin/establishments/${id}`, token, input);
 }
 
 export async function setAdminEstablishmentActive(
@@ -559,16 +576,15 @@ export async function setAdminEstablishmentActive(
   id: number,
   active: boolean,
 ) {
-  return request<AdminEstablishment>(
+  return post<AdminEstablishment>(
     `/admin/establishments/${id}/${active ? "reactivate" : "deactivate"}`,
     token,
-    { method: "POST", body: JSON.stringify({}) },
   );
 }
 
 export async function getAdminCatalogs(token: string, includeInactive = false) {
-  const query = includeInactive ? "?includeInactive=true" : "";
-  return request<AdminCatalogs>(`/admin/catalogs${query}`, token, { cache: "no-store" });
+  const query = toQueryString({ includeInactive: includeInactive || undefined });
+  return get<AdminCatalogs>(`/admin/catalogs${query}`, token);
 }
 
 export async function updateAdminCatalog(
@@ -581,18 +597,7 @@ export async function updateAdminCatalog(
     icon?: string;
   },
 ) {
-  return request<{
-    catalog: AdminCatalogKey;
-    id: number;
-    code: string;
-    name: string;
-    active: boolean;
-    icon?: string;
-    color?: string;
-  }>(`/admin/catalogs/${catalog}/${id}`, token, {
-    method: "PATCH",
-    body: JSON.stringify(input),
-  });
+  return patch<CatalogMutationResult>(`/admin/catalogs/${catalog}/${id}`, token, input);
 }
 
 export async function createAdminCatalog(
@@ -607,64 +612,36 @@ export async function createAdminCatalog(
     numericValue?: number;
   },
 ) {
-  return request<{
-    catalog: AdminCatalogKey;
-    id: number;
-    code: string;
-    name: string;
-    active: boolean;
-    icon?: string;
-    color?: string;
-  }>(`/admin/catalogs/${catalog}`, token, {
-    method: "POST",
-    body: JSON.stringify(input),
-  });
+  return post<CatalogMutationResult>(`/admin/catalogs/${catalog}`, token, input);
 }
 
 export async function getAdminCenter(token: string, code: string) {
-  return request<AdminCenterDetail>(`/admin/centers/${encodeURIComponent(code)}`, token, {
-    cache: "no-store",
-  });
+  return get<AdminCenterDetail>(centerPath(code), token);
 }
 
 export async function getAdminCenterSections(token: string, code: string) {
-  return request<AdminCenterSections>(
-    `/admin/centers/${encodeURIComponent(code)}/sections`,
-    token,
-    { cache: "no-store" },
-  );
+  return get<AdminCenterSections>(centerPath(code, "sections"), token);
 }
 
 export async function getAdminCenterValuation(token: string, code: string) {
-  return request<AdminCenterValuation>(
-    `/admin/centers/${encodeURIComponent(code)}/valuation`,
-    token,
-    { cache: "no-store" },
-  );
+  return get<AdminCenterValuation>(centerPath(code, "valuation"), token);
 }
 
 export async function saveAdminCenterSection(
   token: string,
   code: string,
-  sectionCode: AdminCenterSectionCode,
+  sectionCode: CenterSectionCode,
   content: Record<string, unknown>,
   version?: number,
 ) {
-  return request<AdminCenterDetail>(
-    `/admin/centers/${encodeURIComponent(code)}/sections/${sectionCode}`,
-    token,
-    {
-      method: "PATCH",
-      body: JSON.stringify({ content, version }),
-    },
-  );
+  return patch<AdminCenterDetail>(centerPath(code, `sections/${sectionCode}`), token, {
+    content,
+    version,
+  });
 }
 
 export async function createAdminCenter(token: string, input: SaveCenterInput) {
-  return request<AdminCenterDetail>("/admin/centers", token, {
-    method: "POST",
-    body: JSON.stringify(input),
-  });
+  return post<AdminCenterDetail>("/admin/centers", token, input);
 }
 
 export async function saveAdminCenter(
@@ -672,66 +649,28 @@ export async function saveAdminCenter(
   code: string,
   input: SaveCenterInput,
 ) {
-  return request<AdminCenterDetail>(`/admin/centers/${encodeURIComponent(code)}`, token, {
-    method: "PATCH",
-    body: JSON.stringify(input),
-  });
+  return patch<AdminCenterDetail>(centerPath(code), token, input);
 }
 
 export async function submitAdminCenterReview(token: string, code: string) {
-  return request<AdminCenterDetail>(
-    `/admin/centers/${encodeURIComponent(code)}/submit-review`,
-    token,
-    { method: "POST", body: JSON.stringify({}) },
-  );
+  return post<AdminCenterDetail>(centerPath(code, "submit-review"), token);
 }
 
 export async function reviewAdminCenter(
   token: string,
   code: string,
-  action: "APPROVE" | "REJECT",
+  action: ReviewAction,
   observation?: string,
 ) {
-  return request<AdminCenter>(
-    `/admin/centers/${encodeURIComponent(code)}/review`,
-    token,
-    {
-      method: "PATCH",
-      body: JSON.stringify({ action, observation }),
-    },
-  );
+  return patch<AdminCenter>(centerPath(code, "review"), token, { action, observation });
 }
 
 export async function publishAdminCenter(token: string, code: string) {
-  return request<AdminCenterDetail>(
-    `/admin/centers/${encodeURIComponent(code)}/publish`,
-    token,
-    { method: "POST", body: JSON.stringify({}) },
-  );
-}
-
-export async function setAdminCenterActive(token: string, code: string, active: boolean) {
-  return request<AdminCenterDetail>(
-    `/admin/centers/${encodeURIComponent(code)}/${active ? "reactivate" : "deactivate"}`,
-    token,
-    { method: "POST", body: JSON.stringify({}) },
-  );
-}
-
-export async function getAdminCenterAudit(token: string, code: string) {
-  return request<{ items: Array<Record<string, unknown>> }>(
-    `/admin/centers/${encodeURIComponent(code)}/audit`,
-    token,
-    { cache: "no-store" },
-  );
+  return post<AdminCenterDetail>(centerPath(code, "publish"), token);
 }
 
 export async function getAdminCenterMedia(token: string, code: string) {
-  return request<{ items: AdminMediaItem[] }>(
-    `/admin/centers/${encodeURIComponent(code)}/media`,
-    token,
-    { cache: "no-store" },
-  );
+  return get<{ items: AdminMediaItem[] }>(centerPath(code, "media"), token);
 }
 
 export async function uploadAdminCenterMedia(
@@ -751,19 +690,25 @@ export async function uploadAdminCenterMedia(
   if (metadata.sourceAuthor?.trim())
     body.append("sourceAuthor", metadata.sourceAuthor.trim());
   body.append("file", file, file.name);
-  return request<AdminMediaItem>(
-    `/admin/centers/${encodeURIComponent(code)}/media`,
-    token,
-    { method: "POST", body },
-  );
+  return post<AdminMediaItem>(centerPath(code, "media"), token, body);
 }
 
 export async function deleteAdminCenterMedia(token: string, code: string, id: number) {
-  return request<{ id: number; state: "ELIMINADO" }>(
-    `/admin/centers/${encodeURIComponent(code)}/media/${id}`,
-    token,
-    { method: "DELETE" },
-  );
+  return del<{ id: number; state: "ELIMINADO" }>(centerPath(code, `media/${id}`), token);
 }
 
-export type { AdminUser };
+/**
+ * Sube una ficha MINTUR (.xlsx/.xlsm) a la ruta interna del portal para
+ * precargar el formulario. Usa la misma sesión y renovación de token que el
+ * resto del panel. Solo debe llamarse desde el navegador.
+ */
+export async function importFichaFile(token: string, file: File) {
+  const body = new FormData();
+  body.append("file", file);
+  return authorizedRequest<FichaImportResult>(
+    FICHA_IMPORT_URL,
+    token,
+    { method: "POST", body },
+    "No se pudo importar la ficha.",
+  );
+}

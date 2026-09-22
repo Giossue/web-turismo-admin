@@ -1,5 +1,7 @@
 import type ExcelJS from "exceljs";
 
+import { POLICY_DEFINITIONS, type PolicyCode } from "@/lib/center-sections/options";
+
 import { leerMarcaDirecta, leerMarcaJuntoAEtiqueta } from "./checkbox";
 import { leerTexto, leerTextoOpcional } from "./xlsx-utils";
 import type {
@@ -30,55 +32,61 @@ function leerSiNoDirecto(
 }
 
 // --- 8. Políticas y regulaciones (filas 224-232) ---
-// Códigos confirmados en center-section-workflow.tsx (POLICY_DEFINITIONS),
-// en el mismo orden a/b/c/d de la ficha.
-const PREGUNTAS_POLITICA = [
+// Celdas de cada pregunta de `POLICY_DEFINITIONS` (mismos códigos que valida
+// la API), en el mismo orden a/b/c/d de la ficha.
+const CELDAS_POLITICA: Record<
+  PolicyCode,
   {
-    codigo: "PLAN_DESARROLLO_GAD",
+    fila: number;
+    refSi: string;
+    refNo: string;
+    refEspecifique: string | null;
+    refAnio: string | null;
+  }
+> = {
+  PLAN_DESARROLLO_GAD: {
     fila: 225,
     refSi: "L225",
     refNo: "N225",
-    refEspecifique: null as string | null,
+    refEspecifique: null,
     refAnio: "U225:V225",
   },
-  {
-    codigo: "PLANIFICACION_TERRITORIAL",
+  PLANIFICACION_TERRITORIAL: {
     fila: 226,
     refSi: "O226",
     refNo: "Q226",
     refEspecifique: "B227:V227",
-    refAnio: null as string | null,
+    refAnio: null,
   },
-  {
-    codigo: "REGULACIONES_APLICABLES",
+  REGULACIONES_APLICABLES: {
     fila: 228,
     refSi: "O228",
     refNo: "Q228",
     refEspecifique: "B229:V229",
-    refAnio: null as string | null,
+    refAnio: null,
   },
-  {
-    codigo: "ORDENANZAS_APLICABLES",
+  ORDENANZAS_APLICABLES: {
     fila: 230,
     refSi: "O230",
     refNo: "Q230",
     refEspecifique: "B231:V231",
-    refAnio: null as string | null,
+    refAnio: null,
   },
-];
+};
 
 export function leerPoliticas(worksheet: ExcelJS.Worksheet): FichaPolitica[] {
-  return PREGUNTAS_POLITICA.map((pregunta) => ({
-    codigo: pregunta.codigo,
-    pregunta: leerTextoOpcional(worksheet, `B${pregunta.fila}`) ?? "",
-    respuesta: leerSiNoDirecto(worksheet, pregunta.refSi, pregunta.refNo),
-    anioElaboracion: pregunta.refAnio
-      ? numeroOpcional(worksheet, pregunta.refAnio)
-      : null,
-    especifique: pregunta.refEspecifique
-      ? leerTextoOpcional(worksheet, pregunta.refEspecifique)
-      : null,
-  }));
+  return POLICY_DEFINITIONS.map(({ code }) => {
+    const celdas = CELDAS_POLITICA[code];
+    return {
+      codigo: code,
+      pregunta: leerTextoOpcional(worksheet, `B${celdas.fila}`) ?? "",
+      respuesta: leerSiNoDirecto(worksheet, celdas.refSi, celdas.refNo),
+      anioElaboracion: celdas.refAnio ? numeroOpcional(worksheet, celdas.refAnio) : null,
+      especifique: celdas.refEspecifique
+        ? leerTextoOpcional(worksheet, celdas.refEspecifique)
+        : null,
+    };
+  });
 }
 
 // --- 12. Recurso humano (filas 293-298) ---

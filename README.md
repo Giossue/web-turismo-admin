@@ -51,6 +51,23 @@ corepack pnpm --filter @turismo/api auth:create-user
 unset AUTH_BOOTSTRAP_PASSWORD
 ```
 
+## Módulos compartidos
+
+Antes de duplicar lógica en un componente, usa estos módulos. `src/lib` nunca importa
+desde `src/components`.
+
+| Módulo                                         | Propósito                                                                                                                                                                                                 |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/lib/config.ts`                            | URL de la API: `getApiUrl()` (servidor `TURISMO_API_URL`, navegador `NEXT_PUBLIC_TURISMO_API_URL`) y `publicApiUrl` para enlaces renderizados.                                                            |
+| `src/lib/http.ts`                              | `fetch` común (sin `Content-Type` en GET, errores de red en español), `ApiError` con `status` y `toQueryString`.                                                                                          |
+| `src/lib/admin-api.ts`                         | Único cliente de la API administrativa (token, renovación ante 401, `importFichaFile`) y tipos compartidos (`Page`, `ReviewAction`, `EstablishmentReviewStatus`, …).                                      |
+| `src/lib/admin-queries.ts`                     | Claves `adminKeys`, fábricas `queryOptions`, `centerSaveScope` y `getCachedCenterVersion` para serializar guardados de una ficha.                                                                         |
+| `src/lib/admin-labels.ts`                      | Etiquetas y tonos (`StatusTone`) de estados de fichas, catastro, opiniones, multimedia y activo/inactivo.                                                                                                 |
+| `src/lib/errors.ts`, `format.ts`, `values.ts`  | `errorMessage`, `formatDate`/`formatDateTime` (es-EC) y utilidades de valores (`isRecord`, `toNullableNumber`, `findCatalogOption`, …).                                                                   |
+| `src/lib/center-sections/`                     | Fuente única de los 14 apartados (`definitions.ts`, `sectionTitle`) y de sus opciones cerradas (`options.ts`: respuestas, políticas, conservación, higiene).                                              |
+| `src/components/ui/form/`                      | Campos conectados a react-hook-form (`RhfTextField`, `RhfNumberField`, `RhfDateField`, `RhfSelect`, `RhfCatalogSelect`, `RhfResponseSelect`), `EditableContext`, `rules.ts` y `SelectField` para filtros. |
+| `src/components/admin/coordinate-fieldset.tsx` | Latitud, longitud y selector en mapa con `latitudeRules`/`longitudeRules`.                                                                                                                                |
+
 ## Despliegue en Dokploy
 
 El repositorio incluye un `Dockerfile` standalone para producción. Usa el contexto raíz,
@@ -71,5 +88,6 @@ de runtime para las solicitudes realizadas desde el servidor.
 bun run format
 bun run lint
 bun run typecheck
+bun test
 bun run build
 ```

@@ -37,160 +37,38 @@ import { ContentState } from "@/components/ui/content-state";
 import { FlatSurface } from "@/components/ui/flat-surface";
 import { SectionHeader } from "@/components/ui/section-header";
 import {
-  getAdminCenterSections,
-  getAdminCenterValuation,
-  getAdminCenterMedia,
   saveAdminCenterSection,
   type AdminCenterDetail,
-  type AdminCenterSectionCode,
   type AdminCatalogs,
   type AdminCenterValuation,
   type AdminMediaItem,
 } from "@/lib/admin-api";
+import {
+  adminKeys,
+  centerMediaQueryOptions,
+  centerSectionsQueryOptions,
+  centerValuationQueryOptions,
+} from "@/lib/admin-queries";
+import {
+  centerSectionDefinitions,
+  type CenterSectionCode,
+  type SectionDefinition,
+  type SectionProgress,
+} from "@/lib/center-sections/definitions";
+import {
+  CONSERVATION_STATE_OPTIONS,
+  EMPTY_RESPONSE,
+  HYGIENE_ENTRY_OPTIONS,
+  isSectionResponse,
+  POLICY_DEFINITIONS,
+  SECTION_RESPONSE_OPTIONS,
+  type HygieneEntryKind,
+  type SectionResponse,
+} from "@/lib/center-sections/options";
+import { errorMessage } from "@/lib/errors";
 import type { SugerenciasSecciones } from "@/lib/ficha/sugerencias-secciones";
+import { isRecord, toNullableNumber } from "@/lib/values";
 import { webTokens } from "@/theme/tokens";
-
-export const SECTION_RESPONSE_OPTIONS = [
-  { value: "SI", label: "Sí" },
-  { value: "NO", label: "No" },
-  { value: "SIN_INFORMACION", label: "Sin información" },
-  { value: "NO_APLICA", label: "No aplica" },
-] as const;
-
-export type SectionResponse = (typeof SECTION_RESPONSE_OPTIONS)[number]["value"];
-
-type SectionDefinition = {
-  code: AdminCenterSectionCode;
-  title: string;
-  description: string;
-  coreAnchor?: string;
-  suggestedRows: string[];
-};
-
-export const centerSectionDefinitions: readonly SectionDefinition[] = [
-  {
-    code: "identificacion",
-    title: "Datos generales y clasificación",
-    description: "Nombre, clasificación, territorio y código institucional.",
-    coreAnchor: "center-section-identificacion",
-    suggestedRows: [],
-  },
-  {
-    code: "ubicacion-admin",
-    title: "Ubicación y administración",
-    description: "Coordenadas, dirección y responsable institucional.",
-    coreAnchor: "center-section-ubicacion-admin",
-    suggestedRows: [],
-  },
-  {
-    code: "caracteristicas",
-    title: "Características e ingreso",
-    description: "Clima, línea de producto, escenario, horarios y tarifas.",
-    coreAnchor: "center-section-caracteristicas",
-    suggestedRows: [
-      "Clima y condiciones habituales",
-      "Formas de pago",
-      "Meses recomendados",
-    ],
-  },
-  {
-    code: "accesibilidad",
-    title: "Accesibilidad y conectividad",
-    description: "Localidad cercana, vías, transporte, accesibilidad y señalización.",
-    coreAnchor: "center-section-accesibilidad",
-    suggestedRows: [],
-  },
-  {
-    code: "planta",
-    title: "Planta y complementarios",
-    description: "Agregados del atractivo, localidad cercana, facilidades y servicios.",
-    coreAnchor: "center-section-planta",
-    suggestedRows: [
-      "Planta turística en el atractivo",
-      "Planta turística en la localidad cercana",
-      "Facilidades",
-      "Servicios complementarios",
-    ],
-  },
-  {
-    code: "conservacion",
-    title: "Conservación",
-    description: "Estado de conservación, alteraciones y declaratorias.",
-    suggestedRows: ["Estado de conservación", "Factores de alteración", "Declaratorias"],
-  },
-  {
-    code: "higiene-seguridad",
-    title: "Higiene y seguridad",
-    description: "Servicios básicos, salud, seguridad, comunicación y contingencia.",
-    suggestedRows: [
-      "Servicios básicos",
-      "Señalética",
-      "Servicios de salud",
-      "Servicios de seguridad",
-      "Comunicación y radios",
-      "Amenazas y plan de contingencia",
-    ],
-  },
-  {
-    code: "politicas",
-    title: "Políticas y regulaciones",
-    description: "Políticas institucionales, restricciones y regulaciones aplicables.",
-    suggestedRows: [
-      "Políticas del atractivo",
-      "Regulaciones aplicables",
-      "Plan de contingencia",
-    ],
-  },
-  {
-    code: "actividades",
-    title: "Actividades",
-    description: "Actividades compatibles con la categoría y sus condiciones.",
-    coreAnchor: "center-section-actividades",
-    suggestedRows: [],
-  },
-  {
-    code: "promocion",
-    title: "Promoción y comercialización",
-    description: "Difusión, comercialización y medios utilizados.",
-    suggestedRows: ["Promoción institucional", "Comercialización", "Medios de promoción"],
-  },
-  {
-    code: "visitantes",
-    title: "Visitantes y afluencia",
-    description: "Temporadas, procedencias, informantes y registros de visitantes.",
-    suggestedRows: [
-      "Registro de visitantes",
-      "Temporadas de visitación",
-      "Procedencias",
-      "Informantes clave",
-      "Afluencia",
-    ],
-  },
-  {
-    code: "recurso-humano",
-    title: "Recurso humano",
-    description: "Personal, formación, idiomas y capacidades disponibles.",
-    suggestedRows: ["Resumen de recurso humano", "Formación del personal", "Idiomas"],
-  },
-  {
-    code: "descripcion",
-    title: "Descripción",
-    description: "Descripción narrativa y observaciones públicas del centro.",
-    coreAnchor: "center-section-descripcion",
-    suggestedRows: [],
-  },
-  {
-    code: "anexos",
-    title: "Anexos y responsabilidades",
-    description: "Archivos, responsables, levantamiento y validación del GAD.",
-    suggestedRows: [
-      "Anexos documentales",
-      "Responsables de la ficha",
-      "Levantamiento de accesibilidad",
-      "Validación del GAD",
-    ],
-  },
-] as const;
 
 type SectionRowForm = {
   label: string;
@@ -315,9 +193,6 @@ type ConservationDeclarationForm = {
   scope: string;
   observation: string;
 };
-
-type HygieneEntryKind =
-  "BASIC_SERVICE" | "SIGNAGE" | "HEALTH" | "SECURITY" | "COMMUNICATION" | "THREAT";
 
 type HygieneEntryForm = {
   kind: HygieneEntryKind;
@@ -509,11 +384,6 @@ type SectionFormValues = {
   };
 };
 
-type SectionProgress =
-  "SIN_INICIAR" | "INCOMPLETA" | "COMPLETA" | "CON_ERRORES" | "NO_APLICA";
-
-const EMPTY_RESPONSE: SectionResponse = "SIN_INFORMACION";
-
 function useSectionAutosave({
   form,
   token,
@@ -566,13 +436,11 @@ function useSectionAutosave({
         }
         onDetailChanged(saved);
         await queryClient.invalidateQueries({
-          queryKey: ["admin", "center", code, "sections"],
+          queryKey: adminKeys.centerSections(code),
         });
       } catch (cause) {
         onError(
-          cause instanceof Error
-            ? cause.message
-            : "No se pudo actualizar la información de esta sección.",
+          errorMessage(cause, "No se pudo actualizar la información de esta sección."),
         );
       }
     },
@@ -642,30 +510,15 @@ export function CenterSectionWorkflow({
   onDetailChanged: (detail: AdminCenterDetail) => void;
   onError: (message: string | null) => void;
 }) {
-  const [activeCode, setActiveCode] = useState<AdminCenterSectionCode>(
+  const [activeCode, setActiveCode] = useState<CenterSectionCode>(
     centerSectionDefinitions[0].code,
   );
   const [localDrafts, setLocalDrafts] = useState<
-    Partial<Record<AdminCenterSectionCode, SectionFormValues>>
+    Partial<Record<CenterSectionCode, SectionFormValues>>
   >({});
-  const sectionsQuery = useQuery({
-    queryKey: ["admin", "center", code, "sections"],
-    queryFn: () => getAdminCenterSections(token, code as string),
-    enabled: Boolean(token && code),
-    staleTime: 10_000,
-  });
-  const valuationQuery = useQuery<AdminCenterValuation>({
-    queryKey: ["admin", "center", code, "valuation"],
-    queryFn: () => getAdminCenterValuation(token, code as string),
-    enabled: Boolean(token && code),
-    staleTime: 10_000,
-  });
-  const mediaQuery = useQuery<{ items: AdminMediaItem[] }>({
-    queryKey: ["admin", "media", code],
-    queryFn: () => getAdminCenterMedia(token, code as string),
-    enabled: Boolean(token && code),
-    staleTime: 5_000,
-  });
+  const sectionsQuery = useQuery(centerSectionsQueryOptions(token, code));
+  const valuationQuery = useQuery(centerValuationQueryOptions(token, code));
+  const mediaQuery = useQuery(centerMediaQueryOptions(token, code));
   const annexMedia = mediaQuery.data?.items ?? [];
   const sectionData = sectionsQuery.data;
   const sections = useMemo(
@@ -767,7 +620,7 @@ export function CenterSectionWorkflow({
     onError,
   });
 
-  function selectSection(nextCode: AdminCenterSectionCode) {
+  function selectSection(nextCode: CenterSectionCode) {
     if (nextCode === activeCode) return;
     setLocalDrafts((current) => ({ ...current, [activeCode]: getValues() }));
     setActiveCode(nextCode);
@@ -793,9 +646,7 @@ export function CenterSectionWorkflow({
           </Button>
         }
       >
-        {sectionsError instanceof Error
-          ? sectionsError.message
-          : "No se pudieron cargar las secciones de la ficha."}
+        {errorMessage(sectionsError, "No se pudieron cargar las secciones de la ficha.")}
       </Alert>
     );
   }
@@ -2719,13 +2570,6 @@ function PlantSectionFields({
   );
 }
 
-const CONSERVATION_STATE_OPTIONS = [
-  { value: "CONSERVADO", label: "Conservado" },
-  { value: "ALTERADO", label: "Alterado" },
-  { value: "EN_PROCESO_DE_DETERIORO", label: "En proceso de deterioro" },
-  { value: "DETERIORADO", label: "Deteriorado" },
-] as const;
-
 function ConservationSectionFields({
   catalogs,
   canEdit,
@@ -3043,7 +2887,7 @@ function ConservationSectionFields({
                       type="date"
                       fullWidth
                       disabled={!canEdit}
-                      InputLabelProps={{ shrink: true }}
+                      slotProps={{ inputLabel: { shrink: true } }}
                       {...register(`declarations.${index}.date`)}
                     />
                   </Grid>
@@ -3089,15 +2933,6 @@ function ConservationSectionFields({
     </Stack>
   );
 }
-
-const HYGIENE_ENTRY_OPTIONS: Array<{ value: HygieneEntryKind; label: string }> = [
-  { value: "BASIC_SERVICE", label: "Servicio básico" },
-  { value: "SIGNAGE", label: "Señalética" },
-  { value: "HEALTH", label: "Servicio de salud" },
-  { value: "SECURITY", label: "Servicio de seguridad" },
-  { value: "COMMUNICATION", label: "Comunicación" },
-  { value: "THREAT", label: "Amenaza" },
-];
 
 function HygieneSafetySectionFields({
   catalogs,
@@ -3577,25 +3412,6 @@ function HygieneSafetySectionFields({
     </Stack>
   );
 }
-
-const POLICY_DEFINITIONS = [
-  {
-    code: "PLAN_DESARROLLO_GAD",
-    question: "¿El atractivo está incluido en el plan de desarrollo turístico del GAD?",
-  },
-  {
-    code: "PLANIFICACION_TERRITORIAL",
-    question: "¿El atractivo está incluido en la planificación territorial?",
-  },
-  {
-    code: "REGULACIONES_APLICABLES",
-    question: "¿Existen regulaciones específicas aplicables al atractivo?",
-  },
-  {
-    code: "ORDENANZAS_APLICABLES",
-    question: "¿Existen ordenanzas aplicables al atractivo?",
-  },
-] as const;
 
 function PoliciesSectionFields({
   canEdit,
@@ -5058,7 +4874,7 @@ function AnnexesSectionFields({
                 type="date"
                 fullWidth
                 disabled={!canEdit}
-                InputLabelProps={{ shrink: true }}
+                slotProps={{ inputLabel: { shrink: true } }}
                 {...register("accessibilitySurvey.date")}
               />
             </Grid>
@@ -5178,7 +4994,7 @@ function AnnexesSectionFields({
                 type="date"
                 fullWidth
                 disabled={!canEdit}
-                InputLabelProps={{ shrink: true }}
+                slotProps={{ inputLabel: { shrink: true } }}
                 {...register("gadValidation.date")}
               />
             </Grid>
@@ -5291,7 +5107,7 @@ function getProgress(
 
 function getCoreCompletion(
   detail: AdminCenterDetail | null,
-): Partial<Record<AdminCenterSectionCode, boolean>> {
+): Partial<Record<CenterSectionCode, boolean>> {
   const draft = detail?.draft ?? detail?.published;
   if (!draft) return {};
   const hasCoreClassification = Boolean(
@@ -5386,10 +5202,7 @@ function createSectionValues(
   };
 }
 
-function toSectionContent(
-  sectionCode: AdminCenterSectionCode,
-  values: SectionFormValues,
-) {
+function toSectionContent(sectionCode: CenterSectionCode, values: SectionFormValues) {
   return {
     schemaVersion: 1,
     response: values.response,
@@ -5400,33 +5213,33 @@ function toSectionContent(
           distanceKm: values.distanceKm.trim() ? Number(values.distanceKm) : null,
           accessibilityDetails: {
             roads: values.accessibilityRoads.map((road) => ({
-              roadTypeId: toNullableInteger(road.roadTypeId),
+              roadTypeId: toNullableNumber(road.roadTypeId),
               typeLabel: road.typeLabel.trim(),
               startLatitude: toNullableNumber(road.startLatitude),
               startLongitude: toNullableNumber(road.startLongitude),
               endLatitude: toNullableNumber(road.endLatitude),
               endLongitude: toNullableNumber(road.endLongitude),
               distanceKm: toNullableNumber(road.distanceKm),
-              materialId: toNullableInteger(road.materialId),
-              conditionId: toNullableInteger(road.conditionId),
+              materialId: toNullableNumber(road.materialId),
+              conditionId: toNullableNumber(road.conditionId),
               observation: road.observation.trim(),
             })),
             aquatic: values.accessibilityAquatic.map((access) => ({
-              modalityId: toNullableInteger(access.modalityId),
+              modalityId: toNullableNumber(access.modalityId),
               modalityLabel: access.modalityLabel.trim(),
               departure: access.departure.trim(),
-              departureConditionId: toNullableInteger(access.departureConditionId),
+              departureConditionId: toNullableNumber(access.departureConditionId),
               arrival: access.arrival.trim(),
-              arrivalConditionId: toNullableInteger(access.arrivalConditionId),
+              arrivalConditionId: toNullableNumber(access.arrivalConditionId),
               observation: access.observation.trim(),
             })),
             aerial: values.accessibilityAerial.map((access) => ({
-              coverageId: toNullableInteger(access.coverageId),
+              coverageId: toNullableNumber(access.coverageId),
               coverageLabel: access.coverageLabel.trim(),
               observation: access.observation.trim(),
             })),
             transportTypes: values.accessibilityTransportTypes.map((transport) => ({
-              typeId: toNullableInteger(transport.typeId),
+              typeId: toNullableNumber(transport.typeId),
               label: transport.label.trim(),
               applies: transport.applies === "SI",
               detailOther: transport.detailOther.trim(),
@@ -5435,14 +5248,14 @@ function toSectionContent(
             transportDetails: values.accessibilityTransportDetails.map((detail) => ({
               operator: detail.operator.trim(),
               terminal: detail.terminal.trim(),
-              frequencyId: toNullableInteger(detail.frequencyId),
+              frequencyId: toNullableNumber(detail.frequencyId),
               frequencyLabel: detail.frequencyLabel.trim(),
               transferDetail: detail.transferDetail.trim(),
               observation: detail.observation.trim(),
             })),
             criteria: values.accessibilityCriteria.map((criterion) => ({
-              accessibilityTypeId: toNullableInteger(criterion.accessibilityTypeId),
-              criterionId: toNullableInteger(criterion.criterionId),
+              accessibilityTypeId: toNullableNumber(criterion.accessibilityTypeId),
+              criterionId: toNullableNumber(criterion.criterionId),
               label: criterion.label.trim(),
               response: criterion.response,
               detail: criterion.detail.trim(),
@@ -5450,7 +5263,7 @@ function toSectionContent(
             })),
             signage: {
               available: values.accessibilitySignage.available,
-              conditionId: toNullableInteger(values.accessibilitySignage.conditionId),
+              conditionId: toNullableNumber(values.accessibilitySignage.conditionId),
               observation: values.accessibilitySignage.observation.trim(),
             },
           },
@@ -5471,30 +5284,30 @@ function toSectionContent(
       ? {
           plant: values.plant.map((item) => ({
             scope: item.scope,
-            typeId: toNullableInteger(item.typeId),
+            typeId: toNullableNumber(item.typeId),
             typeLabel: item.typeLabel.trim(),
             group: item.group.trim(),
-            quantity1: toNullableInteger(item.quantity1),
-            quantity2: toNullableInteger(item.quantity2),
-            quantity3: toNullableInteger(item.quantity3),
+            quantity1: toNullableNumber(item.quantity1),
+            quantity2: toNullableNumber(item.quantity2),
+            quantity3: toNullableNumber(item.quantity3),
             observation: item.observation.trim(),
           })),
           facilitiesDetails: values.facilityDetails.map((item) => ({
-            categoryId: toNullableInteger(item.categoryId),
-            typeId: toNullableInteger(item.typeId),
+            categoryId: toNullableNumber(item.categoryId),
+            typeId: toNullableNumber(item.typeId),
             typeLabel: item.typeLabel.trim(),
-            quantity: toNullableInteger(item.quantity),
+            quantity: toNullableNumber(item.quantity),
             latitude: toNullableNumber(item.latitude),
             longitude: toNullableNumber(item.longitude),
             administrator: item.administrator.trim(),
             universalAccessibility: item.universalAccessibility,
-            conditionId: toNullableInteger(item.conditionId),
+            conditionId: toNullableNumber(item.conditionId),
             detailOther: item.detailOther.trim(),
             observation: item.observation.trim(),
           })),
           complementaryServices: values.complementaryServices.map((item) => ({
             scope: item.scope,
-            typeId: toNullableInteger(item.typeId),
+            typeId: toNullableNumber(item.typeId),
             typeLabel: item.typeLabel.trim(),
             specification: item.specification.trim(),
             observation: item.observation.trim(),
@@ -5514,7 +5327,7 @@ function toSectionContent(
             },
             factors: values.conservationFactors.map((factor) => ({
               component: factor.component,
-              factorId: toNullableInteger(factor.factorId),
+              factorId: toNullableNumber(factor.factorId),
               origin: factor.origin,
               name: factor.name.trim(),
               response: factor.response,
@@ -5537,10 +5350,10 @@ function toSectionContent(
             entries: values.hygieneEntries.map((entry) => ({
               kind: entry.kind,
               scope: entry.scope || null,
-              typeId: toNullableInteger(entry.typeId),
+              typeId: toNullableNumber(entry.typeId),
               name: entry.name.trim(),
               provider: entry.provider.trim(),
-              secondaryId: toNullableInteger(entry.secondaryId),
+              secondaryId: toNullableNumber(entry.secondaryId),
               secondary: entry.secondary.trim(),
               response: entry.response,
               quantity: entry.quantity.trim() === "" ? null : Number(entry.quantity),
@@ -5552,14 +5365,14 @@ function toSectionContent(
               visitorUse: values.hygieneRadios.visitorUse,
               internalUse: values.hygieneRadios.internalUse,
               emergencyUse: values.hygieneRadios.emergencyUse,
-              quantity: toNullableInteger(values.hygieneRadios.quantity),
+              quantity: toNullableNumber(values.hygieneRadios.quantity),
               observation: values.hygieneRadios.observation.trim(),
             },
             contingency: {
               exists: values.hygieneContingency.exists,
               institution: values.hygieneContingency.institution.trim(),
               document: values.hygieneContingency.document.trim(),
-              year: toNullableInteger(values.hygieneContingency.year),
+              year: toNullableNumber(values.hygieneContingency.year),
               observation: values.hygieneContingency.observation.trim(),
             },
           },
@@ -5571,7 +5384,7 @@ function toSectionContent(
             code: policy.code || POLICY_DEFINITIONS[index]?.code,
             question: policy.question || POLICY_DEFINITIONS[index]?.question,
             response: policy.response,
-            year: toNullableInteger(policy.year),
+            year: toNullableNumber(policy.year),
             specification: policy.specification.trim(),
             observation: policy.observation.trim(),
           })),
@@ -5588,7 +5401,7 @@ function toSectionContent(
             observation: values.promotion.observation.trim(),
             media: values.promotionMedia.map((media) => ({
               response: media.response,
-              typeId: toNullableInteger(media.typeId),
+              typeId: toNullableNumber(media.typeId),
               name: media.name.trim(),
               url: media.url.trim(),
               periodicity: media.periodicity.trim(),
@@ -5604,24 +5417,24 @@ function toSectionContent(
             registry: {
               exists: values.visitorRegistry.exists,
               type: values.visitorRegistry.type || null,
-              years: toNullableInteger(values.visitorRegistry.years),
+              years: toNullableNumber(values.visitorRegistry.years),
               reports: values.visitorRegistry.reports,
               frequency: values.visitorRegistry.frequency.trim(),
               observation: values.visitorRegistry.observation.trim(),
             },
             seasons: values.visitorSeasons.map((season) => ({
               type: season.type,
-              quantity: toNullableInteger(season.quantity),
-              year: toNullableInteger(season.year),
+              quantity: toNullableNumber(season.quantity),
+              year: toNullableNumber(season.year),
               months: parseMonths(season.months),
               observation: season.observation.trim(),
             })),
             origins: values.visitorOrigins.map((origin) => ({
               type: origin.type,
               place: origin.place.trim(),
-              month: toNullableInteger(origin.month),
-              year: toNullableInteger(origin.year),
-              quantity: toNullableInteger(origin.quantity),
+              month: toNullableNumber(origin.month),
+              year: toNullableNumber(origin.year),
+              quantity: toNullableNumber(origin.quantity),
               observation: origin.observation.trim(),
             })),
             informants: values.visitorInformants.map((informant) => ({
@@ -5630,9 +5443,9 @@ function toSectionContent(
               observation: informant.observation.trim(),
             })),
             influx: {
-              weekday: toNullableInteger(values.visitorInflux.weekday),
-              weekend: toNullableInteger(values.visitorInflux.weekend),
-              holidays: toNullableInteger(values.visitorInflux.holidays),
+              weekday: toNullableNumber(values.visitorInflux.weekday),
+              weekend: toNullableNumber(values.visitorInflux.weekend),
+              holidays: toNullableNumber(values.visitorInflux.holidays),
               frequency: values.visitorInflux.frequency || null,
               observation: values.visitorInflux.observation.trim(),
             },
@@ -5643,19 +5456,19 @@ function toSectionContent(
       ? {
           humanResources: {
             summary: {
-              administrationOperation: toNullableInteger(
+              administrationOperation: toNullableNumber(
                 values.humanResourceSummary.administrationOperation,
               ),
-              specializedTourism: toNullableInteger(
+              specializedTourism: toNullableNumber(
                 values.humanResourceSummary.specializedTourism,
               ),
               observation: values.humanResourceSummary.observation.trim(),
             },
             training: values.humanResourceTraining.map((training) => ({
               group: training.group,
-              typeId: toNullableInteger(training.typeId),
+              typeId: toNullableNumber(training.typeId),
               name: training.name.trim(),
-              quantity: toNullableInteger(training.quantity),
+              quantity: toNullableNumber(training.quantity),
               detailOther: training.detailOther.trim(),
               observation: training.observation.trim(),
             })),
@@ -5666,7 +5479,7 @@ function toSectionContent(
       ? {
           annexes: {
             documents: values.annexDocuments.map((document) => ({
-              fileId: toNullableInteger(document.fileId),
+              fileId: toNullableNumber(document.fileId),
               type: document.type.trim(),
               source: document.source.trim(),
               author: document.author.trim(),
@@ -5675,7 +5488,7 @@ function toSectionContent(
               observation: document.observation.trim(),
             })),
             responsibles: values.annexResponsibles.map((responsible) => ({
-              typeId: toNullableInteger(responsible.typeId),
+              typeId: toNullableNumber(responsible.typeId),
               name: responsible.name.trim(),
               role: responsible.role.trim(),
               institution: responsible.institution.trim(),
@@ -6240,14 +6053,6 @@ function toDeclarationForm(value: unknown): ConservationDeclarationForm {
   };
 }
 
-function toNullableNumber(value: string): number | null {
-  return value.trim() === "" ? null : Number(value);
-}
-
-function toNullableInteger(value: string): number | null {
-  return value.trim() === "" ? null : Number(value);
-}
-
 function toRowForm(raw: unknown): SectionRowForm {
   const row = isRecord(raw) ? raw : {};
   const response = isSectionResponse(row.response) ? row.response : EMPTY_RESPONSE;
@@ -6263,10 +6068,6 @@ function toRowForm(raw: unknown): SectionRowForm {
     quantity,
     observation: typeof row.observation === "string" ? row.observation : "",
   };
-}
-
-function isSectionResponse(value: unknown): value is SectionResponse {
-  return SECTION_RESPONSE_OPTIONS.some((option) => option.value === value);
 }
 
 /**
@@ -6294,7 +6095,7 @@ export function ContinuousCenterSectionWorkflow({
   detail: AdminCenterDetail | null;
   catalogs: AdminCatalogs | null;
   canEdit: boolean;
-  activeSectionCode: AdminCenterSectionCode | null;
+  activeSectionCode: CenterSectionCode | null;
   visible: boolean;
   showOverview: boolean;
   onDetailChanged: (detail: AdminCenterDetail) => void;
@@ -6302,24 +6103,9 @@ export function ContinuousCenterSectionWorkflow({
   /** Ver src/lib/ficha/sugerencias-secciones.ts. */
   sugerenciasImportadas?: SugerenciasSecciones | null;
 }) {
-  const sectionsQuery = useQuery({
-    queryKey: ["admin", "center", code, "sections"],
-    queryFn: () => getAdminCenterSections(token, code as string),
-    enabled: Boolean(token && code),
-    staleTime: 10_000,
-  });
-  const valuationQuery = useQuery<AdminCenterValuation>({
-    queryKey: ["admin", "center", code, "valuation"],
-    queryFn: () => getAdminCenterValuation(token, code as string),
-    enabled: Boolean(token && code),
-    staleTime: 10_000,
-  });
-  const mediaQuery = useQuery<{ items: AdminMediaItem[] }>({
-    queryKey: ["admin", "media", code],
-    queryFn: () => getAdminCenterMedia(token, code as string),
-    enabled: Boolean(token && code),
-    staleTime: 5_000,
-  });
+  const sectionsQuery = useQuery(centerSectionsQueryOptions(token, code));
+  const valuationQuery = useQuery(centerValuationQueryOptions(token, code));
+  const mediaQuery = useQuery(centerMediaQueryOptions(token, code));
   const mediaItems = useMemo(
     () => mediaQuery.data?.items ?? [],
     [mediaQuery.data?.items],
@@ -6327,9 +6113,10 @@ export function ContinuousCenterSectionWorkflow({
   useEffect(() => {
     if (sectionsQuery.error) {
       onError(
-        sectionsQuery.error instanceof Error
-          ? sectionsQuery.error.message
-          : "No se pudieron cargar las secciones de la ficha.",
+        errorMessage(
+          sectionsQuery.error,
+          "No se pudieron cargar las secciones de la ficha.",
+        ),
       );
     }
   }, [onError, sectionsQuery.error]);
@@ -6372,7 +6159,7 @@ export function ContinuousCenterSectionWorkflow({
     return (
       <Box sx={{ display: visible ? "block" : "none" }}>
         <ContentState
-          status="empty"
+          status="error"
           message="No se pudieron cargar las secciones de la ficha."
         />
       </Box>
@@ -6886,8 +6673,4 @@ function SectionResponseControl({
       </Select>
     </FormControl>
   );
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

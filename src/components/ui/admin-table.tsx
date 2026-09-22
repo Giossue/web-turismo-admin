@@ -17,15 +17,24 @@ import { webTokens } from "@/theme/tokens";
 
 export const ADMIN_TABLE_PAGE_SIZE = 20;
 
+export type AdminTablePagination = {
+  page: number;
+  total: number;
+  onPageChange: (page: number) => void;
+  pageSize?: number;
+};
+
 type AdminTableProps = Omit<TableProps, "aria-label" | "children"> & {
   ariaLabel: string;
   children: React.ReactNode;
+  /** Sin filas para mostrar; se ignora mientras `loading` está activo. */
   empty?: boolean;
   emptyMessage?: string;
-  footer?: React.ReactNode;
+  /** Mensaje de error de carga; tiene prioridad sobre el estado vacío. */
+  error?: string | null;
   loading?: boolean;
-  loadingLabel?: string;
   minWidth?: number | string;
+  pagination?: AdminTablePagination;
 };
 
 export function AdminTable({
@@ -33,17 +42,17 @@ export function AdminTable({
   children,
   empty = false,
   emptyMessage = "No hay información para mostrar.",
-  footer,
+  error,
   loading = false,
-  loadingLabel = "Cargando información",
   minWidth,
+  pagination,
   sx: tableSx,
   ...tableProps
 }: AdminTableProps) {
   return (
     <FlatSurface sx={{ overflow: "hidden" }}>
       {loading ? (
-        <ContentState status="loading" label={loadingLabel} message={emptyMessage} />
+        <ContentState status="loading" label="Cargando información" />
       ) : (
         <TableContainer
           sx={{
@@ -62,15 +71,23 @@ export function AdminTable({
           </Table>
         </TableContainer>
       )}
-      {!loading && empty ? (
-        <ContentState status="empty" label={loadingLabel} message={emptyMessage} />
+      {!loading && error ? <ContentState status="error" message={error} /> : null}
+      {!loading && !error && empty ? (
+        <ContentState status="empty" message={emptyMessage} />
       ) : null}
-      {footer}
+      {pagination ? (
+        <AdminTableFooter
+          page={pagination.page}
+          pageSize={pagination.pageSize ?? ADMIN_TABLE_PAGE_SIZE}
+          total={pagination.total}
+          onPageChange={pagination.onPageChange}
+        />
+      ) : null}
     </FlatSurface>
   );
 }
 
-export function AdminTableFooter({
+function AdminTableFooter({
   page,
   pageSize,
   total,
@@ -93,7 +110,7 @@ export function AdminTableFooter({
       gap={webTokens.spacing.inline}
       sx={{
         p: webTokens.spacing.tableFooter,
-        borderTop: "1px solid var(--mui-palette-divider)",
+        borderTop: webTokens.border,
       }}
     >
       <Typography variant="body2" color="text.secondary">

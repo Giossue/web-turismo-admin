@@ -1,18 +1,17 @@
 import { Chip } from "@mui/material";
 
-const statusColors = {
-  ACTIVA: "success",
-  EN_REVISION: "warning",
-  BORRADOR: "default",
-  APROBADO: "success",
-  PUBLICADO: "success",
-  PENDIENTE: "warning",
-  RECHAZADO: "error",
-  INACTIVA: "default",
-  INACTIVO: "default",
-} as const;
+import type { StatusTone } from "@/lib/admin-labels";
 
-export function StatusBadge({ code, label }: { code: string; label: string }) {
-  const color = statusColors[code as keyof typeof statusColors] ?? "default";
-  return <Chip label={label} size="small" color={color} />;
+/**
+ * Etiqueta de estado. El tono se obtiene con las funciones por dominio de
+ * `@/lib/admin-labels` (por ejemplo `opinionStatusTone`).
+ */
+export function StatusBadge({
+  label,
+  tone = "default",
+}: {
+  label: string;
+  tone?: StatusTone;
+}) {
+  return <Chip label={label} size="small" color={tone} />;
 }

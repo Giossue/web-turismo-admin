@@ -22,18 +22,24 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 
-import {
-  AdminTable,
-  AdminTableFooter,
-  ADMIN_TABLE_PAGE_SIZE,
-} from "@/components/ui/admin-table";
+import { AdminTable, ADMIN_TABLE_PAGE_SIZE } from "@/components/ui/admin-table";
 import {
   getAdminOpinionHistory,
   getAdminOpinions,
   reviewAdminOpinion,
   type AdminOpinion,
   type AdminOpinionHistory,
+  type OpinionStatus,
+  type ReviewAction,
 } from "@/lib/admin-api";
+import {
+  opinionStatusLabel,
+  opinionStatusTone,
+  opinionTargetTypeLabel,
+} from "@/lib/admin-labels";
+import { adminKeys } from "@/lib/admin-queries";
+import { errorMessage } from "@/lib/errors";
+import { formatDateTime } from "@/lib/format";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { webTokens } from "@/theme/tokens";
 
@@ -41,7 +47,7 @@ const pageSize = ADMIN_TABLE_PAGE_SIZE;
 
 type ReviewIntent = {
   opinion: AdminOpinion;
-  action: "APPROVE" | "REJECT";
+  action: ReviewAction;
 };
 
 export function OpinionManagement({
@@ -62,7 +68,7 @@ export function OpinionManagement({
   const [historyOpinion, setHistoryOpinion] = useState<AdminOpinion | null>(null);
   const [reason, setReason] = useState("");
   const historyQuery = useQuery({
-    queryKey: ["admin", "opinion-history", historyOpinion?.reviewCode],
+    queryKey: adminKeys.opinionHistory(historyOpinion?.reviewCode ?? null),
     queryFn: () => getAdminOpinionHistory(token, historyOpinion?.reviewCode ?? ""),
     enabled: Boolean(token && historyOpinion),
   });
@@ -70,9 +76,7 @@ export function OpinionManagement({
   useEffect(() => {
     if (historyQuery.error) {
       onError(
-        historyQuery.error instanceof Error
-          ? historyQuery.error.message
-          : "No se pudo cargar el historial de la opinión.",
+        errorMessage(historyQuery.error, "No se pudo cargar el historial de la opinión."),
       );
     }
   }, [historyQuery.error, onError]);
@@ -90,11 +94,7 @@ export function OpinionManagement({
         setItems(result.items);
         setTotal(result.total);
       } catch (cause) {
-        onError(
-          cause instanceof Error
-            ? cause.message
-            : "No se pudieron cargar las opiniones pendientes.",
-        );
+        onError(errorMessage(cause, "No se pudieron cargar las opiniones pendientes."));
       } finally {
         setLoading(false);
       }
@@ -106,7 +106,7 @@ export function OpinionManagement({
     void Promise.resolve().then(() => load(page));
   }, [load, page]);
 
-  function openReview(opinion: AdminOpinion, action: "APPROVE" | "REJECT") {
+  function openReview(opinion: AdminOpinion, action: ReviewAction) {
     setReason("");
     setHistoryOpinion(null);
     setReviewIntent({ opinion, action });
@@ -147,7 +147,7 @@ export function OpinionManagement({
       if (nextPage !== page) setPage(nextPage);
       else await load(page);
     } catch (cause) {
-      onError(cause instanceof Error ? cause.message : "No se pudo revisar la opinión.");
+      onError(errorMessage(cause, "No se pudo revisar la opinión."));
     } finally {
       setWorkingCode(null);
     }
@@ -159,16 +159,9 @@ export function OpinionManagement({
         ariaLabel="Opiniones de visitantes"
         minWidth={760}
         loading={loading && items.length === 0}
-        empty={!loading && items.length === 0}
+        empty={items.length === 0}
         emptyMessage="No hay opiniones pendientes ni publicadas."
-        footer={
-          <AdminTableFooter
-            total={total}
-            page={page}
-            pageSize={pageSize}
-            onPageChange={setPage}
-          />
-        }
+        pagination={{ page, total, pageSize, onPageChange: setPage }}
       >
         <TableHead>
           <TableRow>
@@ -185,17 +178,15 @@ export function OpinionManagement({
               <TableCell component="th" scope="row">
                 <Typography fontWeight={700}>{opinion.target.name}</Typography>
                 <Typography variant="caption" color="text.secondary">
-                  {opinion.target.type === "CENTRO"
-                    ? "Centro turístico"
-                    : "Punto de interés"}
+                  {opinionTargetTypeLabel(opinion.target.type)}
                   {opinion.target.code ? ` · ${opinion.target.code}` : ""}
                 </Typography>
               </TableCell>
               <TableCell>{opinion.authorName}</TableCell>
               <TableCell>
                 <StatusBadge
-                  code={opinion.status === "APROBADA" ? "PUBLICADO" : "PENDIENTE"}
-                  label={opinion.status === "APROBADA" ? "Publicada" : "Pendiente"}
+                  label={opinionStatusLabel(opinion.status)}
+                  tone={opinionStatusTone(opinion.status)}
                 />
               </TableCell>
               <TableCell>
@@ -293,7 +284,7 @@ export function OpinionManagement({
                   multiline
                   minRows={3}
                   helperText="El motivo se conserva en la auditoría y se muestra al autor."
-                  inputProps={{ maxLength: 1000 }}
+                  slotProps={{ htmlInput: { maxLength: 1000 } }}
                 />
               ) : (
                 <Typography color="text.secondary">
@@ -334,7 +325,7 @@ function OpinionHistoryDetail({ history }: { history: AdminOpinionHistory }) {
       <Stack spacing={0.5}>
         <Typography variant="h6">{history.target.name}</Typography>
         <Typography color="text.secondary" variant="body2">
-          {history.target.type === "CENTRO" ? "Centro turístico" : "Punto de interés"}
+          {opinionTargetTypeLabel(history.target.type)}
           {history.target.code ? ` · ${history.target.code}` : ""}
         </Typography>
         <Typography variant="body2">
@@ -366,8 +357,10 @@ function OpinionHistoryDetail({ history }: { history: AdminOpinionHistory }) {
             <OpinionRating rating={version.rating} />
             <Typography variant="body2">{version.comment || "Sin comentario"}</Typography>
             <Typography color="text.secondary" variant="caption">
-              Enviada: {formatDate(version.submittedAt)}
-              {version.reviewedAt ? ` · Revisada: ${formatDate(version.reviewedAt)}` : ""}
+              Enviada: {formatDateTime(version.submittedAt)}
+              {version.reviewedAt
+                ? ` · Revisada: ${formatDateTime(version.reviewedAt)}`
+                : ""}
             </Typography>
             {version.moderations.length > 0 ? (
               <Stack spacing={webTokens.spacing.inline} sx={{ pt: 1 }}>
@@ -381,7 +374,7 @@ function OpinionHistoryDetail({ history }: { history: AdminOpinionHistory }) {
                       <strong>{moderation.moderatorName}</strong>
                     </Typography>
                     <Typography color="text.secondary" variant="caption">
-                      {formatDate(moderation.createdAt)}
+                      {formatDateTime(moderation.createdAt)}
                       {moderation.reason ? ` · Motivo: ${moderation.reason}` : ""}
                     </Typography>
                   </Stack>
@@ -395,28 +388,9 @@ function OpinionHistoryDetail({ history }: { history: AdminOpinionHistory }) {
   );
 }
 
-function OpinionHistoryStatus({
-  status,
-}: {
-  status: AdminOpinionHistory["versions"][number]["status"];
-}) {
-  const labels: Record<typeof status, string> = {
-    PENDIENTE: "Pendiente",
-    APROBADA: "Publicada",
-    RECHAZADA: "Rechazada",
-    REEMPLAZADA: "Reemplazada",
-  };
+function OpinionHistoryStatus({ status }: { status: OpinionStatus }) {
   return (
-    <StatusBadge
-      code={
-        status === "APROBADA"
-          ? "PUBLICADO"
-          : status === "REEMPLAZADA"
-            ? "INACTIVO"
-            : status
-      }
-      label={labels[status]}
-    />
+    <StatusBadge label={opinionStatusLabel(status)} tone={opinionStatusTone(status)} />
   );
 }
 
@@ -464,14 +438,4 @@ function OpinionRating({ rating }: { rating: number | null }) {
         : `${"★".repeat(rating)}${"☆".repeat(5 - rating)}`}
     </Typography>
   );
-}
-
-function formatDate(value: string): string {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime())
-    ? "—"
-    : date.toLocaleString("es-EC", {
-        dateStyle: "medium",
-        timeStyle: "short",
-      });
 }

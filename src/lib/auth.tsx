@@ -1,11 +1,19 @@
 "use client";
 
-import { Alert, Box, Button, Stack, TextField, Typography } from "@mui/material";
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
-import { FlatSurface } from "@/components/ui/flat-surface";
-import { webTokens } from "@/theme/tokens";
 import { registerAdminAccessTokenRefresh } from "./admin-api";
+import { errorMessage } from "./errors";
+import { apiEndpoint, sendApiRequest, toApiError } from "./http";
 
 export type AdminRole = "ADMINISTRADOR" | "AGENTE_TURISTICO" | "TURISTA";
 
@@ -15,6 +23,18 @@ export type AdminUser = {
   email: string;
   roles: AdminRole[];
 };
+
+/** Administración: revisión, opiniones, catálogos y resumen. */
+export function isAdministrator(user: AdminUser | null | undefined): boolean {
+  return Boolean(user?.roles.includes("ADMINISTRADOR"));
+}
+
+/** Cuentas que pueden entrar al panel: administradores y agentes turísticos. */
+export function canOperatePanel(user: AdminUser | null | undefined): boolean {
+  return Boolean(
+    user?.roles.some((role) => role === "ADMINISTRADOR" || role === "AGENTE_TURISTICO"),
+  );
+}
 
 type AuthContextValue = {
   user: AdminUser | null;
@@ -26,39 +46,19 @@ type AuthContextValue = {
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
-const apiUrl = process.env.NEXT_PUBLIC_TURISMO_API_URL ?? "http://localhost:3000/api/v1";
+type SessionData = { accessToken?: string; user?: AdminUser };
 type RefreshData = Awaited<ReturnType<typeof request>>;
 let refreshPromise: Promise<RefreshData> | null = null;
 
 async function request(path: string, init?: RequestInit) {
-  const headers = new Headers(init?.headers);
-  headers.set("Accept", "application/json");
-  if (init?.body == null) {
-    headers.delete("Content-Type");
-  } else if (!headers.has("Content-Type")) {
-    headers.set("Content-Type", "application/json");
+  const result = await sendApiRequest<SessionData>(apiEndpoint(path), {
+    ...init,
+    credentials: "include",
+  });
+  if (!result.response.ok) {
+    throw toApiError(result, "No se pudo completar la operación.");
   }
-
-  let response: Response;
-  try {
-    response = await fetch(`${apiUrl}${path}`, {
-      ...init,
-      credentials: "include",
-      headers,
-    });
-  } catch {
-    throw new Error(
-      "No se pudo conectar con la API institucional. Verifica que el servicio esté iniciado y que NEXT_PUBLIC_TURISMO_API_URL sea correcto.",
-    );
-  }
-  const body = (await response.json().catch(() => null)) as {
-    data?: { accessToken?: string; user?: AdminUser };
-    error?: { message?: string };
-  } | null;
-  if (!response.ok) {
-    throw new Error(body?.error?.message ?? "No se pudo completar la operación.");
-  }
-  return body?.data;
+  return result.body?.data;
 }
 
 function refreshSession() {
@@ -82,37 +82,50 @@ function refreshSession() {
   return refreshPromise;
 }
 
+/**
+ * Sesión institucional. Debe montarse dentro de `QueryClientProvider`: al
+ * cerrar sesión, perderla o cambiar de cuenta vacía la caché de TanStack Query
+ * para que la siguiente cuenta no vea datos de la anterior.
+ */
 export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<AdminUser | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const refreshStarted = useRef(false);
+  const sessionUserId = useRef<number | null>(null);
 
-  const refreshAccessToken = useMemo(
-    () =>
-      async (expiredToken: string): Promise<string | null> => {
-        if (accessToken && accessToken !== expiredToken) {
-          return accessToken;
-        }
+  /** Aplica la sesión recibida de la API (o su ausencia) y devuelve el token. */
+  const applySession = useCallback(
+    (data: SessionData | null | undefined): string | null => {
+      const next = data?.accessToken && data.user ? data : null;
+      const nextUserId = next?.user?.id ?? null;
+      if (sessionUserId.current !== null && sessionUserId.current !== nextUserId) {
+        // Se vacía antes de renderizar con la nueva sesión: ningún componente
+        // de la cuenta siguiente llega a leer datos en caché de la anterior.
+        queryClient.clear();
+      }
+      sessionUserId.current = nextUserId;
+      setAccessToken(next?.accessToken ?? null);
+      setUser(next?.user ?? null);
+      return next?.accessToken ?? null;
+    },
+    [queryClient],
+  );
 
-        try {
-          const data = await refreshSession();
-          if (!data?.accessToken || !data.user) {
-            setAccessToken(null);
-            setUser(null);
-            return null;
-          }
-          setAccessToken(data.accessToken);
-          setUser(data.user);
-          return data.accessToken;
-        } catch {
-          setAccessToken(null);
-          setUser(null);
-          return null;
-        }
-      },
-    [accessToken],
+  const refreshAccessToken = useCallback(
+    async (expiredToken: string): Promise<string | null> => {
+      if (accessToken && accessToken !== expiredToken) {
+        return accessToken;
+      }
+      try {
+        return applySession(await refreshSession());
+      } catch {
+        return applySession(null);
+      }
+    },
+    [accessToken, applySession],
   );
 
   useEffect(
@@ -127,15 +140,10 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
     refreshStarted.current = true;
 
     void refreshSession()
-      .then((data) => {
-        if (data?.accessToken && data.user) {
-          setAccessToken(data.accessToken);
-          setUser(data.user);
-        }
-      })
+      .then((data) => applySession(data))
       .catch(() => undefined)
       .finally(() => setReady(true));
-  }, []);
+  }, [applySession]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -153,22 +161,18 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
           if (!data?.accessToken || !data.user) {
             throw new Error("La API no devolvió una sesión válida.");
           }
-          setAccessToken(data.accessToken);
-          setUser(data.user);
+          applySession(data);
         } catch (cause) {
-          const message =
-            cause instanceof Error ? cause.message : "No se pudo iniciar sesión.";
-          setError(message);
+          setError(errorMessage(cause, "No se pudo iniciar sesión."));
           throw cause;
         }
       },
       async logout() {
         await request("/auth/logout", { method: "POST" }).catch(() => undefined);
-        setAccessToken(null);
-        setUser(null);
+        applySession(null);
       },
     }),
-    [accessToken, error, ready, user],
+    [accessToken, applySession, error, ready, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -180,71 +184,4 @@ export function useAdminAuth() {
     throw new Error("useAdminAuth debe usarse dentro de AdminAuthProvider.");
   }
   return value;
-}
-
-export function AdminLogin() {
-  const { error, login } = useAdminAuth();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [pending, setPending] = useState(false);
-
-  async function submit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setPending(true);
-    try {
-      await login(email, password);
-    } catch {
-      // El proveedor ya expone el error en el formulario; evita un Runtime Error no controlado.
-    } finally {
-      setPending(false);
-    }
-  }
-
-  return (
-    <Box
-      component="main"
-      sx={{
-        minHeight: "100vh",
-        display: "grid",
-        placeItems: "center",
-        p: webTokens.spacing.surfaceCompact,
-      }}
-    >
-      <Box sx={{ width: "100%", maxWidth: 440 }}>
-        <Stack spacing={webTokens.spacing.inline} sx={{ mb: 4 }}>
-          <Typography variant="h3" component="h1">
-            Acceso institucional
-          </Typography>
-          <Typography color="text.secondary">
-            Gestiona fichas y revisiones publicadas para Turismo Vinculación.
-          </Typography>
-        </Stack>
-        <FlatSurface padding="default">
-          <Stack component="form" onSubmit={submit} spacing={webTokens.spacing.control}>
-            {error ? <Alert severity="error">{error}</Alert> : null}
-            <TextField
-              label="Correo institucional"
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              autoComplete="username"
-              required
-            />
-            <TextField
-              label="Contraseña"
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              autoComplete="current-password"
-              required
-              inputProps={{ minLength: 8 }}
-            />
-            <Button type="submit" variant="contained" disabled={pending}>
-              {pending ? "Validando…" : "Iniciar sesión"}
-            </Button>
-          </Stack>
-        </FlatSurface>
-      </Box>
-    </Box>
-  );
 }

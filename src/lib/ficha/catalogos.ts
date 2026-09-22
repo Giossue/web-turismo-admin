@@ -3,7 +3,7 @@ import type { AdminCatalogs, CatalogOption } from "@/lib/admin-api";
 import { normalizarTextoCatalogo } from "./normalizacion";
 import type { FichaExtraida } from "./tipos";
 
-export type ResolucionCatalogo = { id: number | null; advertencia: string | null };
+type ResolucionCatalogo = { id: number | null; advertencia: string | null };
 
 function resolverPorNombre(
   opciones: CatalogOption[],

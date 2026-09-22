@@ -11,13 +11,8 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  FormControl,
-  FormHelperText,
   Grid,
   IconButton,
-  InputLabel,
-  MenuItem,
-  Select,
   Stack,
   TableBody,
   TableCell,
@@ -36,29 +31,37 @@ import {
   useMemo,
   useState,
 } from "react";
-import { Controller, useForm, useWatch } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 
 import {
   AdminTable,
-  AdminTableFooter,
   AdminTableToolbar,
   ADMIN_TABLE_PAGE_SIZE,
 } from "@/components/ui/admin-table";
 import { CatalogSelect } from "@/components/ui/catalog-select";
 import { CoordinatePickerDialog } from "@/components/admin/coordinate-picker-dialog";
+import { RhfCatalogSelect } from "@/components/ui/form/rhf-select";
+import { SelectField } from "@/components/ui/form/select-field";
 import { SearchField } from "@/components/ui/search-field";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
   createAdminEstablishment,
-  getAdminCatalogs,
   getAdminEstablishments,
   saveAdminEstablishment,
   setAdminEstablishmentActive,
   submitAdminEstablishmentReview,
   type AdminCatalogs,
   type AdminEstablishment,
+  type AdminEstablishmentsOptions,
   type SaveEstablishmentInput,
 } from "@/lib/admin-api";
+import {
+  establishmentReviewStatusLabel,
+  establishmentReviewStatusTone,
+} from "@/lib/admin-labels";
+import { adminKeys, catalogsQueryOptions } from "@/lib/admin-queries";
+import { errorMessage } from "@/lib/errors";
+import { findCatalogIdByName } from "@/lib/values";
 import { webTokens } from "@/theme/tokens";
 import { ADMIN_SEARCH_DEBOUNCE_MS, useDebouncedValue } from "@/lib/use-debounced-value";
 
@@ -100,6 +103,16 @@ const emptyValues: EstablishmentFormValues = {
 
 const pageSize = ADMIN_TABLE_PAGE_SIZE;
 
+const ACTIVE_FILTER_OPTIONS = [
+  { value: "ALL", label: "Todos" },
+  { value: "true", label: "Activos" },
+  { value: "false", label: "Inactivos" },
+];
+
+function toFilterOption(option: { id: number; name: string }) {
+  return { value: String(option.id), label: option.name };
+}
+
 export type EstablishmentManagementRef = {
   openCreate: () => void;
 };
@@ -140,58 +153,34 @@ export const EstablishmentManagement = forwardRef<
   const latitude = useWatch({ control, name: "latitude" });
   const longitude = useWatch({ control, name: "longitude" });
 
-  const catalogsQuery = useQuery({
-    queryKey: ["admin", "catalogs"],
-    queryFn: () => getAdminCatalogs(token),
-    enabled: token.length > 0,
-  });
+  const catalogsQuery = useQuery(catalogsQueryOptions(token));
+  const establishmentFilters: AdminEstablishmentsOptions = {
+    q: debouncedQuery || undefined,
+    activity: debouncedActivity || undefined,
+    classification: debouncedClassification || undefined,
+    category: debouncedCategory || undefined,
+    provinceId: provinceId ? Number(provinceId) : undefined,
+    cantonId: cantonId ? Number(cantonId) : undefined,
+    localityId: localityId ? Number(localityId) : undefined,
+    active: active === "ALL" ? undefined : active === "true",
+    limit: pageSize,
+    offset: page * pageSize,
+  };
   const establishmentsQuery = useQuery({
-    queryKey: [
-      "admin",
-      "establishments",
-      debouncedQuery,
-      provinceId,
-      cantonId,
-      localityId,
-      debouncedActivity,
-      debouncedClassification,
-      debouncedCategory,
-      active,
-      page,
-    ],
-    queryFn: () =>
-      getAdminEstablishments(token, {
-        q: debouncedQuery || undefined,
-        activity: debouncedActivity || undefined,
-        classification: debouncedClassification || undefined,
-        category: debouncedCategory || undefined,
-        provinceId: provinceId ? Number(provinceId) : undefined,
-        cantonId: cantonId ? Number(cantonId) : undefined,
-        localityId: localityId ? Number(localityId) : undefined,
-        active: active === "ALL" ? undefined : active === "true",
-        limit: pageSize,
-        offset: page * pageSize,
-      }),
+    queryKey: adminKeys.establishments(establishmentFilters),
+    queryFn: () => getAdminEstablishments(token, establishmentFilters),
     enabled: token.length > 0,
   });
 
   useEffect(() => {
     if (catalogsQuery.error) {
-      onError(
-        catalogsQuery.error instanceof Error
-          ? catalogsQuery.error.message
-          : "No se pudieron cargar los catálogos.",
-      );
+      onError(errorMessage(catalogsQuery.error, "No se pudieron cargar los catálogos."));
     }
   }, [catalogsQuery.error, onError]);
 
   useEffect(() => {
     if (establishmentsQuery.error) {
-      onError(
-        establishmentsQuery.error instanceof Error
-          ? establishmentsQuery.error.message
-          : "No se pudo cargar el catastro.",
-      );
+      onError(errorMessage(establishmentsQuery.error, "No se pudo cargar el catastro."));
     }
   }, [establishmentsQuery.error, onError]);
 
@@ -201,7 +190,7 @@ export const EstablishmentManagement = forwardRef<
         ? saveAdminEstablishment(token, editing.id, input)
         : createAdminEstablishment(token, input),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["admin", "establishments"] });
+      await queryClient.invalidateQueries({ queryKey: adminKeys.allEstablishments() });
       setDialogOpen(false);
       setEditing(null);
       onNotice(
@@ -215,38 +204,31 @@ export const EstablishmentManagement = forwardRef<
       );
     },
     onError: (cause) =>
-      onError(
-        cause instanceof Error ? cause.message : "No se pudo guardar el establecimiento.",
-      ),
+      onError(errorMessage(cause, "No se pudo guardar el establecimiento.")),
   });
 
   const submitReviewMutation = useMutation({
     mutationFn: (id: number) => submitAdminEstablishmentReview(token, id),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["admin", "establishments"] });
+      await queryClient.invalidateQueries({ queryKey: adminKeys.allEstablishments() });
       onNotice("El catastro fue enviado a revisión.");
     },
     onError: (cause) =>
-      onError(
-        cause instanceof Error
-          ? cause.message
-          : "No se pudo enviar el catastro a revisión.",
-      ),
+      onError(errorMessage(cause, "No se pudo enviar el catastro a revisión.")),
   });
 
   const activeMutation = useMutation({
     mutationFn: ({ id, next }: { id: number; next: boolean }) =>
       setAdminEstablishmentActive(token, id, next),
     onSuccess: async (_, variables) => {
-      await queryClient.invalidateQueries({ queryKey: ["admin", "establishments"] });
+      await queryClient.invalidateQueries({ queryKey: adminKeys.allEstablishments() });
       onNotice(
         variables.next
           ? "El establecimiento fue reactivado."
           : "El establecimiento fue desactivado.",
       );
     },
-    onError: (cause) =>
-      onError(cause instanceof Error ? cause.message : "No se pudo cambiar el estado."),
+    onError: (cause) => onError(errorMessage(cause, "No se pudo cambiar el estado.")),
   });
 
   const data = establishmentsQuery.data;
@@ -381,74 +363,51 @@ export const EstablishmentManagement = forwardRef<
                 setQueryDraft(event.target.value);
                 setPage(0);
               }}
-              inputProps={{ "aria-label": "Buscar establecimientos" }}
+              slotProps={{ htmlInput: { "aria-label": "Buscar establecimientos" } }}
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6, lg: 2 }}>
-            <FormControl fullWidth>
-              <InputLabel id="establishment-province-filter-label">Provincia</InputLabel>
-              <Select
-                labelId="establishment-province-filter-label"
-                label="Provincia"
-                value={provinceId}
-                onChange={(event) => {
-                  setProvinceId(event.target.value);
-                  setCantonId("");
-                  setLocalityId("");
-                  setPage(0);
-                }}
-              >
-                <MenuItem value="">Todas</MenuItem>
-                {provinces.map((province) => (
-                  <MenuItem key={province.id} value={String(province.id)}>
-                    {province.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <SelectField
+              id="establishment-province-filter"
+              label="Provincia"
+              value={provinceId}
+              emptyLabel="Todas"
+              options={provinces.map(toFilterOption)}
+              onChange={(value) => {
+                setProvinceId(value);
+                setCantonId("");
+                setLocalityId("");
+                setPage(0);
+              }}
+            />
           </Grid>
           <Grid size={{ xs: 12, sm: 6, lg: 2 }}>
-            <FormControl fullWidth disabled={!provinceId}>
-              <InputLabel id="establishment-canton-filter-label">Cantón</InputLabel>
-              <Select
-                labelId="establishment-canton-filter-label"
-                label="Cantón"
-                value={cantonId}
-                onChange={(event) => {
-                  setCantonId(event.target.value);
-                  setLocalityId("");
-                  setPage(0);
-                }}
-              >
-                <MenuItem value="">Todos</MenuItem>
-                {cantons.map((canton) => (
-                  <MenuItem key={canton.id} value={String(canton.id)}>
-                    {canton.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <SelectField
+              id="establishment-canton-filter"
+              label="Cantón"
+              value={cantonId}
+              emptyLabel="Todos"
+              options={cantons.map(toFilterOption)}
+              disabled={!provinceId}
+              onChange={(value) => {
+                setCantonId(value);
+                setLocalityId("");
+                setPage(0);
+              }}
+            />
           </Grid>
           <Grid size={{ xs: 12, sm: 6, lg: 2 }}>
-            <FormControl fullWidth>
-              <InputLabel id="establishment-locality-filter-label">Localidad</InputLabel>
-              <Select
-                labelId="establishment-locality-filter-label"
-                label="Localidad"
-                value={localityId}
-                onChange={(event) => {
-                  setLocalityId(event.target.value);
-                  setPage(0);
-                }}
-              >
-                <MenuItem value="">Todas</MenuItem>
-                {localities.map((locality) => (
-                  <MenuItem key={locality.id} value={String(locality.id)}>
-                    {locality.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <SelectField
+              id="establishment-locality-filter"
+              label="Localidad"
+              value={localityId}
+              emptyLabel="Todas"
+              options={localities.map(toFilterOption)}
+              onChange={(value) => {
+                setLocalityId(value);
+                setPage(0);
+              }}
+            />
           </Grid>
           <Grid size={{ xs: 12, sm: 6, lg: 2 }}>
             <CatalogSelect
@@ -507,22 +466,16 @@ export const EstablishmentManagement = forwardRef<
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6, lg: 2 }}>
-            <FormControl fullWidth>
-              <InputLabel id="establishment-status-filter-label">Estado</InputLabel>
-              <Select
-                labelId="establishment-status-filter-label"
-                label="Estado"
-                value={active}
-                onChange={(event) => {
-                  setActive(event.target.value);
-                  setPage(0);
-                }}
-              >
-                <MenuItem value="ALL">Todos</MenuItem>
-                <MenuItem value="true">Activos</MenuItem>
-                <MenuItem value="false">Inactivos</MenuItem>
-              </Select>
-            </FormControl>
+            <SelectField
+              id="establishment-status-filter"
+              label="Estado"
+              value={active}
+              options={ACTIVE_FILTER_OPTIONS}
+              onChange={(value) => {
+                setActive(value || "ALL");
+                setPage(0);
+              }}
+            />
           </Grid>
         </Grid>
       </AdminTableToolbar>
@@ -531,16 +484,9 @@ export const EstablishmentManagement = forwardRef<
         ariaLabel="Catastro de establecimientos"
         minWidth={760}
         loading={establishmentsQuery.isLoading}
-        empty={!establishmentsQuery.isLoading && !data?.items.length}
+        empty={!data?.items.length}
         emptyMessage="No hay establecimientos para los filtros seleccionados."
-        footer={
-          <AdminTableFooter
-            total={data?.total ?? 0}
-            page={page}
-            pageSize={pageSize}
-            onPageChange={setPage}
-          />
-        }
+        pagination={{ page, total: data?.total ?? 0, pageSize, onPageChange: setPage }}
       >
         <TableHead>
           <TableRow>
@@ -568,8 +514,8 @@ export const EstablishmentManagement = forwardRef<
               <TableCell>{item.numeroRegistro ?? "—"}</TableCell>
               <TableCell>
                 <StatusBadge
-                  code={item.reviewStatus}
-                  label={establishmentReviewLabel(item.reviewStatus)}
+                  label={establishmentReviewStatusLabel(item.reviewStatus)}
+                  tone={establishmentReviewStatusTone(item.reviewStatus)}
                 />
               </TableCell>
               <TableCell align="right">
@@ -644,27 +590,13 @@ export const EstablishmentManagement = forwardRef<
             <input type="hidden" {...register("categoria")} />
             <Grid container spacing={webTokens.spacing.control}>
               <Grid size={{ xs: 12, md: 6 }}>
-                <Controller
-                  name="localityId"
+                <RhfCatalogSelect
+                  id="establishment-locality"
                   control={control}
+                  name="localityId"
+                  label="Localidad"
+                  options={catalogs?.localities ?? []}
                   rules={{ required: "Selecciona una localidad." }}
-                  render={({ field, fieldState }) => (
-                    <FormControl fullWidth error={Boolean(fieldState.error)}>
-                      <InputLabel id="establishment-locality-label">Localidad</InputLabel>
-                      <Select
-                        {...field}
-                        labelId="establishment-locality-label"
-                        label="Localidad"
-                      >
-                        {(catalogs?.localities ?? []).map((locality) => (
-                          <MenuItem key={locality.id} value={String(locality.id)}>
-                            {locality.name}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                      <FormHelperText>{fieldState.error?.message}</FormHelperText>
-                    </FormControl>
-                  )}
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
@@ -687,79 +619,58 @@ export const EstablishmentManagement = forwardRef<
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
-                <Controller
+                <RhfCatalogSelect
+                  id="establishment-activity"
+                  control={control}
                   name="activityId"
-                  control={control}
+                  label="Actividad"
+                  options={establishmentActivities}
+                  required
                   rules={{ required: "Selecciona una actividad." }}
-                  render={({ field, fieldState }) => (
-                    <CatalogSelect
-                      id="establishment-activity"
-                      label="Actividad"
-                      value={field.value}
-                      options={establishmentActivities}
-                      required
-                      helperText={fieldState.error?.message}
-                      onChange={(value) => {
-                        field.onChange(value);
-                        setValue("classificationId", "");
-                        setValue("categoryId", "");
-                        const option = establishmentActivities.find(
-                          (candidate) => String(candidate.id) === value,
-                        );
-                        setValue("actividad", option?.name ?? "");
-                        setValue("clasificacion", "");
-                        setValue("categoria", "");
-                      }}
-                    />
-                  )}
+                  onValueChange={(value) => {
+                    setValue("classificationId", "");
+                    setValue("categoryId", "");
+                    const option = establishmentActivities.find(
+                      (candidate) => String(candidate.id) === value,
+                    );
+                    setValue("actividad", option?.name ?? "");
+                    setValue("clasificacion", "");
+                    setValue("categoria", "");
+                  }}
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
-                <Controller
+                <RhfCatalogSelect
+                  id="establishment-classification"
+                  control={control}
                   name="classificationId"
-                  control={control}
-                  render={({ field, fieldState }) => (
-                    <CatalogSelect
-                      id="establishment-classification"
-                      label="Clasificación"
-                      value={field.value}
-                      options={establishmentClassifications}
-                      disabled={!formActivityId}
-                      helperText={fieldState.error?.message}
-                      onChange={(value) => {
-                        field.onChange(value);
-                        setValue("categoryId", "");
-                        const option = establishmentClassifications.find(
-                          (candidate) => String(candidate.id) === value,
-                        );
-                        setValue("clasificacion", option?.name ?? "");
-                        setValue("categoria", "");
-                      }}
-                    />
-                  )}
+                  label="Clasificación"
+                  options={establishmentClassifications}
+                  disabled={!formActivityId}
+                  onValueChange={(value) => {
+                    setValue("categoryId", "");
+                    const option = establishmentClassifications.find(
+                      (candidate) => String(candidate.id) === value,
+                    );
+                    setValue("clasificacion", option?.name ?? "");
+                    setValue("categoria", "");
+                  }}
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
-                <Controller
-                  name="categoryId"
+                <RhfCatalogSelect
+                  id="establishment-category"
                   control={control}
-                  render={({ field, fieldState }) => (
-                    <CatalogSelect
-                      id="establishment-category"
-                      label="Categoría"
-                      value={field.value}
-                      options={establishmentCategories}
-                      disabled={!formClassificationId}
-                      helperText={fieldState.error?.message}
-                      onChange={(value) => {
-                        field.onChange(value);
-                        const option = establishmentCategories.find(
-                          (candidate) => String(candidate.id) === value,
-                        );
-                        setValue("categoria", option?.name ?? "");
-                      }}
-                    />
-                  )}
+                  name="categoryId"
+                  label="Categoría"
+                  options={establishmentCategories}
+                  disabled={!formClassificationId}
+                  onValueChange={(value) => {
+                    const option = establishmentCategories.find(
+                      (candidate) => String(candidate.id) === value,
+                    );
+                    setValue("categoria", option?.name ?? "");
+                  }}
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
@@ -769,7 +680,7 @@ export const EstablishmentManagement = forwardRef<
                 <TextField
                   label="RUC"
                   fullWidth
-                  inputProps={{ maxLength: 13 }}
+                  slotProps={{ htmlInput: { maxLength: 13 } }}
                   {...register("ruc")}
                 />
               </Grid>
@@ -787,7 +698,7 @@ export const EstablishmentManagement = forwardRef<
                   type="number"
                   error={Boolean(formState.errors.latitude)}
                   helperText={formState.errors.latitude?.message}
-                  inputProps={{ step: "any", min: -90, max: 90 }}
+                  slotProps={{ htmlInput: { step: "any", min: -90, max: 90 } }}
                   {...register("latitude", {
                     required: "Ingresa la latitud.",
                     validate: (value) => {
@@ -810,7 +721,7 @@ export const EstablishmentManagement = forwardRef<
                   type="number"
                   error={Boolean(formState.errors.longitude)}
                   helperText={formState.errors.longitude?.message}
-                  inputProps={{ step: "any", min: -180, max: 180 }}
+                  slotProps={{ htmlInput: { step: "any", min: -180, max: 180 } }}
                   {...register("longitude", {
                     required: "Ingresa la longitud.",
                     validate: (value) => {
@@ -877,10 +788,11 @@ function toFormValues(
   catalogs?: AdminCatalogs,
 ): EstablishmentFormValues {
   const activityId =
-    item.activityId ?? findCatalogId(catalogs?.establishmentActivities, item.actividad);
+    item.activityId ??
+    findCatalogIdByName(catalogs?.establishmentActivities, item.actividad);
   const classificationId =
     item.classificationId ??
-    findCatalogId(
+    findCatalogIdByName(
       catalogs?.establishmentClassifications?.filter(
         (option) => !activityId || String(option.activityId) === String(activityId),
       ),
@@ -888,7 +800,7 @@ function toFormValues(
     );
   const categoryId =
     item.categoryId ??
-    findCatalogId(
+    findCatalogIdByName(
       catalogs?.establishmentCategories?.filter(
         (option) =>
           !classificationId ||
@@ -913,21 +825,4 @@ function toFormValues(
     latitude: item.latitude === null ? "" : String(item.latitude),
     longitude: item.longitude === null ? "" : String(item.longitude),
   };
-}
-
-function findCatalogId(
-  options: Array<{ id: number; name: string }> | undefined,
-  name: string | null,
-) {
-  if (!name) return null;
-  return options?.find((option) => option.name === name)?.id ?? null;
-}
-
-function establishmentReviewLabel(status: AdminEstablishment["reviewStatus"]) {
-  return {
-    BORRADOR: "Borrador",
-    EN_REVISION: "En revisión",
-    PUBLICADO: "Publicado",
-    RECHAZADO: "Rechazado",
-  }[status];
 }

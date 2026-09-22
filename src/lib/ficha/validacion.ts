@@ -366,5 +366,3 @@ export const resultadoParseoFichaSchema = z.object({
     z.object({ archivo: z.string(), extension: z.string(), tamanoBytes: z.number() }),
   ),
 });
-
-export type ResultadoParseoFichaValidado = z.infer<typeof resultadoParseoFichaSchema>;

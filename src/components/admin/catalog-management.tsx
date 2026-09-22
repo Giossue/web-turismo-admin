@@ -27,7 +27,6 @@ import { useEffect, useMemo, useState } from "react";
 
 import {
   AdminTable,
-  AdminTableFooter,
   AdminTableToolbar,
   ADMIN_TABLE_PAGE_SIZE,
 } from "@/components/ui/admin-table";
@@ -35,12 +34,14 @@ import { CatalogIconSelect } from "@/components/ui/catalog-icon-select";
 import { SearchField } from "@/components/ui/search-field";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
-  getAdminCatalogs,
   createAdminCatalog,
   updateAdminCatalog,
   type AdminCatalogKey,
   type CatalogOption,
 } from "@/lib/admin-api";
+import { activeLabel, activeTone } from "@/lib/admin-labels";
+import { adminKeys, catalogsQueryOptions } from "@/lib/admin-queries";
+import { errorMessage } from "@/lib/errors";
 import { webTokens } from "@/theme/tokens";
 import { ADMIN_SEARCH_DEBOUNCE_MS, useDebouncedValue } from "@/lib/use-debounced-value";
 
@@ -137,19 +138,11 @@ export function CatalogManagement({
   const [working, setWorking] = useState(false);
   const [page, setPage] = useState(0);
   const debouncedSearch = useDebouncedValue(search.trim(), ADMIN_SEARCH_DEBOUNCE_MS);
-  const catalogsQuery = useQuery({
-    queryKey: ["admin", "catalogs", "management"],
-    queryFn: () => getAdminCatalogs(token, true),
-    enabled: token.length > 0,
-  });
+  const catalogsQuery = useQuery(catalogsQueryOptions(token, true));
 
   useEffect(() => {
     if (catalogsQuery.error) {
-      onError(
-        catalogsQuery.error instanceof Error
-          ? catalogsQuery.error.message
-          : "No se pudieron cargar los catálogos.",
-      );
+      onError(errorMessage(catalogsQuery.error, "No se pudieron cargar los catálogos."));
     }
   }, [catalogsQuery.error, onError]);
 
@@ -284,15 +277,13 @@ export function CatalogManagement({
           ...(selected === "ESTABLISHMENT_CLASSIFICATION" ? { icon } : {}),
         });
       }
-      await queryClient.invalidateQueries({ queryKey: ["admin", "catalogs"] });
+      await queryClient.invalidateQueries({ queryKey: adminKeys.allCatalogs() });
       resetEditor();
       onNotice(
         creating ? "Opción creada y auditada." : "Catálogo actualizado y auditado.",
       );
     } catch (cause) {
-      onError(
-        cause instanceof Error ? cause.message : "No se pudo actualizar el catálogo.",
-      );
+      onError(errorMessage(cause, "No se pudo actualizar el catálogo."));
     } finally {
       setWorking(false);
     }
@@ -345,23 +336,10 @@ export function CatalogManagement({
         ariaLabel="Opciones del catálogo"
         minWidth={560}
         loading={catalogsQuery.isLoading}
-        empty={
-          Boolean(catalogsQuery.error) ||
-          (!catalogsQuery.isLoading && options.length === 0)
-        }
-        emptyMessage={
-          catalogsQuery.error
-            ? "No se pudieron cargar los catálogos."
-            : "No hay opciones que coincidan con la búsqueda."
-        }
-        footer={
-          <AdminTableFooter
-            total={options.length}
-            page={visiblePage}
-            pageSize={ADMIN_TABLE_PAGE_SIZE}
-            onPageChange={setPage}
-          />
-        }
+        error={catalogsQuery.error ? "No se pudieron cargar los catálogos." : null}
+        empty={options.length === 0}
+        emptyMessage="No hay opciones que coincidan con la búsqueda."
+        pagination={{ page: visiblePage, total: options.length, onPageChange: setPage }}
       >
         <TableHead>
           <TableRow>
@@ -398,8 +376,8 @@ export function CatalogManagement({
               ) : null}
               <TableCell>
                 <StatusBadge
-                  code={option.active === false ? "INACTIVA" : "ACTIVA"}
-                  label={option.active === false ? "Inactiva" : "Activa"}
+                  label={activeLabel(option.active !== false)}
+                  tone={activeTone(option.active !== false)}
                 />
               </TableCell>
               <TableCell align="right">
@@ -489,7 +467,7 @@ export function CatalogManagement({
                   type="number"
                   value={numericValue}
                   onChange={(event) => setNumericValue(event.target.value)}
-                  inputProps={{ min: 1, max: 99, step: 1 }}
+                  slotProps={{ htmlInput: { min: 1, max: 99, step: 1 } }}
                   fullWidth
                   disabled={working}
                 />

@@ -25,7 +25,7 @@ export function FlatSurface({
       elevation={0}
       {...props}
       sx={{
-        border: "1px solid var(--mui-palette-divider)",
+        border: webTokens.border,
         borderRadius: `${webTokens.shape.radius}px`,
         boxShadow: "none",
         bgcolor: tone === "subtle" ? "background.subtle" : "background.paper",

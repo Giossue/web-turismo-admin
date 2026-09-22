@@ -23,12 +23,17 @@ import {
   type CatalogOption,
   type CenterDraft,
 } from "@/lib/admin-api";
+import {
+  centerSectionDefinitions,
+  type CenterSectionCode,
+} from "@/lib/center-sections/definitions";
+import { findCatalogOption, isRecord } from "@/lib/values";
 import { webTokens } from "@/theme/tokens";
 
 type DiffStatus = "ADDED" | "MODIFIED" | "REMOVED" | "UNCHANGED";
 
 type ReviewSection = {
-  code: string;
+  code: CenterSectionCode;
   title: string;
   getSnapshot: (draft: CenterDraft) => unknown;
 };
@@ -44,110 +49,63 @@ type SectionDiff = ReviewSection & {
   changes: ScalarChange[];
 };
 
-const REVIEW_SECTIONS: readonly ReviewSection[] = [
-  {
-    code: "identificacion",
-    title: "Datos generales y clasificación",
-    getSnapshot: (draft) => ({
-      name: draft.name,
-      subtypeId: draft.subtypeId,
-      touristZoneId: draft.touristZoneId,
-      parishId: draft.parishId,
-      productLineId: draft.productLineId,
-      scenarioId: draft.scenarioId,
-      hierarchyId: draft.hierarchyId,
-      details: draft.sections?.identificacion,
-    }),
-  },
-  {
-    code: "ubicacion-admin",
-    title: "Ubicación y administración",
-    getSnapshot: (draft) => ({
-      latitude: draft.latitude,
-      longitude: draft.longitude,
-      altitudeMeters: draft.altitudeMeters,
-      address: draft.address,
-      administration: draft.administration,
-      details: draft.sections?.["ubicacion-admin"],
-    }),
-  },
-  {
-    code: "caracteristicas",
-    title: "Características e ingreso",
-    getSnapshot: (draft) => ({
-      climate: draft.climate,
-      admission: draft.admission,
-      details: draft.sections?.caracteristicas,
-    }),
-  },
-  {
-    code: "accesibilidad",
-    title: "Accesibilidad y conectividad",
-    getSnapshot: (draft) => ({
-      accessibility: draft.accessibility,
-      details: draft.sections?.accesibilidad,
-    }),
-  },
-  {
-    code: "planta",
-    title: "Planta y complementarios",
-    getSnapshot: (draft) => ({
-      facilities: draft.facilities,
-      details: draft.sections?.planta,
-    }),
-  },
-  {
-    code: "conservacion",
-    title: "Conservación",
-    getSnapshot: (draft) => draft.sections?.conservacion,
-  },
-  {
-    code: "higiene-seguridad",
-    title: "Higiene y seguridad",
-    getSnapshot: (draft) => draft.sections?.["higiene-seguridad"],
-  },
-  {
-    code: "politicas",
-    title: "Políticas y regulaciones",
-    getSnapshot: (draft) => draft.sections?.politicas,
-  },
-  {
-    code: "actividades",
-    title: "Actividades",
-    getSnapshot: (draft) => ({
-      activities: draft.activities,
-      details: draft.sections?.actividades,
-    }),
-  },
-  {
-    code: "promocion",
-    title: "Promoción y comercialización",
-    getSnapshot: (draft) => draft.sections?.promocion,
-  },
-  {
-    code: "visitantes",
-    title: "Visitantes y afluencia",
-    getSnapshot: (draft) => draft.sections?.visitantes,
-  },
-  {
-    code: "recurso-humano",
-    title: "Recurso humano",
-    getSnapshot: (draft) => draft.sections?.["recurso-humano"],
-  },
-  {
-    code: "descripcion",
-    title: "Descripción",
-    getSnapshot: (draft) => ({
-      description: draft.description,
-      details: draft.sections?.descripcion,
-    }),
-  },
-  {
-    code: "anexos",
-    title: "Anexos y responsabilidades",
-    getSnapshot: (draft) => draft.sections?.anexos,
-  },
-] as const;
+/** Parte del borrador que se compara en cada apartado de la ficha. */
+const SECTION_SNAPSHOTS: Record<CenterSectionCode, (draft: CenterDraft) => unknown> = {
+  identificacion: (draft) => ({
+    name: draft.name,
+    subtypeId: draft.subtypeId,
+    touristZoneId: draft.touristZoneId,
+    parishId: draft.parishId,
+    productLineId: draft.productLineId,
+    scenarioId: draft.scenarioId,
+    hierarchyId: draft.hierarchyId,
+    details: draft.sections?.identificacion,
+  }),
+  "ubicacion-admin": (draft) => ({
+    latitude: draft.latitude,
+    longitude: draft.longitude,
+    altitudeMeters: draft.altitudeMeters,
+    address: draft.address,
+    administration: draft.administration,
+    details: draft.sections?.["ubicacion-admin"],
+  }),
+  caracteristicas: (draft) => ({
+    climate: draft.climate,
+    admission: draft.admission,
+    details: draft.sections?.caracteristicas,
+  }),
+  accesibilidad: (draft) => ({
+    accessibility: draft.accessibility,
+    details: draft.sections?.accesibilidad,
+  }),
+  planta: (draft) => ({
+    facilities: draft.facilities,
+    details: draft.sections?.planta,
+  }),
+  conservacion: (draft) => draft.sections?.conservacion,
+  "higiene-seguridad": (draft) => draft.sections?.["higiene-seguridad"],
+  politicas: (draft) => draft.sections?.politicas,
+  actividades: (draft) => ({
+    activities: draft.activities,
+    details: draft.sections?.actividades,
+  }),
+  promocion: (draft) => draft.sections?.promocion,
+  visitantes: (draft) => draft.sections?.visitantes,
+  "recurso-humano": (draft) => draft.sections?.["recurso-humano"],
+  descripcion: (draft) => ({
+    description: draft.description,
+    details: draft.sections?.descripcion,
+  }),
+  anexos: (draft) => draft.sections?.anexos,
+};
+
+const REVIEW_SECTIONS: readonly ReviewSection[] = centerSectionDefinitions.map(
+  (section) => ({
+    code: section.code,
+    title: section.title,
+    getSnapshot: SECTION_SNAPSHOTS[section.code],
+  }),
+);
 
 const FIELD_LABELS: Record<string, string> = {
   name: "Nombre",
@@ -456,7 +414,7 @@ function formatValue(value: unknown, path: string, catalogs: AdminCatalogs | nul
   if (typeof value === "boolean") return value ? "Sí" : "No";
   if (typeof value === "string") return value || "Texto vacío";
   if (typeof value === "number") {
-    const option = findCatalogOption(path, value, catalogs);
+    const option = resolveCatalogOption(path, value, catalogs);
     if (option) return option.code ? `${option.name} (${option.code})` : option.name;
     return String(value);
   }
@@ -467,7 +425,7 @@ function formatValue(value: unknown, path: string, catalogs: AdminCatalogs | nul
   return String(value);
 }
 
-function findCatalogOption(
+function resolveCatalogOption(
   path: string,
   value: number,
   catalogs: AdminCatalogs | null,
@@ -477,58 +435,57 @@ function findCatalogOption(
     .split(".")
     .at(-1)
     ?.replace(/\[\d+\]$/, "");
-  if (key === "subtypeId") return catalogs.subtypes.find((item) => item.id === value);
-  if (key === "touristZoneId") return catalogs.zones.find((item) => item.id === value);
-  if (key === "parishId") return catalogs.parishes.find((item) => item.id === value);
-  if (key === "productLineId") return catalogs.lines.find((item) => item.id === value);
-  if (key === "scenarioId") return catalogs.scenarios.find((item) => item.id === value);
-  if (key === "hierarchyId")
-    return catalogs.hierarchies.find((item) => item.id === value);
-  if (key === "localityId") return catalogs.localities.find((item) => item.id === value);
-  if (key === "climateId") return catalogs.climates.find((item) => item.id === value);
-  if (key === "activityId") return catalogs.activities.find((item) => item.id === value);
+  if (key === "subtypeId") return findCatalogOption(catalogs.subtypes, value);
+  if (key === "touristZoneId") return findCatalogOption(catalogs.zones, value);
+  if (key === "parishId") return findCatalogOption(catalogs.parishes, value);
+  if (key === "productLineId") return findCatalogOption(catalogs.lines, value);
+  if (key === "scenarioId") return findCatalogOption(catalogs.scenarios, value);
+  if (key === "hierarchyId") return findCatalogOption(catalogs.hierarchies, value);
+  if (key === "localityId") return findCatalogOption(catalogs.localities, value);
+  if (key === "climateId") return findCatalogOption(catalogs.climates, value);
+  if (key === "activityId") return findCatalogOption(catalogs.activities, value);
   if (key === "accessibilityTypeId") {
-    return catalogs.accessibilityTypes.find((item) => item.id === value);
+    return findCatalogOption(catalogs.accessibilityTypes, value);
   }
   if (key === "criterionId") {
-    return catalogs.accessibilityCriteria.find((item) => item.id === value);
+    return findCatalogOption(catalogs.accessibilityCriteria, value);
   }
-  if (key === "roadTypeId") return catalogs.roadTypes.find((item) => item.id === value);
+  if (key === "roadTypeId") return findCatalogOption(catalogs.roadTypes, value);
   if (key === "materialId") {
-    return catalogs.roadMaterials.find((item) => item.id === value);
+    return findCatalogOption(catalogs.roadMaterials, value);
   }
   if (key === "conditionId") {
-    return catalogs.conditionStates.find((item) => item.id === value);
+    return findCatalogOption(catalogs.conditionStates, value);
   }
   if (key === "modalityId") {
-    return catalogs.aquaticAccessModes.find((item) => item.id === value);
+    return findCatalogOption(catalogs.aquaticAccessModes, value);
   }
   if (key === "coverageId") {
-    return catalogs.aerialAccessCoverages.find((item) => item.id === value);
+    return findCatalogOption(catalogs.aerialAccessCoverages, value);
   }
   if (key === "frequencyId") {
-    return catalogs.serviceFrequencies.find((item) => item.id === value);
+    return findCatalogOption(catalogs.serviceFrequencies, value);
   }
   if (key === "typeId" && path.includes("plant")) {
-    return catalogs.plantTypes.find((item) => item.id === value);
+    return findCatalogOption(catalogs.plantTypes, value);
   }
   if (key === "typeId" && path.includes("complementaryServices")) {
-    return catalogs.complementaryServiceTypes.find((item) => item.id === value);
+    return findCatalogOption(catalogs.complementaryServiceTypes, value);
   }
   if (key === "categoryId" && path.includes("facilityDetails")) {
-    return catalogs.facilityCategories.find((item) => item.id === value);
+    return findCatalogOption(catalogs.facilityCategories, value);
   }
   if (key === "typeId" && path.includes("facilityDetails")) {
-    return catalogs.facilities.find((item) => item.id === value);
+    return findCatalogOption(catalogs.facilities, value);
   }
   if (key === "typeId" && path.includes("transportTypes")) {
-    return catalogs.transportTypes.find((item) => item.id === value);
+    return findCatalogOption(catalogs.transportTypes, value);
   }
   if (key === "typeId" && path.includes("accessibility")) {
-    return catalogs.accessibilityTypes.find((item) => item.id === value);
+    return findCatalogOption(catalogs.accessibilityTypes, value);
   }
   if (key === "typeId" && path.includes("facilit")) {
-    return catalogs.facilities.find((item) => item.id === value);
+    return findCatalogOption(catalogs.facilities, value);
   }
   return undefined;
 }
@@ -545,8 +502,4 @@ function humanize(value: string) {
     .replace(/([a-z])([A-Z])/g, "$1 $2")
     .replace(/[-_]/g, " ")
     .replace(/^./, (character) => character.toUpperCase());
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

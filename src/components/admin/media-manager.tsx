@@ -8,11 +8,7 @@ import {
   Button,
   CircularProgress,
   Divider,
-  FormControl,
   IconButton,
-  InputLabel,
-  MenuItem,
-  Select,
   Stack,
   TextField,
   Tooltip,
@@ -23,16 +19,30 @@ import { useEffect, useRef, useState } from "react";
 
 import { FlatSurface } from "@/components/ui/flat-surface";
 import { ContentState } from "@/components/ui/content-state";
+import { SelectField, type SelectOption } from "@/components/ui/form/select-field";
 import { SectionHeader } from "@/components/ui/section-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
-  apiUrl,
   deleteAdminCenterMedia,
-  getAdminCenterMedia,
   uploadAdminCenterMedia,
   type AdminMediaItem,
 } from "@/lib/admin-api";
+import { mediaStateLabel, mediaStateTone } from "@/lib/admin-labels";
+import { adminKeys, centerMediaQueryOptions } from "@/lib/admin-queries";
+import { publicApiUrl } from "@/lib/config";
+import { errorMessage } from "@/lib/errors";
 import { webTokens } from "@/theme/tokens";
+
+type MediaTypeCode = AdminMediaItem["typeCode"];
+
+const MEDIA_TYPE_OPTIONS: readonly SelectOption<MediaTypeCode>[] = [
+  { value: "FOTOGRAFIA", label: "Fotografía" },
+  { value: "VIDEO", label: "Video" },
+  { value: "AUDIO", label: "Audio" },
+  { value: "MAPA", label: "Mapa" },
+  { value: "PLAN_CONTINGENCIA", label: "Plan de contingencia" },
+  { value: "OTRO", label: "Otro anexo" },
+];
 
 export function MediaManager({
   token,
@@ -51,21 +61,13 @@ export function MediaManager({
   const queryClient = useQueryClient();
   const [description, setDescription] = useState("");
   const [sourceAuthor, setSourceAuthor] = useState("");
-  const [typeCode, setTypeCode] = useState<AdminMediaItem["typeCode"]>("FOTOGRAFIA");
+  const [typeCode, setTypeCode] = useState<MediaTypeCode>("FOTOGRAFIA");
   const [working, setWorking] = useState(false);
-  const mediaQuery = useQuery({
-    queryKey: ["admin", "media", code],
-    queryFn: () => getAdminCenterMedia(token, code as string),
-    enabled: Boolean(token && code),
-  });
+  const mediaQuery = useQuery(centerMediaQueryOptions(token, code));
 
   useEffect(() => {
     if (mediaQuery.error) {
-      onError(
-        mediaQuery.error instanceof Error
-          ? mediaQuery.error.message
-          : "No se pudo cargar la multimedia.",
-      );
+      onError(errorMessage(mediaQuery.error, "No se pudo cargar la multimedia."));
     }
   }, [mediaQuery.error, onError]);
 
@@ -81,14 +83,10 @@ export function MediaManager({
       });
       setDescription("");
       setSourceAuthor("");
-      await queryClient.invalidateQueries({ queryKey: ["admin", "media", code] });
+      await queryClient.invalidateQueries({ queryKey: adminKeys.media(code) });
       onNotice("Archivo cargado. Quedará pendiente hasta publicar la ficha.");
     } catch (cause) {
-      onError(
-        cause instanceof Error
-          ? cause.message
-          : "No se pudo cargar el archivo multimedia.",
-      );
+      onError(errorMessage(cause, "No se pudo cargar el archivo multimedia."));
     } finally {
       setWorking(false);
       if (fileInput.current) fileInput.current.value = "";
@@ -101,12 +99,10 @@ export function MediaManager({
     onError(null);
     try {
       await deleteAdminCenterMedia(token, code, item.id);
-      await queryClient.invalidateQueries({ queryKey: ["admin", "media", code] });
+      await queryClient.invalidateQueries({ queryKey: adminKeys.media(code) });
       onNotice("Fotografía eliminada.");
     } catch (cause) {
-      onError(
-        cause instanceof Error ? cause.message : "No se pudo eliminar la fotografía.",
-      );
+      onError(errorMessage(cause, "No se pudo eliminar la fotografía."));
     } finally {
       setWorking(false);
     }
@@ -125,24 +121,16 @@ export function MediaManager({
           direction={{ xs: "column", md: "row" }}
           spacing={webTokens.spacing.control}
         >
-          <FormControl fullWidth disabled={!canEdit || !code || working}>
-            <InputLabel id="media-type-label">Tipo de archivo</InputLabel>
-            <Select
-              labelId="media-type-label"
-              label="Tipo de archivo"
-              value={typeCode}
-              onChange={(event) =>
-                setTypeCode(event.target.value as AdminMediaItem["typeCode"])
-              }
-            >
-              <MenuItem value="FOTOGRAFIA">Fotografía</MenuItem>
-              <MenuItem value="VIDEO">Video</MenuItem>
-              <MenuItem value="AUDIO">Audio</MenuItem>
-              <MenuItem value="MAPA">Mapa</MenuItem>
-              <MenuItem value="PLAN_CONTINGENCIA">Plan de contingencia</MenuItem>
-              <MenuItem value="OTRO">Otro anexo</MenuItem>
-            </Select>
-          </FormControl>
+          <SelectField
+            id="media-type"
+            label="Tipo de archivo"
+            value={typeCode}
+            options={MEDIA_TYPE_OPTIONS}
+            onChange={(value) => {
+              if (value) setTypeCode(value);
+            }}
+            disabled={!canEdit || !code || working}
+          />
           <TextField
             label="Descripción del archivo"
             value={description}
@@ -179,7 +167,7 @@ export function MediaManager({
           </Button>
         </Stack>
         {mediaQuery.error ? (
-          <ContentState status="empty" message="No se pudo cargar la multimedia." />
+          <ContentState status="error" message="No se pudo cargar la multimedia." />
         ) : mediaQuery.isLoading ? (
           <ContentState status="loading" label="Cargando multimedia" />
         ) : null}
@@ -199,7 +187,7 @@ export function MediaManager({
               {item.downloadUrl && item.typeCode === "FOTOGRAFIA" ? (
                 <Box
                   component="img"
-                  src={`${apiUrl}${item.downloadUrl}`}
+                  src={`${publicApiUrl}${item.downloadUrl}`}
                   alt={item.description ?? item.originalName}
                   sx={{
                     width: 72,
@@ -217,13 +205,13 @@ export function MediaManager({
                 </Typography>
               </Box>
               <StatusBadge
-                code={item.state === "PUBLICADO" ? "PUBLICADO" : "PENDIENTE"}
-                label={item.state === "PUBLICADO" ? "Publicado" : "Pendiente"}
+                label={mediaStateLabel(item.state)}
+                tone={mediaStateTone(item.state)}
               />
               {item.downloadUrl && item.typeCode !== "FOTOGRAFIA" ? (
                 <Button
                   component="a"
-                  href={`${apiUrl}${item.downloadUrl}`}
+                  href={`${publicApiUrl}${item.downloadUrl}`}
                   target="_blank"
                   rel="noreferrer"
                   size="small"
@@ -251,7 +239,7 @@ export function MediaManager({
   );
 }
 
-function acceptForType(typeCode: AdminMediaItem["typeCode"]): string {
+function acceptForType(typeCode: MediaTypeCode): string {
   if (typeCode === "FOTOGRAFIA" || typeCode === "MAPA") {
     return "image/jpeg,image/png,image/webp,application/pdf";
   }

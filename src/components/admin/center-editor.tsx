@@ -19,41 +19,29 @@ import {
   ButtonBase,
   Checkbox,
   Divider,
-  FormControl,
   FormControlLabel,
   Grid,
-  InputLabel,
-  MenuItem,
-  Select,
   Stack,
   TextField,
   Typography,
 } from "@mui/material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  useController,
-  useForm,
-  useWatch,
-  type Control,
-  type FieldPath,
-} from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 
 import { FlatSurface } from "@/components/ui/flat-surface";
 import { ContentState } from "@/components/ui/content-state";
 import { CoordinatePickerDialog } from "@/components/admin/coordinate-picker-dialog";
 import { MediaManager } from "@/components/admin/media-manager";
 import { CenterReviewDiff } from "@/components/admin/center-review-diff";
-import {
-  centerSectionDefinitions,
-  ContinuousCenterSectionWorkflow,
-} from "@/components/admin/center-section-workflow";
+import { ContinuousCenterSectionWorkflow } from "@/components/admin/center-section-workflow";
+import { RhfCatalogSelect } from "@/components/ui/form/rhf-select";
 import { PageHeader } from "@/components/ui/page-header";
 import { SectionHeader } from "@/components/ui/section-header";
 import {
   createAdminCenter,
-  getAdminCatalogs,
   getAdminCenter,
+  importFichaFile,
   publishAdminCenter,
   saveAdminCenter,
   submitAdminCenterReview,
@@ -62,7 +50,11 @@ import {
   type CenterDraft,
   type SaveCenterInput,
 } from "@/lib/admin-api";
+import { adminKeys, catalogsQueryOptions } from "@/lib/admin-queries";
+import { centerSectionDefinitions } from "@/lib/center-sections/definitions";
+import { errorMessage } from "@/lib/errors";
 import type { SugerenciasSecciones } from "@/lib/ficha/sugerencias-secciones";
+import { findCatalogOption, toOptionalNumber } from "@/lib/values";
 import { webTokens } from "@/theme/tokens";
 
 export type FormValues = {
@@ -200,13 +192,9 @@ export function CenterEditor({
     defaultValues: emptyValues,
   });
   const queryClient = useQueryClient();
-  const catalogsQuery = useQuery({
-    queryKey: ["admin", "catalogs"],
-    queryFn: () => getAdminCatalogs(token),
-    enabled: token.length > 0,
-  });
+  const catalogsQuery = useQuery(catalogsQueryOptions(token));
   const centerQuery = useQuery({
-    queryKey: ["admin", "center", code],
+    queryKey: adminKeys.center(code),
     queryFn: () => getAdminCenter(token, code as string),
     enabled: token.length > 0 && code !== null,
   });
@@ -226,7 +214,7 @@ export function CenterEditor({
   const handleDetailChanged = useCallback(
     (saved: AdminCenterDetail) => {
       setDetailOverride(saved);
-      queryClient.setQueryData(["admin", "center", saved.code], saved);
+      queryClient.setQueryData(adminKeys.center(saved.code), saved);
       onSaved(saved);
     },
     [onSaved, queryClient],
@@ -239,12 +227,9 @@ export function CenterEditor({
   }, [catalogs, detail, isDirty, reset]);
 
   const queryError = catalogsQuery.error ?? centerQuery.error;
-  const queryErrorMessage =
-    queryError instanceof Error
-      ? queryError.message
-      : queryError
-        ? "No se pudo cargar la ficha."
-        : null;
+  const queryErrorMessage = queryError
+    ? errorMessage(queryError, "No se pudo cargar la ficha.")
+    : null;
   useEffect(() => {
     if (queryErrorMessage) onError(queryErrorMessage);
   }, [onError, queryErrorMessage]);
@@ -388,7 +373,7 @@ export function CenterEditor({
         const latestSignature = JSON.stringify(getValues());
         const hasChangesSinceSubmit = latestSignature !== submittedSignature;
         setDetailOverride(saved);
-        queryClient.setQueryData(["admin", "center", saved.code], saved);
+        queryClient.setQueryData(adminKeys.center(saved.code), saved);
         const normalizedSaved = withEditorDraft(saved);
         if (catalogs && !hasChangesSinceSubmit) {
           skipNextAutoSaveRef.current = true;
@@ -408,9 +393,7 @@ export function CenterEditor({
         }
         return true;
       } catch (cause) {
-        reportError(
-          cause instanceof Error ? cause.message : "No se pudo actualizar la ficha.",
-        );
+        reportError(errorMessage(cause, "No se pudo actualizar la ficha."));
         return false;
       } finally {
         setWorking(null);
@@ -437,34 +420,15 @@ export function CenterEditor({
       setImportWarnings([]);
       reportError(null);
       try {
-        const body = new FormData();
-        body.append("file", file);
-        const response = await fetch("/api/admin/ficha/import", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-          body,
-        });
-        const payload = (await response.json().catch(() => null)) as {
-          data?: {
-            formulario: Partial<FormValues>;
-            sugerenciasSecciones?: SugerenciasSecciones;
-            advertencias: string[];
-          };
-          error?: { message?: string };
-        } | null;
-        if (!response.ok || !payload?.data) {
-          throw new Error(payload?.error?.message ?? "No se pudo importar la ficha.");
-        }
-        reset({ ...emptyValues, ...payload.data.formulario });
-        setImportWarnings(payload.data.advertencias);
-        setSugerenciasImportadas(payload.data.sugerenciasSecciones ?? null);
+        const imported = await importFichaFile(token, file);
+        reset({ ...emptyValues, ...imported.formulario });
+        setImportWarnings(imported.advertencias);
+        setSugerenciasImportadas(imported.sugerenciasSecciones ?? null);
         onNotice(
           "Se precargó el formulario desde la ficha. Revisa las advertencias antes de guardar.",
         );
       } catch (cause) {
-        reportError(
-          cause instanceof Error ? cause.message : "No se pudo importar la ficha.",
-        );
+        reportError(errorMessage(cause, "No se pudo importar la ficha."));
       } finally {
         setImporting(false);
       }
@@ -554,7 +518,7 @@ export function CenterEditor({
       const published = await publishAdminCenter(token, detail.code);
       const normalizedPublished = withEditorDraft(published);
       setDetailOverride(published);
-      queryClient.setQueryData(["admin", "center", published.code], published);
+      queryClient.setQueryData(adminKeys.center(published.code), published);
       if (catalogs) {
         reset(
           toFormValues(
@@ -566,9 +530,7 @@ export function CenterEditor({
       onSaved(published);
       onNotice("La ficha fue publicada en la aplicación móvil.");
     } catch (cause) {
-      reportError(
-        cause instanceof Error ? cause.message : "No se pudo publicar la ficha.",
-      );
+      reportError(errorMessage(cause, "No se pudo publicar la ficha."));
     } finally {
       setWorking(null);
     }
@@ -724,7 +686,7 @@ export function CenterEditor({
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 4 }}>
-                <CatalogSelect
+                <RhfCatalogSelect
                   label="Categoría"
                   name="categoryId"
                   options={catalogs?.categories ?? []}
@@ -738,7 +700,7 @@ export function CenterEditor({
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
-                <CatalogSelect
+                <RhfCatalogSelect
                   label="Tipo"
                   name="typeId"
                   options={typeOptions}
@@ -749,7 +711,7 @@ export function CenterEditor({
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
-                <CatalogSelect
+                <RhfCatalogSelect
                   label="Subtipo"
                   name="subtypeId"
                   options={subtypeOptions}
@@ -759,7 +721,7 @@ export function CenterEditor({
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 4 }}>
-                <CatalogSelect
+                <RhfCatalogSelect
                   label="Provincia"
                   name="provinceId"
                   options={catalogs?.provinces ?? []}
@@ -773,7 +735,7 @@ export function CenterEditor({
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 4 }}>
-                <CatalogSelect
+                <RhfCatalogSelect
                   label="Cantón"
                   name="cantonId"
                   options={cantonOptions}
@@ -784,7 +746,7 @@ export function CenterEditor({
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 4 }}>
-                <CatalogSelect
+                <RhfCatalogSelect
                   label="Parroquia"
                   name="parishId"
                   options={parishOptions}
@@ -794,7 +756,7 @@ export function CenterEditor({
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 4 }}>
-                <CatalogSelect
+                <RhfCatalogSelect
                   label="Zona turística"
                   name="touristZoneId"
                   options={zoneOptions}
@@ -804,7 +766,7 @@ export function CenterEditor({
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 4 }}>
-                <CatalogSelect
+                <RhfCatalogSelect
                   label="Línea de producto"
                   name="productLineId"
                   options={catalogs?.lines ?? []}
@@ -814,7 +776,7 @@ export function CenterEditor({
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 4 }}>
-                <CatalogSelect
+                <RhfCatalogSelect
                   label="Escenario"
                   name="scenarioId"
                   options={catalogs?.scenarios ?? []}
@@ -1028,7 +990,7 @@ export function CenterEditor({
             />
             <Grid container spacing={webTokens.spacing.control}>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <CatalogSelect
+                <RhfCatalogSelect
                   label="Tipo de ingreso"
                   name="admission.incomeTypeId"
                   options={catalogs?.incomeTypes ?? []}
@@ -1042,7 +1004,7 @@ export function CenterEditor({
                   type="time"
                   fullWidth
                   disabled={!canEdit}
-                  InputLabelProps={{ shrink: true }}
+                  slotProps={{ inputLabel: { shrink: true } }}
                   {...register("admission.opensAt")}
                 />
               </Grid>
@@ -1052,12 +1014,12 @@ export function CenterEditor({
                   type="time"
                   fullWidth
                   disabled={!canEdit}
-                  InputLabelProps={{ shrink: true }}
+                  slotProps={{ inputLabel: { shrink: true } }}
                   {...register("admission.closesAt")}
                 />
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <CatalogSelect
+                <RhfCatalogSelect
                   label="Modalidad de atención"
                   name="admission.attentionModeId"
                   options={catalogs?.attentionModes ?? []}
@@ -1460,61 +1422,12 @@ function findCatalogName(
   options: Array<{ id: number; name: string }> | undefined,
   id: number | undefined,
 ) {
-  if (id === undefined) return "Pendiente";
-  return options?.find((option) => Number(option.id) === Number(id))?.name ?? "Pendiente";
+  return findCatalogOption(options, id)?.name ?? "Pendiente";
 }
 
 function formatCoordinates(latitude: number | undefined, longitude: number | undefined) {
   if (latitude === undefined || longitude === undefined) return "Pendiente";
   return `${latitude}, ${longitude}`;
-}
-
-function CatalogSelect({
-  label,
-  name,
-  options,
-  control,
-  disabled,
-  required,
-  onValueChange,
-}: {
-  label: string;
-  name: FieldPath<FormValues>;
-  options: Array<{ id: number; name: string }>;
-  control: Control<FormValues>;
-  disabled: boolean;
-  required?: boolean;
-  onValueChange?: (value: string) => void;
-}) {
-  const { field } = useController({
-    control,
-    name,
-    rules: { required: required ? `${label} es obligatorio` : undefined },
-  });
-  return (
-    <FormControl fullWidth required={required}>
-      <InputLabel>{label}</InputLabel>
-      <Select
-        label={label}
-        name={field.name}
-        value={String(field.value ?? "")}
-        disabled={disabled}
-        inputRef={field.ref}
-        onBlur={field.onBlur}
-        onChange={(event) => {
-          const value = String(event.target.value);
-          field.onChange(value);
-          onValueChange?.(value);
-        }}
-      >
-        {options.map((option) => (
-          <MenuItem key={option.id} value={String(option.id)}>
-            {option.name}
-          </MenuItem>
-        ))}
-      </Select>
-    </FormControl>
-  );
 }
 
 function OptionGrid({
@@ -1638,18 +1551,10 @@ function toFormValues(
   catalogs: AdminCatalogs,
 ): FormValues {
   if (!data) return emptyValues;
-  const subtype = catalogs.subtypes.find(
-    (option) => Number(option.id) === Number(data.subtypeId),
-  );
-  const type = catalogs.types.find(
-    (option) => Number(option.id) === Number(subtype?.typeId),
-  );
-  const parish = catalogs.parishes.find(
-    (option) => Number(option.id) === Number(data.parishId),
-  );
-  const canton = catalogs.cantons.find(
-    (option) => Number(option.id) === Number(parish?.cantonId),
-  );
+  const subtype = findCatalogOption(catalogs.subtypes, data.subtypeId);
+  const type = findCatalogOption(catalogs.types, subtype?.typeId);
+  const parish = findCatalogOption(catalogs.parishes, data.parishId);
+  const canton = findCatalogOption(catalogs.cantons, parish?.cantonId);
   return {
     name: data.name ?? "",
     categoryId: String(type?.categoryId ?? ""),
@@ -1718,15 +1623,15 @@ function toFormValues(
 function toPayload(values: FormValues, version?: number): SaveCenterInput {
   const payload: SaveCenterInput = {
     name: values.name.trim(),
-    subtypeId: numberOrUndefined(values.subtypeId),
-    touristZoneId: numberOrUndefined(values.touristZoneId),
-    parishId: numberOrUndefined(values.parishId),
-    productLineId: numberOrUndefined(values.productLineId),
-    scenarioId: numberOrUndefined(values.scenarioId),
-    hierarchyId: numberOrUndefined(values.hierarchyId),
-    latitude: numberOrUndefined(values.latitude),
-    longitude: numberOrUndefined(values.longitude),
-    altitudeMeters: numberOrUndefined(values.altitudeMeters),
+    subtypeId: toOptionalNumber(values.subtypeId),
+    touristZoneId: toOptionalNumber(values.touristZoneId),
+    parishId: toOptionalNumber(values.parishId),
+    productLineId: toOptionalNumber(values.productLineId),
+    scenarioId: toOptionalNumber(values.scenarioId),
+    hierarchyId: toOptionalNumber(values.hierarchyId),
+    latitude: toOptionalNumber(values.latitude),
+    longitude: toOptionalNumber(values.longitude),
+    altitudeMeters: toOptionalNumber(values.altitudeMeters),
     description: values.description.trim() || undefined,
     address: {
       barrio: values.address.barrio.trim() || undefined,
@@ -1746,18 +1651,16 @@ function toPayload(values: FormValues, version?: number): SaveCenterInput {
         }
       : undefined,
     admission:
-      numberOrUndefined(values.admission.incomeTypeId) &&
-      numberOrUndefined(values.admission.attentionModeId)
+      toOptionalNumber(values.admission.incomeTypeId) &&
+      toOptionalNumber(values.admission.attentionModeId)
         ? {
-            incomeTypeId: numberOrUndefined(values.admission.incomeTypeId) as number,
-            attentionModeId: numberOrUndefined(
-              values.admission.attentionModeId,
-            ) as number,
+            incomeTypeId: toOptionalNumber(values.admission.incomeTypeId) as number,
+            attentionModeId: toOptionalNumber(values.admission.attentionModeId) as number,
             opensAt: values.admission.opensAt || undefined,
             closesAt: values.admission.closesAt || undefined,
             otherAttention: values.admission.otherAttention.trim() || undefined,
-            priceFrom: numberOrUndefined(values.admission.priceFrom),
-            priceTo: numberOrUndefined(values.admission.priceTo),
+            priceFrom: toOptionalNumber(values.admission.priceFrom),
+            priceTo: toOptionalNumber(values.admission.priceTo),
             reservations: values.admission.reservations,
             observation: values.admission.observation.trim() || undefined,
           }
@@ -1772,16 +1675,10 @@ function toPayload(values: FormValues, version?: number): SaveCenterInput {
     })),
     facilities: values.facilityIds.map((id) => ({
       typeId: Number(id),
-      quantity: numberOrUndefined(values.facilityQuantities[id]) ?? 1,
+      quantity: toOptionalNumber(values.facilityQuantities[id]) ?? 1,
       observation: (values.facilityObservations[id] ?? "").trim() || undefined,
     })),
     version,
   };
   return payload;
-}
-
-function numberOrUndefined(value: string) {
-  if (!value.trim()) return undefined;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : undefined;
 }
