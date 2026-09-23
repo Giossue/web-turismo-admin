@@ -309,7 +309,7 @@ function DiffValue({
       sx={{
         border: 1,
         borderColor: tone === "after" ? "primary.light" : "divider",
-        bgcolor: tone === "after" ? "primary.50" : "background.default",
+        bgcolor: tone === "after" ? "action.selected" : "background.default",
         borderRadius: 1,
         p: 1.25,
         minHeight: 54,
