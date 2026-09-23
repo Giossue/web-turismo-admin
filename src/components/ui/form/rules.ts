@@ -50,8 +50,3 @@ export function numberRule(limits: NumberLimits = {}) {
     return true;
   };
 }
-
-/** Atajo de `numberRule` para enteros. */
-export function integerRule(limits: Omit<NumberLimits, "integer"> = {}) {
-  return numberRule({ ...limits, integer: true });
-}

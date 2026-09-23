@@ -15,7 +15,7 @@ import { registerAdminAccessTokenRefresh } from "./admin-api";
 import { errorMessage } from "./errors";
 import { apiEndpoint, sendApiRequest, toApiError } from "./http";
 
-export type AdminRole = "ADMINISTRADOR" | "AGENTE_TURISTICO" | "TURISTA";
+type AdminRole = "ADMINISTRADOR" | "AGENTE_TURISTICO" | "TURISTA";
 
 export type AdminUser = {
   id: number;

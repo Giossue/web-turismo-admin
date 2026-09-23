@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { integerRule, maxLen, numberRule, required } from "@/components/ui/form/rules";
+import { maxLen, numberRule, required } from "@/components/ui/form/rules";
 
 describe("reglas de formulario", () => {
   test("required usa un mensaje por defecto o el indicado", () => {
@@ -21,8 +21,8 @@ describe("reglas de formulario", () => {
     expect(validate("91")).toBe("Usa un valor entre -90 y 90.");
   });
 
-  test("integerRule exige enteros y respeta límites abiertos", () => {
-    const validate = integerRule({ min: 0 });
+  test("numberRule con integer exige enteros y respeta límites abiertos", () => {
+    const validate = numberRule({ min: 0, integer: true });
     expect(validate("3")).toBe(true);
     expect(validate("2.5")).toBe("Ingresa un número entero.");
     expect(validate("-1")).toBe("Usa un valor igual o mayor que 0.");

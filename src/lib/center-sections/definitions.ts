@@ -136,12 +136,3 @@ export type SectionProgress =
   "SIN_INICIAR" | "INCOMPLETA" | "COMPLETA" | "CON_ERRORES" | "NO_APLICA";
 
 export const centerSectionDefinitions: readonly SectionDefinition[] = definitions;
-
-const sectionTitles = new Map<string, string>(
-  definitions.map((definition) => [definition.code, definition.title]),
-);
-
-/** Título visible de un apartado; devuelve el código si no es un apartado conocido. */
-export function sectionTitle(code: string): string {
-  return sectionTitles.get(code) ?? code;
-}

@@ -1,9 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import {
-  centerSectionDefinitions,
-  sectionTitle,
-} from "@/lib/center-sections/definitions";
+import { centerSectionDefinitions } from "@/lib/center-sections/definitions";
 import {
   CONSERVATION_STATE_OPTIONS,
   EMPTY_RESPONSE,
@@ -18,15 +15,6 @@ describe("definiciones de secciones", () => {
     expect(codes[0]).toBe("identificacion");
     expect(codes.at(-1)).toBe("anexos");
     expect(codes).toHaveLength(14);
-  });
-
-  test("sectionTitle devuelve el título del apartado", () => {
-    expect(sectionTitle("identificacion")).toBe("Datos generales y clasificación");
-    expect(sectionTitle("higiene-seguridad")).toBe("Higiene y seguridad");
-  });
-
-  test("sectionTitle devuelve el código si no es un apartado conocido", () => {
-    expect(sectionTitle("desconocida")).toBe("desconocida");
   });
 });
 

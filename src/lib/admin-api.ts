@@ -1,7 +1,6 @@
 import type { CenterSectionCode, SectionProgress } from "./center-sections/definitions";
 import type { mapearFichaAFormulario } from "./ficha/mapear-formulario";
 import type { SugerenciasSecciones } from "./ficha/sugerencias-secciones";
-import type { FichaImagenAnexo } from "./ficha/tipos";
 import { ApiError, apiEndpoint, sendApiRequest, toApiError, toQueryString } from "./http";
 
 /** Página de resultados de un listado administrativo. */
@@ -224,20 +223,6 @@ export type AdminCenterSections = {
   progress?: Array<{ code: CenterSectionCode; status: SectionProgress }>;
 };
 
-export type AdminCenterValuation = {
-  configured: boolean;
-  total: number | null;
-  hierarchyCode: string;
-  hierarchyId: number | null;
-  criteria: Array<{
-    code: string;
-    name: string;
-    maximum: number;
-    score: number | null;
-    appliedMaximum: number | null;
-  }>;
-};
-
 export type AdminCentersOptions = {
   status?: string;
   q?: string;
@@ -326,7 +311,7 @@ export type AdminSummary = {
   }>;
 };
 
-export type AdminOpinionVersion = {
+type AdminOpinionVersion = {
   rating: number | null;
   comment: string | null;
   version: number;
@@ -384,7 +369,6 @@ type FichaImportResult = {
   formulario: ReturnType<typeof mapearFichaAFormulario>;
   sugerenciasSecciones: SugerenciasSecciones;
   advertencias: string[];
-  imagenes: FichaImagenAnexo[];
 };
 
 type AdminAccessTokenRefresh = (expiredToken: string) => Promise<string | null>;
@@ -621,10 +605,6 @@ export async function getAdminCenter(token: string, code: string) {
 
 export async function getAdminCenterSections(token: string, code: string) {
   return get<AdminCenterSections>(centerPath(code, "sections"), token);
-}
-
-export async function getAdminCenterValuation(token: string, code: string) {
-  return get<AdminCenterValuation>(centerPath(code, "valuation"), token);
 }
 
 export async function saveAdminCenterSection(

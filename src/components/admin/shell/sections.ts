@@ -8,7 +8,7 @@ import SettingsRounded from "@mui/icons-material/SettingsRounded";
 import StorefrontRounded from "@mui/icons-material/StorefrontRounded";
 import type { SvgIconComponent } from "@mui/icons-material";
 
-export const ADMIN_SECTIONS = [
+const ADMIN_SECTIONS = [
   "summary",
   "review",
   "opinions",

@@ -15,12 +15,12 @@ import { CoordinatePickerDialog } from "@/components/admin/coordinate-picker-dia
 import { useEditable } from "@/components/ui/form/editable-context";
 import { numberRule, required } from "@/components/ui/form/rules";
 
-export const latitudeRules = {
+const latitudeRules = {
   required: required("Ingresa la latitud."),
   validate: numberRule({ min: -90, max: 90 }),
 };
 
-export const longitudeRules = {
+const longitudeRules = {
   required: required("Ingresa la longitud."),
   validate: numberRule({ min: -180, max: 180 }),
 };

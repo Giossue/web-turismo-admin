@@ -13,7 +13,7 @@ export const CENTER_STATUS_FILTER_OPTIONS = [
 export type CenterStatusFilter = (typeof CENTER_STATUS_FILTER_OPTIONS)[number]["value"];
 
 /** Longitud mínima de una búsqueda de fichas. */
-export const MIN_CENTER_QUERY_LENGTH = 2;
+const MIN_CENTER_QUERY_LENGTH = 2;
 
 function isCenterStatusFilter(value: string | null): value is CenterStatusFilter {
   return CENTER_STATUS_FILTER_OPTIONS.some((option) => option.value === value);

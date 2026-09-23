@@ -46,7 +46,7 @@ import type {
   ResultadoParseoFicha,
 } from "./tipos";
 
-export const EXTENSIONES_PERMITIDAS = new Set(["xlsx", "xlsm"]);
+const EXTENSIONES_PERMITIDAS = new Set(["xlsx", "xlsm"]);
 export const TAMANO_MAXIMO_BYTES = 20 * 1024 * 1024;
 
 export class FichaInvalidaError extends Error {}

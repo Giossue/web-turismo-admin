@@ -1,7 +1,5 @@
 import type ExcelJS from "exceljs";
 
-import type { SectionResponse } from "@/lib/center-sections/options";
-
 import {
   columnaANumero,
   encontrarMerge,
@@ -62,13 +60,6 @@ export function leerMarcaJuntoAEtiqueta(
   const colCasilla = numeroAColumna(columnaANumero(col) + 1);
   return interpretarMarca(leerTexto(worksheet, `${colCasilla}${row}`));
 }
-
-/**
- * Respuesta de sección (SI / NO / SIN_INFORMACION / NO_APLICA): la app usa un
- * enum de 4 estados, no un booleano, y la ausencia de dato nunca equivale a
- * "NO". Es el mismo tipo que `SectionResponse` del editor de secciones.
- */
-export type RespuestaSeccion = SectionResponse;
 
 /**
  * Grupo de selección única (ej. línea de producto Cultura/Naturaleza/Aventura,

@@ -1,10 +1,14 @@
-import { keepPreviousData, queryOptions, type QueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  queryOptions,
+  skipToken,
+  type QueryClient,
+} from "@tanstack/react-query";
 
 import {
   getAdminCatalogs,
   getAdminCenterMedia,
   getAdminCenterSections,
-  getAdminCenterValuation,
   getAdminCenters,
   getAdminEstablishments,
   getAdminOpinionHistory,
@@ -19,7 +23,7 @@ import {
  * Claves de TanStack Query del panel. Todas comparten el prefijo `["admin"]`
  * y las jerarquías permiten invalidar por prefijo (por ejemplo,
  * `adminKeys.allCatalogs()` invalida los catálogos activos y los completos, y
- * `adminKeys.center(code)` incluye secciones y valoración de esa ficha).
+ * `adminKeys.center(code)` incluye las secciones de esa ficha).
  */
 export const adminKeys = {
   all: ["admin"] as const,
@@ -29,8 +33,6 @@ export const adminKeys = {
   center: (code: string | null) => [...adminKeys.all, "center", code] as const,
   centerSections: (code: string | null) =>
     [...adminKeys.center(code), "sections"] as const,
-  centerValuation: (code: string | null) =>
-    [...adminKeys.center(code), "valuation"] as const,
   media: (code: string | null) => [...adminKeys.all, "media", code] as const,
   allEstablishments: () => [...adminKeys.all, "establishments"] as const,
   establishments: (filters: AdminEstablishmentsOptions) =>
@@ -57,17 +59,8 @@ export function catalogsQueryOptions(token: string, includeInactive = false) {
 export function centerSectionsQueryOptions(token: string, code: string | null) {
   return queryOptions({
     queryKey: adminKeys.centerSections(code),
-    queryFn: () => getAdminCenterSections(token, code as string),
-    enabled: Boolean(token && code),
-    staleTime: 10_000,
-  });
-}
-
-export function centerValuationQueryOptions(token: string, code: string | null) {
-  return queryOptions({
-    queryKey: adminKeys.centerValuation(code),
-    queryFn: () => getAdminCenterValuation(token, code as string),
-    enabled: Boolean(token && code),
+    queryFn: code ? () => getAdminCenterSections(token, code) : skipToken,
+    enabled: token.length > 0,
     staleTime: 10_000,
   });
 }
@@ -75,8 +68,8 @@ export function centerValuationQueryOptions(token: string, code: string | null) 
 export function centerMediaQueryOptions(token: string, code: string | null) {
   return queryOptions({
     queryKey: adminKeys.media(code),
-    queryFn: () => getAdminCenterMedia(token, code as string),
-    enabled: Boolean(token && code),
+    queryFn: code ? () => getAdminCenterMedia(token, code) : skipToken,
+    enabled: token.length > 0,
     staleTime: 5_000,
   });
 }
@@ -136,8 +129,8 @@ export function opinionsPageQueryOptions(
 export function opinionHistoryQueryOptions(token: string, reviewCode: string | null) {
   return queryOptions({
     queryKey: adminKeys.opinionHistory(reviewCode),
-    queryFn: () => getAdminOpinionHistory(token, reviewCode as string),
-    enabled: Boolean(token && reviewCode),
+    queryFn: reviewCode ? () => getAdminOpinionHistory(token, reviewCode) : skipToken,
+    enabled: token.length > 0,
   });
 }
 
