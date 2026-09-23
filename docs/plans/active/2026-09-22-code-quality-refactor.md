@@ -41,4 +41,18 @@ bugs y malas prácticas encontrados en una auditoría del portal.
 
 ## Estado
 
-En curso (22 de septiembre de 2026).
+Implementado el 22 de septiembre de 2026; falta la prueba manual en navegador.
+
+- Ola 1 y ola 2 completadas: `admin-shell.tsx` (1.4k → 256 líneas), `center-editor.tsx`
+  (1.7k → ~320) y `center-section-workflow.tsx` (6.9k → 126 más módulos por apartado).
+- Corregidos: lectura de accesibilidad (pérdida de datos), `Select` que no mostraban el
+  valor guardado, carreras y 409 del autoguardado (guardados en serie por ficha), mapa
+  del selector de coordenadas, alta bloqueada en el paso 1, reinicio tras el primer
+  guardado, autenticación antes de leer el archivo en la importación, caché al cerrar
+  sesión, paginación de revisión, `version: 0` en fichas publicadas sin borrador.
+- Tras una revisión independiente se corrigieron además: ediciones revertidas durante
+  un guardado, validación de pasos no montados, adopción de datos del servidor tras
+  guardar o ante un 409, importación que borraba planta y modalidad, guardado pendiente
+  al salir del editor, coordenadas `null` en catastro y altitud entera.
+- Pendiente conocido: los cambios de un apartado con guardado programado (menos de 2 s)
+  no se envían si la ficha pasa a revisión en ese instante.

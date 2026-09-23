@@ -5,6 +5,7 @@ import { useRef } from "react";
 
 import {
   createAdminCenter,
+  getAdminCenter,
   publishAdminCenter,
   saveAdminCenter,
   submitAdminCenterReview,
@@ -19,7 +20,7 @@ import { ApiError } from "@/lib/http";
 
 /** Mensaje de la API ante un conflicto de versión (409). */
 const CONFLICT_MESSAGE =
-  "La ficha cambió mientras la editabas. Recarga antes de guardar.";
+  "La ficha cambió mientras la editabas. Se cargó la versión vigente.";
 
 type SaveVariables = { values: CenterFormValues; submitForReview: boolean };
 
@@ -39,11 +40,14 @@ export function useCenterSave({
   onSaved,
   onNotice,
   onError,
+  onConflictReload,
 }: {
   token: string;
   code: string | null;
   catalogs: AdminCatalogs | null;
   onSaved: (detail: AdminCenterDetail) => void;
+  /** Tras un 409, recibe la ficha vigente para reemplazar el formulario. */
+  onConflictReload: (detail: AdminCenterDetail) => void;
   onNotice: (message: string) => void;
   onError: (message: string | null) => void;
 }) {
@@ -91,22 +95,27 @@ export function useCenterSave({
   function reportSaveError(cause: unknown) {
     if (cause instanceof ApiError && cause.status === 409) {
       onError(errorMessage(cause, CONFLICT_MESSAGE));
-      // Recarga la ficha para continuar con la versión vigente; los cambios
-      // sin guardar del formulario se conservan (`keepDirtyValues`).
+      // Otra edición ganó: se recarga la ficha y el formulario la adopta, en
+      // lugar de sobrescribirla con los cambios locales en el siguiente guardado.
       const targetCode = code ?? createdCodeRef.current;
       if (targetCode) {
-        void queryClient.invalidateQueries({ queryKey: adminKeys.center(targetCode) });
+        void queryClient
+          .fetchQuery({
+            queryKey: adminKeys.center(targetCode),
+            queryFn: () => getAdminCenter(token, targetCode),
+          })
+          .then(onConflictReload, () => undefined);
       }
       return;
     }
     onError(errorMessage(cause, "No se pudo actualizar la ficha."));
   }
 
-  /** Guarda (o crea) la ficha; devuelve `true` si se guardó. */
+  /** Guarda (o crea) la ficha; devuelve la ficha guardada o `null` si falló. */
   async function save(
     values: CenterFormValues,
     { submitForReview = false, silent = false }: SaveOptions = {},
-  ): Promise<boolean> {
+  ): Promise<AdminCenterDetail | null> {
     onError(null);
     try {
       const saved = await saveMutation.mutateAsync({ values, submitForReview });
@@ -118,10 +127,10 @@ export function useCenterSave({
             : "La ficha fue actualizada.",
         );
       }
-      return true;
+      return saved;
     } catch (cause) {
       reportSaveError(cause);
-      return false;
+      return null;
     }
   }
 

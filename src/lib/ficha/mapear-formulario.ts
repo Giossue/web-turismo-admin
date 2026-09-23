@@ -89,8 +89,6 @@ export function mapearFichaAFormulario(
     },
     activityIds: catalogos.actividadIds.map(String),
     accessibilityIds: catalogos.accesibilidadTipoIds.map(String),
-    facilityIds: [],
-    facilityQuantities: {},
-    facilityObservations: {},
+    // La planta turística no viene en esta parte de la ficha: se conserva la actual.
   };
 }

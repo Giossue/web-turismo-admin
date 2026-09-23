@@ -208,6 +208,10 @@ describe("toPayload", () => {
     expect(payload.administration).toMatchObject({ type: "OTRO", name: "Ana" });
     expect(payload.version).toBeUndefined();
   });
+
+  test("no envía la versión 0 de una ficha publicada sin borrador", () => {
+    expect(toPayload(emptyCenterFormValues, null, 0).version).toBeUndefined();
+  });
 });
 
 describe("mergeImportedValues", () => {

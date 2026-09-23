@@ -16,6 +16,7 @@ import {
   type SectionContent,
 } from "@/lib/center-sections/to-section-content";
 import { errorMessage } from "@/lib/errors";
+import { ApiError } from "@/lib/http";
 import { isRecord } from "@/lib/values";
 
 /** Espera desde el último cambio hasta el guardado automático. */
@@ -94,6 +95,8 @@ export function useSectionAutosave({
   const pendingKeyRef = useRef<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reportedErrorRef = useRef(false);
+  /** Se incrementa tras un guardado para revisar ediciones hechas mientras corría. */
+  const [resaveRequest, setResaveRequest] = useState(0);
 
   function reportError(message: string) {
     reportedErrorRef.current = true;
@@ -112,8 +115,14 @@ export function useSectionAutosave({
     timerRef.current = null;
   }
 
+  /**
+   * Con un guardado en curso, lo que cuenta es lo enviado: volver al valor
+   * anterior mientras tanto también debe guardarse.
+   */
   function isUnchanged(key: string): boolean {
-    return key === savedKeyRef.current || key === pendingKeyRef.current;
+    return pendingKeyRef.current !== null
+      ? key === pendingKeyRef.current
+      : key === savedKeyRef.current;
   }
 
   const mutation = useMutation({
@@ -152,9 +161,15 @@ export function useSectionAutosave({
       }
       clearReportedError();
       onDetailChanged(saved);
+      // Lo editado mientras se guardaba y que ya no programó su propio guardado.
+      if (timerRef.current === null) setResaveRequest((count) => count + 1);
     },
-    onError: (cause, { key }) => {
+    onError: (cause, { code: centerCode, key }) => {
       if (pendingKeyRef.current === key) pendingKeyRef.current = null;
+      if (cause instanceof ApiError && cause.status === 409) {
+        // Otra edición cambió la ficha: se recarga para obtener la versión vigente.
+        void queryClient.invalidateQueries({ queryKey: adminKeys.center(centerCode) });
+      }
       reportError(
         errorMessage(cause, "No se pudo actualizar la información de esta sección."),
       );
@@ -207,6 +222,10 @@ export function useSectionAutosave({
       flushPending();
     };
   }, [subscribe]);
+
+  useEffect(() => {
+    if (resaveRequest > 0) scheduleSave(getValues());
+  }, [getValues, resaveRequest]);
 
   // Cambios del apartado que no vienen de este formulario (otra pestaña,
   // recarga de la caché): se adoptan solo si no hay ediciones locales.

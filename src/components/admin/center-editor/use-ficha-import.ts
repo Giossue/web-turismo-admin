@@ -12,22 +12,20 @@ import type { SugerenciasSecciones } from "@/lib/ficha/sugerencias-secciones";
 
 /**
  * Precarga el formulario desde una ficha MINTUR (.xlsx/.xlsm). Los valores
- * importados quedan como cambios sin guardar (no como valores base), así el
- * autoguardado los persiste y una recarga de la ficha no los descarta.
+ * importados quedan como cambios sin guardar (no como valores base): no se
+ * guardan solos, para que la persona revise las advertencias; su siguiente
+ * edición (o "Siguiente") los guarda, y una recarga de la ficha no los descarta.
  */
 export function useFichaImport({
   token,
   catalogs,
   form: { getValues, reset },
-  onImported,
   onNotice,
   onError,
 }: {
   token: string;
   catalogs: AdminCatalogs | null;
   form: UseFormReturn<CenterFormValues>;
-  /** Se llama tras aplicar los valores (por ejemplo, para programar el autoguardado). */
-  onImported: () => void;
   onNotice: (message: string) => void;
   onError: (message: string | null) => void;
 }) {
@@ -47,7 +45,6 @@ export function useFichaImport({
       reset(next, { keepDefaultValues: true, keepDirtyValues: false });
       setWarnings([...new Set(imported.advertencias)]);
       setSugerencias(imported.sugerenciasSecciones ?? null);
-      onImported();
       onNotice(
         "Se precargó el formulario desde la ficha. Revisa las advertencias antes de guardar.",
       );

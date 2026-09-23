@@ -59,6 +59,7 @@ export function LocationPanel({
             <RhfNumberField<CenterFormValues>
               name="altitudeMeters"
               label="Altitud (msnm)"
+              integer
             />
           </Grid>
         </Grid>

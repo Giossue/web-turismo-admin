@@ -92,9 +92,11 @@ export function useCenterAutosave(
     });
     return () => {
       unsubscribe();
-      cancel();
+      // Al salir del editor, un cambio pendiente se guarda en lugar de perderse.
+      if (timerRef.current) void flush();
+      else cancel();
     };
-  }, [cancel, markChanged, subscribe]);
+  }, [cancel, flush, markChanged, subscribe]);
 
-  return { flush, markChanged, discard };
+  return { flush, discard };
 }

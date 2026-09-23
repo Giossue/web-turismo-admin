@@ -726,7 +726,7 @@ function toFormValues(
     categoria: item.categoria ?? "",
     direccion: item.direccion ?? "",
     telefono: item.telefono ?? "",
-    latitude: String(item.latitude),
-    longitude: String(item.longitude),
+    latitude: item.latitude == null ? "" : String(item.latitude),
+    longitude: item.longitude == null ? "" : String(item.longitude),
   };
 }

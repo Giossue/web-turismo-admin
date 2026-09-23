@@ -121,11 +121,11 @@ function HygieneEntryRow({
           name={`hygieneEntries.${index}.kind`}
           label="Tipo de registro"
           options={HYGIENE_ENTRY_OPTIONS}
-          // El tipo catalogado y el material dependen del tipo de registro.
+          // El tipo catalogado y el material dependen del tipo de registro; el
+          // detalle en texto libre se conserva.
           onValueChange={() => {
             setValue(`hygieneEntries.${index}.typeId`, "", { shouldDirty: true });
             setValue(`hygieneEntries.${index}.secondaryId`, "", { shouldDirty: true });
-            setValue(`hygieneEntries.${index}.secondary`, "", { shouldDirty: true });
           }}
         />
       </Grid>

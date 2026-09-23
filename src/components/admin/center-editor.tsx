@@ -44,8 +44,6 @@ const SUMMARY_STEP = centerSectionDefinitions.length;
 const EDITABLE_STATES = new Set(["BORRADOR", "RECHAZADO", "PUBLICADO"]);
 const REQUIRED_FIELDS_MESSAGE = "Completa los campos obligatorios para continuar.";
 
-const alwaysReady = () => true;
-
 export function CenterEditor({
   token,
   code,
@@ -97,17 +95,39 @@ export function CenterEditor({
   const activeSectionCode =
     activeStep < SUMMARY_STEP ? centerSectionDefinitions[activeStep].code : null;
 
-  const centerSave = useCenterSave({ token, code, catalogs, onSaved, onNotice, onError });
+  /** Reemplaza el formulario por la ficha del servidor (sin cambios locales). */
+  const adoptServerDetail = (saved: AdminCenterDetail) => {
+    if (catalogs)
+      form.reset(toFormValues(editorDraftOf(withEditorDraft(saved)), catalogs));
+  };
+  const centerSave = useCenterSave({
+    token,
+    code,
+    catalogs,
+    onSaved,
+    onNotice,
+    onError,
+    onConflictReload: adoptServerDetail,
+  });
   const autosave = useCenterAutosave(form, {
     enabled: canEdit,
-    canSave: isNew ? isReadyToCreate : alwaysReady,
-    save: (values) => centerSave.save(values, { silent: true }),
+    // Solo se valida el panel montado; esta comprobación cubre los campos
+    // obligatorios de todos los pasos para no guardar una ficha incompleta.
+    canSave: isReadyToCreate,
+    save: async (values) => {
+      const submitted = JSON.stringify(values);
+      const saved = await centerSave.save(values, { silent: true });
+      // Sin ediciones durante el guardado, el formulario vuelve a reflejar lo
+      // que quedó en el servidor (por ejemplo, un campo vaciado que la API conserva).
+      if (saved && JSON.stringify(form.getValues()) === submitted)
+        adoptServerDetail(saved);
+      return saved !== null;
+    },
   });
   const fichaImport = useFichaImport({
     token,
     catalogs,
     form,
-    onImported: autosave.markChanged,
     onNotice,
     onError,
   });
@@ -140,12 +160,19 @@ export function CenterEditor({
       // La API asigna el código al crear; sin código no hay más pasos.
       if (!(await autosave.flush({ force: true }))) return;
     } else {
-      void autosave.flush();
+      // Incluye valores importados que aún no se guardaron.
+      void autosave.flush({ force: form.formState.isDirty });
     }
     setActiveStep(activeStep + 1);
   }
 
   async function submitForReview() {
+    if (!isReadyToCreate(form.getValues())) {
+      // Los campos obligatorios viven en el primer paso, que no está montado.
+      setActiveStep(0);
+      onError(REQUIRED_FIELDS_MESSAGE);
+      return;
+    }
     if (!(await form.trigger(undefined, { shouldFocus: true }))) {
       onError(REQUIRED_FIELDS_MESSAGE);
       return;

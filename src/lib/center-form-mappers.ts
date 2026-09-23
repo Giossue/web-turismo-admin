@@ -267,7 +267,16 @@ export function mergeImportedValues(
   imported: Partial<CenterFormValues>,
   catalogs: AdminCatalogs,
 ): CenterFormValues {
-  return sanitizeFormValues({ ...current, ...imported }, catalogs);
+  const admission = imported.admission && {
+    ...imported.admission,
+    // La ficha no trae la modalidad de atención; no se borra la registrada.
+    attentionModeId:
+      imported.admission.attentionModeId || current.admission.attentionModeId,
+  };
+  return sanitizeFormValues(
+    { ...current, ...imported, ...(admission ? { admission } : {}) },
+    catalogs,
+  );
 }
 
 function optionalText(value: string): string | undefined {
@@ -352,6 +361,8 @@ export function toPayload(
       quantity: toOptionalNumber(values.facilityQuantities[id]) ?? 1,
       observation: optionalText(values.facilityObservations[id] ?? ""),
     })),
-    version,
+    // Una ficha publicada sin borrador tiene versión 0; la API exige >= 1 y
+    // en ese caso no espera versión.
+    version: version || undefined,
   };
 }
