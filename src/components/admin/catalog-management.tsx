@@ -43,6 +43,7 @@ import {
 import { activeLabel, activeTone } from "@/lib/admin-labels";
 import { adminKeys, catalogsQueryOptions } from "@/lib/admin-queries";
 import { errorMessage } from "@/lib/errors";
+import { findCatalogOption } from "@/lib/values";
 import { webTokens } from "@/theme/tokens";
 
 type CatalogListKey = {
@@ -202,9 +203,15 @@ export function CatalogManagement({
     const source = catalogsQuery.data?.[config.source] ?? [];
     return deferredSearch
       ? source.filter((item) =>
-          [item.name, item.activityName, item.classificationName].some((value) =>
-            value?.toLocaleLowerCase().includes(deferredSearch),
-          ),
+          [
+            item.name,
+            item.activityName ??
+              findCatalogOption(
+                catalogsQuery.data?.establishmentActivities,
+                item.activityId,
+              )?.name,
+            item.classificationName,
+          ].some((value) => value?.toLocaleLowerCase().includes(deferredSearch)),
         )
       : source;
   }, [catalogsQuery.data, config.source, deferredSearch]);
@@ -216,6 +223,11 @@ export function CatalogManagement({
   );
 
   const parentOptions = parent ? (catalogsQuery.data?.[parent.source] ?? []) : [];
+  const establishmentActivities = catalogsQuery.data?.establishmentActivities;
+  /** La API solo envía `activityId` en los tipos de establecimiento; el nombre se resuelve aquí. */
+  const activityNameOf = (option: CatalogOption) =>
+    option.activityName ??
+    findCatalogOption(establishmentActivities, option.activityId)?.name;
 
   function resetEditor() {
     setEditing(null);
@@ -387,7 +399,7 @@ export function CatalogManagement({
                   </TableCell>
                 </>
               ) : selected === "ESTABLISHMENT_CLASSIFICATION" ? (
-                <TableCell>{option.activityName ?? "—"}</TableCell>
+                <TableCell>{activityNameOf(option) ?? "—"}</TableCell>
               ) : null}
               <TableCell>
                 <StatusBadge
@@ -444,6 +456,16 @@ export function CatalogManagement({
                   </MenuItem>
                 ))}
               </TextField>
+            ) : editing && parent ? (
+              <TextField
+                label={parent.label}
+                value={
+                  findCatalogOption(parentOptions, parent.idOf(editing))?.name ?? "—"
+                }
+                fullWidth
+                disabled
+                helperText="El catálogo superior no se puede cambiar después de crear la opción."
+              />
             ) : null}
             {selected === "ESTABLISHMENT_CLASSIFICATION" ? (
               <CatalogIconSelect
