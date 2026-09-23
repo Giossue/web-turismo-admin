@@ -5,7 +5,6 @@ import HistoryRounded from "@mui/icons-material/HistoryRounded";
 import {
   Alert,
   Button,
-  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -16,20 +15,25 @@ import {
   TableCell,
   TableHead,
   TableRow,
-  TextField,
   Typography,
 } from "@mui/material";
-import { useQuery } from "@tanstack/react-query";
-import { useCallback, useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 
-import { AdminTable, ADMIN_TABLE_PAGE_SIZE } from "@/components/ui/admin-table";
+import { useAdminFeedback } from "@/components/admin/admin-feedback";
 import {
-  getAdminOpinionHistory,
-  getAdminOpinions,
+  ReviewDecisionDialog,
+  useReviewIntent,
+} from "@/components/admin/review-decision-dialog";
+import { pageAfterRemoval } from "@/components/admin/shell/pagination";
+import { AdminTable, ADMIN_TABLE_PAGE_SIZE } from "@/components/ui/admin-table";
+import { ContentState } from "@/components/ui/content-state";
+import { FlatSurface } from "@/components/ui/flat-surface";
+import { StatusBadge } from "@/components/ui/status-badge";
+import {
   reviewAdminOpinion,
   type AdminOpinion,
   type AdminOpinionHistory,
-  type OpinionStatus,
   type ReviewAction,
 } from "@/lib/admin-api";
 import {
@@ -37,131 +41,103 @@ import {
   opinionStatusTone,
   opinionTargetTypeLabel,
 } from "@/lib/admin-labels";
-import { adminKeys } from "@/lib/admin-queries";
+import {
+  adminKeys,
+  opinionHistoryQueryOptions,
+  opinionsPageQueryOptions,
+} from "@/lib/admin-queries";
 import { errorMessage } from "@/lib/errors";
 import { formatDateTime } from "@/lib/format";
-import { StatusBadge } from "@/components/ui/status-badge";
 import { webTokens } from "@/theme/tokens";
 
 const pageSize = ADMIN_TABLE_PAGE_SIZE;
+const MAX_RATING = 5;
+const REASON_MAX_LENGTH = 1000;
 
-type ReviewIntent = {
-  opinion: AdminOpinion;
-  action: ReviewAction;
-};
+type ReviewVariables = { item: AdminOpinion; action: ReviewAction; reason?: string };
 
-export function OpinionManagement({
-  token,
-  onError,
-  onNotice,
-}: {
-  token: string;
-  onError: (message: string | null) => void;
-  onNotice: (message: string | null) => void;
-}) {
-  const [items, setItems] = useState<AdminOpinion[]>([]);
-  const [total, setTotal] = useState(0);
+/** Moderación de opiniones; usa los avisos de `AdminFeedbackProvider`. */
+export function OpinionManagement({ token }: { token: string }) {
+  const queryClient = useQueryClient();
+  const { showError, showNotice } = useAdminFeedback();
   const [page, setPage] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [workingCode, setWorkingCode] = useState<string | null>(null);
-  const [reviewIntent, setReviewIntent] = useState<ReviewIntent | null>(null);
-  const [historyOpinion, setHistoryOpinion] = useState<AdminOpinion | null>(null);
-  const [reason, setReason] = useState("");
-  const historyQuery = useQuery({
-    queryKey: adminKeys.opinionHistory(historyOpinion?.reviewCode ?? null),
-    queryFn: () => getAdminOpinionHistory(token, historyOpinion?.reviewCode ?? ""),
-    enabled: Boolean(token && historyOpinion),
-  });
-
-  useEffect(() => {
-    if (historyQuery.error) {
-      onError(
-        errorMessage(historyQuery.error, "No se pudo cargar el historial de la opinión."),
-      );
-    }
-  }, [historyQuery.error, onError]);
-
-  const load = useCallback(
-    async (nextPage: number) => {
-      if (!token) return;
-      setLoading(true);
-      onError(null);
-      try {
-        const result = await getAdminOpinions(token, {
-          limit: pageSize,
-          offset: nextPage * pageSize,
-        });
-        setItems(result.items);
-        setTotal(result.total);
-      } catch (cause) {
-        onError(errorMessage(cause, "No se pudieron cargar las opiniones pendientes."));
-      } finally {
-        setLoading(false);
-      }
-    },
-    [onError, token],
+  const opinionsQuery = useQuery(
+    opinionsPageQueryOptions(token, { limit: pageSize, offset: page * pageSize }),
   );
+  const items = opinionsQuery.data?.items ?? [];
+  // Se conserva la opinión al cerrar para no vaciar el diálogo durante la transición.
+  const [historyOpinion, setHistoryOpinion] = useState<AdminOpinion | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const historyCode = historyOpinion?.reviewCode ?? null;
+  const historyQuery = useQuery({
+    ...opinionHistoryQueryOptions(token, historyCode),
+    enabled: Boolean(token && historyCode && historyOpen),
+  });
+  const review = useReviewIntent<AdminOpinion>();
 
-  useEffect(() => {
-    void Promise.resolve().then(() => load(page));
-  }, [load, page]);
-
-  function openReview(opinion: AdminOpinion, action: ReviewAction) {
-    setReason("");
-    setHistoryOpinion(null);
-    setReviewIntent({ opinion, action });
-  }
-
-  function openHistory(opinion: AdminOpinion) {
-    onError(null);
-    setHistoryOpinion(opinion);
-  }
-
-  async function submitReview() {
-    if (!reviewIntent || !token) return;
-    const normalizedReason = reason.trim();
-    if (reviewIntent.action === "REJECT" && !normalizedReason) {
-      onError("Debes indicar el motivo del rechazo.");
-      return;
-    }
-
-    setWorkingCode(reviewIntent.opinion.reviewCode);
-    onError(null);
-    try {
-      await reviewAdminOpinion(
-        token,
-        reviewIntent.opinion.reviewCode,
-        reviewIntent.action,
-        normalizedReason || undefined,
-      );
-      setReviewIntent(null);
-      setReason("");
-      onNotice(
-        reviewIntent.action === "APPROVE"
+  const reviewMutation = useMutation({
+    mutationFn: ({ item, action, reason }: ReviewVariables) =>
+      reviewAdminOpinion(token, item.reviewCode, action, reason),
+    onMutate: () => showError(null),
+    onSuccess: async (_, { item, action }) => {
+      review.close();
+      showNotice(
+        action === "APPROVE"
           ? "La opinión fue aprobada y ahora está publicada."
-          : reviewIntent.opinion.current
+          : item.current
             ? "La edición fue rechazada; la versión anterior sigue publicada."
             : "La opinión fue rechazada y no se mostrará en la aplicación.",
       );
-      const nextPage = page > 0 && items.length === 1 ? page - 1 : page;
+      const nextPage = pageAfterRemoval(page, items.length);
       if (nextPage !== page) setPage(nextPage);
-      else await load(page);
-    } catch (cause) {
-      onError(errorMessage(cause, "No se pudo revisar la opinión."));
-    } finally {
-      setWorkingCode(null);
-    }
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: adminKeys.allOpinions(),
+          // Si cambia la página, la consulta nueva se carga sola al renderizar.
+          refetchType: nextPage === page ? "active" : "none",
+        }),
+        queryClient.invalidateQueries({
+          queryKey: adminKeys.opinionHistory(item.reviewCode),
+        }),
+      ]);
+    },
+    onError: (cause) => showError(errorMessage(cause, "No se pudo revisar la opinión.")),
+  });
+
+  function openHistory(opinion: AdminOpinion) {
+    showError(null);
+    setHistoryOpinion(opinion);
+    setHistoryOpen(true);
   }
+
+  function openReview(opinion: AdminOpinion, action: ReviewAction) {
+    setHistoryOpen(false);
+    review.start(opinion, action);
+  }
+
+  const intent = review.intent;
 
   return (
     <Stack spacing={webTokens.spacing.control}>
       <AdminTable
         ariaLabel="Opiniones de visitantes"
         minWidth={760}
-        loading={loading && items.length === 0}
+        loading={opinionsQuery.isLoading}
+        error={
+          opinionsQuery.error
+            ? errorMessage(
+                opinionsQuery.error,
+                "No se pudieron cargar las opiniones pendientes.",
+              )
+            : null
+        }
         empty={items.length === 0}
         emptyMessage="No hay opiniones pendientes ni publicadas."
-        pagination={{ page, total, pageSize, onPageChange: setPage }}
+        pagination={{
+          page,
+          total: opinionsQuery.data?.total ?? 0,
+          onPageChange: setPage,
+        }}
       >
         <TableHead>
           <TableRow>
@@ -190,11 +166,15 @@ export function OpinionManagement({
                 />
               </TableCell>
               <TableCell>
+                <OpinionVersionSummary version={opinion.proposed} />
+              </TableCell>
+              <TableCell align="right">
                 <Button
                   size="small"
                   variant="text"
                   startIcon={<HistoryRounded />}
                   onClick={() => openHistory(opinion)}
+                  aria-label={`Ver historial de la opinión sobre ${opinion.target.name}`}
                   sx={{
                     backgroundColor: "transparent",
                     "&:hover": { backgroundColor: "action.hover" },
@@ -209,18 +189,23 @@ export function OpinionManagement({
       </AdminTable>
 
       <Dialog
-        open={historyOpinion !== null}
-        onClose={() => setHistoryOpinion(null)}
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
         fullWidth
         maxWidth="md"
       >
         <DialogTitle>Historial de la opinión</DialogTitle>
         <DialogContent dividers>
-          {historyQuery.isPending ? (
-            <Stack alignItems="center" spacing={webTokens.spacing.inline} sx={{ py: 5 }}>
-              <CircularProgress size={28} />
-              <Typography color="text.secondary">Cargando historial…</Typography>
-            </Stack>
+          {historyQuery.isLoading ? (
+            <ContentState status="loading" label="Cargando historial" />
+          ) : historyQuery.error ? (
+            <ContentState
+              status="error"
+              message={errorMessage(
+                historyQuery.error,
+                "No se pudo cargar el historial de la opinión.",
+              )}
+            />
           ) : historyQuery.data ? (
             <OpinionHistoryDetail history={historyQuery.data} />
           ) : (
@@ -228,20 +213,20 @@ export function OpinionManagement({
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setHistoryOpinion(null)}>Cerrar</Button>
+          <Button onClick={() => setHistoryOpen(false)}>Cerrar</Button>
           {historyOpinion?.status === "PENDIENTE" ? (
             <>
               <Button
                 color="error"
                 onClick={() => openReview(historyOpinion, "REJECT")}
-                disabled={workingCode !== null}
+                disabled={reviewMutation.isPending}
               >
                 Rechazar
               </Button>
               <Button
                 variant="contained"
                 onClick={() => openReview(historyOpinion, "APPROVE")}
-                disabled={workingCode !== null}
+                disabled={reviewMutation.isPending}
                 startIcon={<CheckCircleRounded />}
               >
                 Aprobar
@@ -251,70 +236,48 @@ export function OpinionManagement({
         </DialogActions>
       </Dialog>
 
-      <Dialog
-        open={reviewIntent !== null}
-        onClose={() => workingCode === null && setReviewIntent(null)}
-        fullWidth
-        maxWidth="sm"
-      >
-        <DialogTitle>
-          {reviewIntent?.action === "APPROVE" ? "Aprobar opinión" : "Rechazar opinión"}
-        </DialogTitle>
-        <DialogContent>
-          {reviewIntent ? (
-            <Stack spacing={webTokens.spacing.control} sx={{ pt: 1 }}>
-              <Typography>
-                <strong>{reviewIntent.opinion.target.name}</strong> · versión{" "}
-                {reviewIntent.opinion.version}
-              </Typography>
-              <OpinionVersionSummary version={reviewIntent.opinion.proposed} expanded />
-              {reviewIntent.opinion.current ? (
-                <Alert severity="info">
-                  Al rechazar esta edición, la versión{" "}
-                  {reviewIntent.opinion.current.version} seguirá publicada.
-                </Alert>
-              ) : null}
-              {reviewIntent.action === "REJECT" ? (
-                <TextField
-                  required
-                  autoFocus
-                  label="Motivo del rechazo"
-                  value={reason}
-                  onChange={(event) => setReason(event.target.value)}
-                  multiline
-                  minRows={3}
-                  helperText="El motivo se conserva en la auditoría y se muestra al autor."
-                  slotProps={{ htmlInput: { maxLength: 1000 } }}
-                />
-              ) : (
-                <Typography color="text.secondary">
-                  Esta versión reemplazará la versión publicada anterior, si existe.
-                </Typography>
-              )}
-            </Stack>
+      {intent ? (
+        <ReviewDecisionDialog
+          open={review.open}
+          title={intent.action === "APPROVE" ? "Aprobar opinión" : "Rechazar opinión"}
+          subject={
+            <>
+              <strong>{intent.item.target.name}</strong> · versión {intent.item.version}
+            </>
+          }
+          action={intent.action}
+          reason={review.reason}
+          onReasonChange={review.setReason}
+          showReason={intent.action === "REJECT"}
+          reasonLabel="Motivo del rechazo"
+          reasonRequired
+          reasonMaxLength={REASON_MAX_LENGTH}
+          helperText="El motivo se conserva en la auditoría y se muestra al autor."
+          pending={reviewMutation.isPending}
+          onCancel={review.close}
+          onConfirm={() =>
+            reviewMutation.mutate({
+              item: intent.item,
+              action: intent.action,
+              reason:
+                intent.action === "REJECT" ? review.reason.trim() || undefined : undefined,
+            })
+          }
+        >
+          <OpinionVersionSummary version={intent.item.proposed} expanded />
+          {intent.item.current ? (
+            <Alert severity="info">
+              Al rechazar esta edición, la versión {intent.item.current.version} seguirá
+              publicada.
+            </Alert>
           ) : null}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setReviewIntent(null)} disabled={workingCode !== null}>
-            Cancelar
-          </Button>
-          <Button
-            onClick={() => void submitReview()}
-            variant="contained"
-            color={reviewIntent?.action === "REJECT" ? "error" : "primary"}
-            disabled={workingCode !== null}
-            startIcon={
-              workingCode ? <CircularProgress size={16} /> : <CheckCircleRounded />
-            }
-          >
-            {workingCode
-              ? "Guardando…"
-              : reviewIntent?.action === "APPROVE"
-                ? "Aprobar"
-                : "Rechazar"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+          {intent.action === "APPROVE" ? (
+            <Typography color="text.secondary">
+              Esta versión reemplazará la versión publicada anterior, si existe.
+            </Typography>
+          ) : null}
+        </ReviewDecisionDialog>
+      ) : null}
     </Stack>
   );
 }
@@ -335,62 +298,52 @@ function OpinionHistoryDetail({ history }: { history: AdminOpinionHistory }) {
       <Divider />
       <Stack spacing={webTokens.spacing.control}>
         {history.versions.map((version) => (
-          <Stack
-            key={version.reviewCode}
-            spacing={webTokens.spacing.inline}
-            sx={{
-              border: "1px solid",
-              borderColor: "divider",
-              borderRadius: 2,
-              p: 2,
-            }}
-          >
-            <Stack
-              direction={{ xs: "column", sm: "row" }}
-              spacing={webTokens.spacing.inline}
-              alignItems={{ sm: "center" }}
-              justifyContent="space-between"
-            >
-              <Typography fontWeight={700}>Versión {version.version}</Typography>
-              <OpinionHistoryStatus status={version.status} />
-            </Stack>
-            <OpinionRating rating={version.rating} />
-            <Typography variant="body2">{version.comment || "Sin comentario"}</Typography>
-            <Typography color="text.secondary" variant="caption">
-              Enviada: {formatDateTime(version.submittedAt)}
-              {version.reviewedAt
-                ? ` · Revisada: ${formatDateTime(version.reviewedAt)}`
-                : ""}
-            </Typography>
-            {version.moderations.length > 0 ? (
-              <Stack spacing={webTokens.spacing.inline} sx={{ pt: 1 }}>
-                <Typography fontWeight={700} variant="body2">
-                  Moderación
-                </Typography>
-                {version.moderations.map((moderation, index) => (
-                  <Stack key={`${version.reviewCode}-${moderation.createdAt}-${index}`}>
-                    <Typography variant="body2">
-                      {moderation.action === "APROBAR" ? "Aprobada" : "Rechazada"} por{" "}
-                      <strong>{moderation.moderatorName}</strong>
-                    </Typography>
-                    <Typography color="text.secondary" variant="caption">
-                      {formatDateTime(moderation.createdAt)}
-                      {moderation.reason ? ` · Motivo: ${moderation.reason}` : ""}
-                    </Typography>
-                  </Stack>
-                ))}
+          <FlatSurface key={version.reviewCode} padding="compact">
+            <Stack spacing={webTokens.spacing.inline}>
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                spacing={webTokens.spacing.inline}
+                alignItems={{ sm: "center" }}
+                justifyContent="space-between"
+              >
+                <Typography fontWeight={700}>Versión {version.version}</Typography>
+                <StatusBadge
+                  label={opinionStatusLabel(version.status)}
+                  tone={opinionStatusTone(version.status)}
+                />
               </Stack>
-            ) : null}
-          </Stack>
+              <OpinionRating rating={version.rating} />
+              <Typography variant="body2">{version.comment || "Sin comentario"}</Typography>
+              <Typography color="text.secondary" variant="caption">
+                Enviada: {formatDateTime(version.submittedAt)}
+                {version.reviewedAt
+                  ? ` · Revisada: ${formatDateTime(version.reviewedAt)}`
+                  : ""}
+              </Typography>
+              {version.moderations.length > 0 ? (
+                <Stack spacing={webTokens.spacing.inline} sx={{ pt: 1 }}>
+                  <Typography fontWeight={700} variant="body2">
+                    Moderación
+                  </Typography>
+                  {version.moderations.map((moderation, index) => (
+                    <Stack key={`${version.reviewCode}-${moderation.createdAt}-${index}`}>
+                      <Typography variant="body2">
+                        {moderation.action === "APROBAR" ? "Aprobada" : "Rechazada"} por{" "}
+                        <strong>{moderation.moderatorName}</strong>
+                      </Typography>
+                      <Typography color="text.secondary" variant="caption">
+                        {formatDateTime(moderation.createdAt)}
+                        {moderation.reason ? ` · Motivo: ${moderation.reason}` : ""}
+                      </Typography>
+                    </Stack>
+                  ))}
+                </Stack>
+              ) : null}
+            </Stack>
+          </FlatSurface>
         ))}
       </Stack>
     </Stack>
-  );
-}
-
-function OpinionHistoryStatus({ status }: { status: OpinionStatus }) {
-  return (
-    <StatusBadge label={opinionStatusLabel(status)} tone={opinionStatusTone(status)} />
   );
 }
 
@@ -430,12 +383,31 @@ function OpinionVersionSummary({
   );
 }
 
+/** Calificación entera acotada a 0–5 (la API podría enviar valores fuera de rango). */
+export function clampRating(rating: number): number {
+  if (!Number.isFinite(rating)) return 0;
+  return Math.min(MAX_RATING, Math.max(0, Math.round(rating)));
+}
+
 function OpinionRating({ rating }: { rating: number | null }) {
+  if (rating === null) {
+    return (
+      <Typography variant="body2" fontWeight={700} whiteSpace="nowrap">
+        Sin calificación
+      </Typography>
+    );
+  }
+  const value = clampRating(rating);
   return (
-    <Typography variant="body2" fontWeight={700} whiteSpace="nowrap">
-      {rating === null
-        ? "Sin calificación"
-        : `${"★".repeat(rating)}${"☆".repeat(5 - rating)}`}
+    <Typography
+      variant="body2"
+      fontWeight={700}
+      whiteSpace="nowrap"
+      role="img"
+      aria-label={`${value} de ${MAX_RATING}`}
+    >
+      {"★".repeat(value)}
+      {"☆".repeat(MAX_RATING - value)}
     </Typography>
   );
 }

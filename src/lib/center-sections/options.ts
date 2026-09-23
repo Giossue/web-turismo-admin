@@ -61,3 +61,89 @@ export const HYGIENE_ENTRY_OPTIONS = [
 ] as const;
 
 export type HygieneEntryKind = (typeof HYGIENE_ENTRY_OPTIONS)[number]["value"];
+
+/** Ámbito de planta, servicios complementarios e higiene (`SERVICE_SCOPE_VALUES` en la API). */
+export const SERVICE_SCOPE_OPTIONS = [
+  { value: "EN_ATRACTIVO", label: "En el atractivo" },
+  { value: "EN_POBLADO_CERCANO", label: "En el poblado cercano" },
+] as const;
+
+export type ServiceScope = (typeof SERVICE_SCOPE_OPTIONS)[number]["value"];
+
+/** Si un tipo de transporte aplica; la API lo guarda como booleano. */
+export const TRANSPORT_APPLIES_OPTIONS = [
+  { value: "SI", label: "Sí" },
+  { value: "NO", label: "No" },
+] as const;
+
+export type TransportApplies = (typeof TRANSPORT_APPLIES_OPTIONS)[number]["value"];
+
+export const CONSERVATION_COMPONENT_OPTIONS = [
+  { value: "ATRACTIVO", label: "Atractivo" },
+  { value: "ENTORNO", label: "Entorno" },
+] as const;
+
+export type ConservationComponent =
+  (typeof CONSERVATION_COMPONENT_OPTIONS)[number]["value"];
+
+export const CONSERVATION_ORIGIN_OPTIONS = [
+  { value: "NATURAL", label: "Natural" },
+  { value: "ANTROPICO", label: "Antrópico" },
+] as const;
+
+export type ConservationOrigin = (typeof CONSERVATION_ORIGIN_OPTIONS)[number]["value"];
+
+/** Condición de un registro de higiene y seguridad (`SIGNAGE_CONDITION_VALUES`). */
+export const HYGIENE_CONDITION_OPTIONS = [
+  { value: "BUENO", label: "Bueno" },
+  { value: "REGULAR", label: "Regular" },
+  { value: "MALO", label: "Malo" },
+] as const;
+
+export type HygieneCondition = (typeof HYGIENE_CONDITION_OPTIONS)[number]["value"];
+
+export const VISITOR_REGISTRY_TYPE_OPTIONS = [
+  { value: "DIGITAL", label: "Digital" },
+  { value: "PAPEL", label: "Papel" },
+] as const;
+
+export type VisitorRegistryType = (typeof VISITOR_REGISTRY_TYPE_OPTIONS)[number]["value"];
+
+export const VISITOR_SEASON_OPTIONS = [
+  { value: "ALTA", label: "Alta" },
+  { value: "BAJA", label: "Baja" },
+] as const;
+
+export type VisitorSeason = (typeof VISITOR_SEASON_OPTIONS)[number]["value"];
+
+export const VISITOR_ORIGIN_OPTIONS = [
+  { value: "NACIONAL", label: "Nacional" },
+  { value: "EXTRANJERA", label: "Extranjera" },
+] as const;
+
+export type VisitorOrigin = (typeof VISITOR_ORIGIN_OPTIONS)[number]["value"];
+
+export const VISITOR_FREQUENCY_OPTIONS = [
+  { value: "PERMANENTE", label: "Permanente" },
+  { value: "ESTACIONAL", label: "Estacional" },
+  { value: "ESPORADICA", label: "Esporádica" },
+  { value: "INEXISTENTE", label: "Inexistente" },
+] as const;
+
+export type VisitorFrequency = (typeof VISITOR_FREQUENCY_OPTIONS)[number]["value"];
+
+export const TRAINING_GROUP_OPTIONS = [
+  { value: "EDUCACION", label: "Educación" },
+  { value: "CAPACITACION", label: "Capacitación" },
+  { value: "IDIOMA", label: "Idioma" },
+] as const;
+
+export type TrainingGroup = (typeof TRAINING_GROUP_OPTIONS)[number]["value"];
+
+export const ANNEX_VISIBILITY_OPTIONS = [
+  { value: "PUBLICA", label: "Pública" },
+  { value: "ADMINISTRATIVA", label: "Administrativa" },
+  { value: "RESTRINGIDA", label: "Restringida" },
+] as const;
+
+export type AnnexVisibility = (typeof ANNEX_VISIBILITY_OPTIONS)[number]["value"];
