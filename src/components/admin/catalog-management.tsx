@@ -1,7 +1,6 @@
 "use client";
 
 import EditRounded from "@mui/icons-material/EditRounded";
-import AddRounded from "@mui/icons-material/AddRounded";
 import {
   Button,
   Dialog,
@@ -23,7 +22,14 @@ import {
   Tooltip,
 } from "@mui/material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import {
+  forwardRef,
+  useDeferredValue,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useState,
+} from "react";
 
 import {
   AdminTable,
@@ -165,15 +171,18 @@ function normalizeCategoryIcon(value?: string): string {
   return isCatalogIcon(value) ? value : defaultCategoryIcon;
 }
 
-export function CatalogManagement({
-  token,
-  onNotice,
-  onError,
-}: {
-  token: string;
-  onNotice: (message: string) => void;
-  onError: (message: string | null) => void;
-}) {
+export type CatalogManagementRef = {
+  openCreate: () => void;
+};
+
+export const CatalogManagement = forwardRef<
+  CatalogManagementRef,
+  {
+    token: string;
+    onNotice: (message: string) => void;
+    onError: (message: string | null) => void;
+  }
+>(function CatalogManagement({ token, onNotice, onError }, ref) {
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<AdminCatalogKey>("ACCESSIBILITY");
   const [search, setSearch] = useState("");
@@ -245,6 +254,7 @@ export function CatalogManagement({
     setCreating(true);
     onError(null);
   }
+  useImperativeHandle(ref, () => ({ openCreate }));
 
   function openEdit(option: CatalogOption) {
     setCreating(false);
@@ -318,19 +328,7 @@ export function CatalogManagement({
 
   return (
     <Stack spacing={webTokens.spacing.control}>
-      <AdminTableToolbar
-        actions={
-          <Button
-            variant="contained"
-            startIcon={<AddRounded />}
-            onClick={openCreate}
-            disabled={catalogsQuery.isLoading}
-            aria-label={`Agregar opción de ${config.label}`}
-          >
-            Agregar
-          </Button>
-        }
-      >
+      <AdminTableToolbar>
         <Stack spacing={webTokens.spacing.control}>
           <Tabs
             value={selected}
@@ -531,4 +529,4 @@ export function CatalogManagement({
       </Dialog>
     </Stack>
   );
-}
+});

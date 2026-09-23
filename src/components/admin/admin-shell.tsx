@@ -20,7 +20,10 @@ import {
   useAdminFeedback,
 } from "@/components/admin/admin-feedback";
 import { AdminLogin } from "@/components/admin/admin-login";
-import { CatalogManagement } from "@/components/admin/catalog-management";
+import {
+  CatalogManagement,
+  type CatalogManagementRef,
+} from "@/components/admin/catalog-management";
 import { CenterEditor } from "@/components/admin/center-editor";
 import {
   EstablishmentManagement,
@@ -81,6 +84,7 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
   const { section, state } = nav;
   const [drawerOpen, setDrawerOpen] = useState(false);
   const establishmentRef = useRef<EstablishmentManagementRef>(null);
+  const catalogRef = useRef<CatalogManagementRef>(null);
   const editorMode = section === "editor";
   const meta = adminSectionConfig[section];
 
@@ -129,6 +133,14 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
         onClick={() => establishmentRef.current?.openCreate()}
       >
         Nuevo establecimiento
+      </Button>
+    ) : section === "catalogs" ? (
+      <Button
+        variant="contained"
+        startIcon={<AddRounded />}
+        onClick={() => catalogRef.current?.openCreate()}
+      >
+        Agregar opción
       </Button>
     ) : undefined;
 
@@ -244,6 +256,7 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
           ) : null}
           {section === "catalogs" ? (
             <CatalogManagement
+              ref={catalogRef}
               token={token}
               onNotice={feedback.showNotice}
               onError={feedback.showError}
