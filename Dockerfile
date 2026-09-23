@@ -19,7 +19,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV TURISMO_API_URL=${TURISMO_API_URL}
 ENV NEXT_PUBLIC_TURISMO_API_URL=${NEXT_PUBLIC_TURISMO_API_URL}
 
-RUN node ./node_modules/next/dist/bin/next build
+RUN node scripts/copy-maplibre-worker.mjs && node ./node_modules/next/dist/bin/next build
 
 FROM node:24-bookworm-slim AS runtime
 

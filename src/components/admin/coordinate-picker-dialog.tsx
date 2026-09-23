@@ -23,6 +23,10 @@ const mapStyleUrl =
   "https://maps.devs-ueb.tech/styles/basic-preview/style.json";
 const defaultCenter: [number, number] = [-79.0016, -1.5923];
 
+// El bundler no emite el worker de MapLibre v6; se sirve desde `public/maplibre`
+// (ver scripts/copy-maplibre-worker.mjs). Sin él solo se dibuja el fondo.
+maplibregl.setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
+
 type Coordinate = Readonly<{ latitude: number; longitude: number }>;
 
 function parseCoordinate(value: string | number | null | undefined): number | null {

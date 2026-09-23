@@ -11,7 +11,9 @@
     "unrs-resolver"
   ],
   "scripts": {
+    "predev": "node scripts/copy-maplibre-worker.mjs",
     "dev": "next dev --port 3002",
+    "prebuild": "node scripts/copy-maplibre-worker.mjs",
     "build": "next build",
     "start": "next start --port 3002",
     "format": "prettier --check .",
