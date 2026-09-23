@@ -9,21 +9,18 @@ const definitions = [
     code: "identificacion",
     title: "Datos generales y clasificación",
     description: "Nombre, clasificación, territorio y código institucional.",
-    coreAnchor: "center-section-identificacion",
     suggestedRows: [],
   },
   {
     code: "ubicacion-admin",
     title: "Ubicación y administración",
     description: "Coordenadas, dirección y responsable institucional.",
-    coreAnchor: "center-section-ubicacion-admin",
     suggestedRows: [],
   },
   {
     code: "caracteristicas",
     title: "Características e ingreso",
     description: "Clima, línea de producto, escenario, horarios y tarifas.",
-    coreAnchor: "center-section-caracteristicas",
     suggestedRows: [
       "Clima y condiciones habituales",
       "Formas de pago",
@@ -34,14 +31,12 @@ const definitions = [
     code: "accesibilidad",
     title: "Accesibilidad y conectividad",
     description: "Localidad cercana, vías, transporte, accesibilidad y señalización.",
-    coreAnchor: "center-section-accesibilidad",
     suggestedRows: [],
   },
   {
     code: "planta",
     title: "Planta y complementarios",
     description: "Agregados del atractivo, localidad cercana, facilidades y servicios.",
-    coreAnchor: "center-section-planta",
     suggestedRows: [
       "Planta turística en el atractivo",
       "Planta turística en la localidad cercana",
@@ -82,7 +77,6 @@ const definitions = [
     code: "actividades",
     title: "Actividades",
     description: "Actividades compatibles con la categoría y sus condiciones.",
-    coreAnchor: "center-section-actividades",
     suggestedRows: [],
   },
   {
@@ -113,7 +107,6 @@ const definitions = [
     code: "descripcion",
     title: "Descripción",
     description: "Descripción narrativa y observaciones públicas del centro.",
-    coreAnchor: "center-section-descripcion",
     suggestedRows: [],
   },
   {
@@ -135,8 +128,6 @@ export type SectionDefinition = {
   code: CenterSectionCode;
   title: string;
   description: string;
-  /** Ancla del bloque del formulario principal que cubre este apartado. */
-  coreAnchor?: string;
   suggestedRows: readonly string[];
 };
 

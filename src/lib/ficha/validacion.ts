@@ -1,368 +1,419 @@
 import { z } from "zod";
 
+import {
+  CONSERVATION_STATE_OPTIONS,
+  SECTION_RESPONSE_OPTIONS,
+} from "@/lib/center-sections/options";
+
 /**
- * Valida la forma del resultado del parser antes de que cruce el límite del
- * Route Handler hacia el cliente. Esto es una red de seguridad de
- * serialización (defensa en profundidad), no un reemplazo de los tipos de
- * TypeScript que ya garantiza `parsearFicha` — si algún día el parser
- * devuelve algo con una forma distinta por un bug, esto lo convierte en un
- * error 500 explícito en vez de sacar datos silenciosamente malformados.
+ * Esquemas del resultado del parser de fichas MINTUR. Son la fuente única de
+ * los tipos (`tipos*.ts` los derivan con `z.infer`) y, en el Route Handler,
+ * una red de seguridad de serialización: si algún día el parser devuelve algo
+ * con una forma distinta por un bug, la ruta responde un 500 explícito en vez
+ * de enviar datos silenciosamente malformados.
  */
-const advertenciaSchema = z.object({
+
+const texto = z.string().nullable();
+const numero = z.number().nullable();
+const siNo = z.enum(["SI", "NO"]).nullable();
+const estadoFisico = z.enum(["BUENO", "REGULAR", "MALO"]).nullable();
+const conSeleccion = <T extends z.ZodType>(valor: T) =>
+  z.object({ valor: valor.nullable(), advertencia: texto });
+
+const respuestaSeccionSchema = z.enum(
+  SECTION_RESPONSE_OPTIONS.map((option) => option.value),
+);
+
+const coordenadaCruda = z.object({ crudo: z.string(), advertencia: texto });
+const coordenadaParseada = z.object({
   crudo: z.string(),
-  advertencia: z.string().nullable(),
+  valor: numero,
+  advertencia: texto,
+});
+const valorCrudo = z.object({ texto });
+
+// --- Identificación y ubicación ---
+
+export const fichaIdentificacionSchema = z.object({
+  nombre: texto,
+  categoria: valorCrudo,
+  tipo: valorCrudo,
+  subtipo: valorCrudo,
+  codigoAtractivo: texto,
 });
 
-const valorCrudoSchema = z.object({ texto: z.string().nullable() });
-
-const plantaConteoSchema = z.object({
-  nombre: z.string(),
-  establecimientosAtractivo: z.number().nullable(),
-  segundaMetricaAtractivo: z.number().nullable(),
-  terceraMetricaAtractivo: z.number().nullable(),
-  establecimientosCiudad: z.number().nullable(),
-  segundaMetricaCiudad: z.number().nullable(),
-  terceraMetricaCiudad: z.number().nullable(),
+export const fichaUbicacionSchema = z.object({
+  provincia: valorCrudo,
+  canton: valorCrudo,
+  parroquia: valorCrudo,
+  barrioSectorComuna: texto,
+  callePrincipal: texto,
+  numero: texto,
+  calleTransversal: texto,
+  latitud: coordenadaParseada,
+  longitud: coordenadaParseada,
+  altitudMsnm: numero,
+  administracion: z.object({
+    tipo: texto,
+    institucion: texto,
+    nombre: texto,
+    cargo: texto,
+    telefono: texto,
+    email: texto,
+    observacion: texto,
+  }),
 });
 
-const guiaMetricaSchema = z.object({
-  atractivo: z.number().nullable(),
-  ciudad: z.number().nullable(),
-});
+// --- Características e ingreso ---
 
-const componenteConservacionSchema = z.object({
-  estado: z.string().nullable(),
-  observacionEstado: z.string().nullable(),
-  factores: z.array(
-    z.object({ origen: z.string(), nombre: z.string(), marcado: z.boolean() }),
+const tipoIngreso = z.enum(["LIBRE", "RESTRINGIDO", "PAGADO"]);
+
+export const fichaIngresoSchema = z.object({
+  tipoSeleccionado: conSeleccion(tipoIngreso),
+  horarios: z.array(
+    z.object({ tipo: tipoIngreso, horaIngreso: texto, horaSalida: texto }),
   ),
-  otroDetalle: z.string().nullable(),
-  observacionFactores: z.string().nullable(),
+  manejaReservas: z.boolean().nullable(),
+  formasPago: z.array(z.string()),
+  precioDesde: numero,
+  precioHasta: numero,
+  mesesRecomendados: texto,
+  observacion: texto,
+});
+
+export const fichaCaracteristicasSchema = z.object({
+  clima: z.object({
+    texto,
+    temperaturaMinC: numero,
+    temperaturaMaxC: numero,
+    precipitacionMinMm: numero,
+    precipitacionMaxMm: numero,
+  }),
+  lineaProducto: conSeleccion(z.enum(["CULTURA", "NATURALEZA", "AVENTURA"])),
+  escenario: conSeleccion(
+    z.enum(["PRISTINO", "PRIMITIVO", "RUSTICO_NATURAL", "RURAL", "URBANO"]),
+  ),
+  ingreso: fichaIngresoSchema,
+});
+
+// --- Acceso y conectividad ---
+
+export const fichaCooperativaTransporteSchema = z.object({
+  nombre: z.string(),
+  estacionTerminal: texto,
+  frecuencia: z.enum(["DIARIA", "SEMANAL", "MENSUAL", "EVENTUAL"]).nullable(),
+  detalleTraslado: texto,
+});
+
+export const fichaViaTerrestreSchema = z.object({
+  orden: z.enum(["PRIMER_ORDEN", "SEGUNDO_ORDEN", "TERCER_ORDEN"]),
+  coordenadaInicio: coordenadaCruda,
+  coordenadaFin: coordenadaCruda,
+  distanciaKm: numero,
+  tipoMaterial: texto,
+  estado: texto,
+});
+
+export const fichaAccesoConectividadSchema = z.object({
+  ciudadPobladoCercano: texto,
+  distanciaKm: numero,
+  tiempoAutoHoras: texto,
+  coordenadas: coordenadaCruda.nullable(),
+  viasTerrestres: z.array(fichaViaTerrestreSchema),
+  transporteTipos: z.array(z.string()),
+  transporteDetalle: z.array(fichaCooperativaTransporteSchema),
+  accesibilidadGeneral: z.record(z.string(), respuestaSeccionSchema.nullable()),
+  senalizacionAproximacionEstado: estadoFisico,
+});
+
+// --- Responsables, valoración, accesibilidad detallada e imágenes ---
+
+export const fichaResponsableFirmaSchema = z.object({
+  nombre: texto,
+  institucion: texto,
+  cargo: texto,
+  email: texto,
+  telefono: texto,
+  fecha: texto,
+});
+
+export const fichaResumenValoracionSchema = z.object({
+  criterios: z.array(
+    z.object({
+      codigo: z.string(),
+      nombre: z.string(),
+      puntajeMaximo: z.number(),
+      resultado: numero,
+    }),
+  ),
+  /** Solo informativo — nunca se persiste. El API recalcula el puntaje real. */
+  totalInformativo: numero,
+});
+
+export const fichaAccesibilidadDetalleItemSchema = z.object({
+  grupo: z.string(),
+  criterio: z.string(),
+  respuesta: siNo,
+  observacion: texto,
+});
+
+export const fichaImagenAnexoSchema = z.object({
+  archivo: z.string(),
+  extension: z.string(),
+  tamanoBytes: z.number(),
+});
+
+// --- Políticas, actividades, promoción, visitantes y recurso humano ---
+
+export const fichaPoliticaSchema = z.object({
+  codigo: z.string(),
+  pregunta: z.string(),
+  respuesta: siNo,
+  anioElaboracion: numero,
+  especifique: texto,
+});
+
+export const fichaActividadSchema = z.object({ nombre: z.string(), marcada: z.boolean() });
+
+export const fichaPromocionSchema = z.object({
+  tienePlanPromocionCantonal: siNo,
+  incluidoEnPlan: siNo,
+  medios: z.array(z.object({ nombre: z.string(), valor: texto, periodicidad: texto })),
+  observacionMedios: texto,
+  formaPartePaquete: siNo,
+  detallePaquete: texto,
+  observacion: texto,
+});
+
+const temporada = z.object({ marcada: z.boolean(), meses: texto, visitantes: numero });
+
+export const fichaVisitantesSchema = z.object({
+  poseeRegistro: siNo,
+  tipoRegistro: z.enum(["DIGITAL", "PAPEL"]).nullable(),
+  aniosRegistro: numero,
+  generaReportes: siNo,
+  frecuenciaReportes: texto,
+  temporadaAlta: temporada,
+  temporadaBaja: temporada,
+  llegadaNacional: z.array(
+    z.object({ ciudad: z.string(), llegadasMensuales: numero, totalAnual: numero }),
+  ),
+  llegadaExtranjera: z.array(
+    z.object({ pais: z.string(), llegadasMensuales: numero, totalAnual: numero }),
+  ),
+  observacionLlegadas: texto,
+  informanteClave: z.object({ nombre: texto, contacto: texto }),
+  observacion: texto,
+});
+
+export const fichaFormacionPersonalSchema = z.object({
+  grupo: z.enum(["EDUCACION", "CAPACITACION", "IDIOMA"]),
+  nombre: z.string(),
+  cantidad: numero,
+  detalleOtro: texto,
+});
+
+export const fichaRecursoHumanoSchema = z.object({
+  personasAdministracionOperacion: numero,
+  personasEspecializadasTurismo: numero,
+  formacion: z.array(fichaFormacionPersonalSchema),
+  observacion: texto,
+});
+
+// --- Planta turística ---
+
+export const fichaPlantaConteoSchema = z.object({
+  nombre: z.string(),
+  establecimientosAtractivo: numero,
+  segundaMetricaAtractivo: numero,
+  terceraMetricaAtractivo: numero,
+  establecimientosCiudad: numero,
+  segundaMetricaCiudad: numero,
+  terceraMetricaCiudad: numero,
+});
+
+const guiaMetrica = z.object({ atractivo: numero, ciudad: numero });
+
+export const fichaGuiaTuristicaSchema = z.object({
+  local: guiaMetrica,
+  nacional: guiaMetrica,
+  nacionalEspecializado: guiaMetrica,
+  cultura: guiaMetrica,
+  aventura: guiaMetrica,
+});
+
+export const fichaFacilidadEntornoSchema = z.object({
+  categoria: z.string(),
+  nombre: z.string(),
+  cantidad: numero,
+  coordenadas: coordenadaCruda.nullable(),
+  administrador: texto,
+  accesibilidadUniversal: z.boolean().nullable(),
+  estado: estadoFisico,
+});
+
+export const fichaServicioComplementarioSchema = z.object({
+  nombre: z.string(),
+  enAtractivo: z.boolean(),
+  enCiudad: z.boolean(),
+});
+
+export const fichaPlantaSchema = z.object({
+  alojamiento: z.array(fichaPlantaConteoSchema),
+  alimentosBebidas: z.array(fichaPlantaConteoSchema),
+  agenciasViaje: z.array(fichaPlantaConteoSchema),
+  guia: fichaGuiaTuristicaSchema,
+  observacionPlantaAtractivo: texto,
+  observacionPlantaCiudad: texto,
+  facilidadesEntorno: z.array(fichaFacilidadEntornoSchema),
+  observacionFacilidades: texto,
+  complementarios: z.array(fichaServicioComplementarioSchema),
+  observacionComplementarios: texto,
+});
+
+// --- Conservación ---
+
+/** Mismos códigos que valida la API para `conservation.*.state`. */
+export const fichaEstadoConservacionSchema = z.enum(
+  CONSERVATION_STATE_OPTIONS.map((option) => option.value),
+);
+
+export const fichaFactorAlteracionSchema = z.object({
+  origen: z.enum(["NATURAL", "ANTROPICO"]),
+  nombre: z.string(),
+  marcado: z.boolean(),
+});
+
+export const fichaComponenteConservacionSchema = z.object({
+  estado: fichaEstadoConservacionSchema.nullable(),
+  observacionEstado: texto,
+  factores: z.array(fichaFactorAlteracionSchema),
+  otroDetalle: texto,
+  observacionFactores: texto,
+});
+
+export const fichaConservacionSchema = z.object({
+  atractivo: fichaComponenteConservacionSchema,
+  entorno: fichaComponenteConservacionSchema,
+  declaratoria: z.object({
+    declarante: texto,
+    denominacion: texto,
+    fechaDeclaracion: texto,
+    alcance: texto,
+    observacion: texto,
+  }),
+});
+
+// --- Higiene y seguridad ---
+
+export const fichaServicioBasicoSchema = z.object({
+  tipo: z.enum(["AGUA", "ENERGIA_ELECTRICA", "SANEAMIENTO", "DISPOSICION_DESECHOS"]),
+  valorAtractivo: texto,
+  proveedorAtractivo: texto,
+  valorCiudad: texto,
+  proveedorCiudad: texto,
+});
+
+export const fichaSenaleticaItemSchema = z.object({
+  ambiente: z.enum([
+    "AREAS_URBANAS",
+    "AREAS_NATURALES",
+    "LETREROS_INFORMATIVOS",
+    "SENALETICA_SEGURIDAD",
+  ]),
+  nombre: z.string(),
+  cantidadMadera: numero,
+  cantidadAluminio: numero,
+  cantidadOtro: numero,
+  especifiqueOtro: texto,
+  estado: estadoFisico,
+});
+
+export const fichaServicioSaludSchema = z.object({
+  nombre: z.string(),
+  cantidadAtractivo: numero,
+  cantidadCiudad: numero,
+});
+
+export const fichaServicioSeguridadSchema = z.object({
+  nombre: z.string(),
+  detalle: texto,
+});
+
+export const fichaTelefoniaInternetSchema = z.object({
+  scope: z.enum(["ATRACTIVO", "CIUDAD"]),
+  fija: z.boolean(),
+  movil: z.boolean(),
+  satelital: z.boolean(),
+  lineaTelefonica: z.boolean(),
+  satelite: z.boolean(),
+  telefoniaMovil: z.boolean(),
+  fibraOptica: z.boolean(),
+  redesInalambricas: z.boolean(),
+});
+
+export const fichaRadioPortatilSchema = z.object({
+  usoVisitante: z.boolean(),
+  usoInterno: z.boolean(),
+  usoEmergencia: z.boolean(),
+});
+
+export const fichaAmenazaSchema = z.object({ nombre: z.string(), marcada: z.boolean() });
+
+export const fichaHigieneSeguridadSchema = z.object({
+  serviciosBasicos: z.array(fichaServicioBasicoSchema),
+  observacionServiciosBasicos: texto,
+  senaletica: z.array(fichaSenaleticaItemSchema),
+  observacionSenaletica: texto,
+  salud: z.array(fichaServicioSaludSchema),
+  observacionSalud: texto,
+  seguridad: z.array(fichaServicioSeguridadSchema),
+  observacionSeguridad: texto,
+  telefoniaInternet: z.array(fichaTelefoniaInternetSchema),
+  observacionComunicacion: texto,
+  radioPortatil: fichaRadioPortatilSchema,
+  observacionRadioPortatil: texto,
+  amenazas: z.array(fichaAmenazaSchema),
+  contingencia: z.object({
+    existe: z.boolean(),
+    institucion: texto,
+    nombreDocumento: texto,
+    anioElaboracion: numero,
+  }),
+  observacionMultiamenazas: texto,
+});
+
+// --- Ficha completa ---
+
+/**
+ * Secciones extraídas con el mismo rigor de verificación que el resto del
+ * parser (coordenadas confirmadas contra el archivo real, con pruebas).
+ */
+export const fichaExtraidaSchema = z.object({
+  identificacion: fichaIdentificacionSchema,
+  ubicacion: fichaUbicacionSchema,
+  caracteristicas: fichaCaracteristicasSchema,
+  accesoConectividad: fichaAccesoConectividadSchema,
+  descripcion: texto,
+  responsables: z.object({
+    elaborado: fichaResponsableFirmaSchema,
+    validado: fichaResponsableFirmaSchema,
+    aprobado: fichaResponsableFirmaSchema,
+  }),
+  resumenValoracion: fichaResumenValoracionSchema,
+  accesibilidadDetalle: z.array(fichaAccesibilidadDetalleItemSchema),
+  imagenes: z.array(fichaImagenAnexoSchema),
+  politicas: z.array(fichaPoliticaSchema),
+  actividades: z.array(fichaActividadSchema),
+  promocion: fichaPromocionSchema,
+  visitantes: fichaVisitantesSchema,
+  recursoHumano: fichaRecursoHumanoSchema,
+  planta: fichaPlantaSchema,
+  conservacion: fichaConservacionSchema,
+  higieneSeguridad: fichaHigieneSeguridadSchema,
 });
 
 export const resultadoParseoFichaSchema = z.object({
-  datos: z.object({
-    identificacion: z.object({
-      nombre: z.string().nullable(),
-      categoria: valorCrudoSchema,
-      tipo: valorCrudoSchema,
-      subtipo: valorCrudoSchema,
-      codigoAtractivo: z.string().nullable(),
-    }),
-    ubicacion: z.object({
-      provincia: valorCrudoSchema,
-      canton: valorCrudoSchema,
-      parroquia: valorCrudoSchema,
-      barrioSectorComuna: z.string().nullable(),
-      callePrincipal: z.string().nullable(),
-      numero: z.string().nullable(),
-      calleTransversal: z.string().nullable(),
-      latitud: z.object({
-        crudo: z.string(),
-        valor: z.number().nullable(),
-        advertencia: z.string().nullable(),
-      }),
-      longitud: z.object({
-        crudo: z.string(),
-        valor: z.number().nullable(),
-        advertencia: z.string().nullable(),
-      }),
-      altitudMsnm: z.number().nullable(),
-      administracion: z.object({
-        tipo: z.string().nullable(),
-        institucion: z.string().nullable(),
-        nombre: z.string().nullable(),
-        cargo: z.string().nullable(),
-        telefono: z.string().nullable(),
-        email: z.string().nullable(),
-        observacion: z.string().nullable(),
-      }),
-    }),
-    caracteristicas: z.object({
-      clima: z.object({
-        texto: z.string().nullable(),
-        temperaturaMinC: z.number().nullable(),
-        temperaturaMaxC: z.number().nullable(),
-        precipitacionMinMm: z.number().nullable(),
-        precipitacionMaxMm: z.number().nullable(),
-      }),
-      lineaProducto: z.object({
-        valor: z.string().nullable(),
-        advertencia: z.string().nullable(),
-      }),
-      escenario: z.object({
-        valor: z.string().nullable(),
-        advertencia: z.string().nullable(),
-      }),
-      ingreso: z.object({
-        tipoSeleccionado: z.object({
-          valor: z.string().nullable(),
-          advertencia: z.string().nullable(),
-        }),
-        horarios: z.array(
-          z.object({
-            tipo: z.string(),
-            horaIngreso: z.string().nullable(),
-            horaSalida: z.string().nullable(),
-          }),
-        ),
-        manejaReservas: z.boolean().nullable(),
-        formasPago: z.array(z.string()),
-        precioDesde: z.number().nullable(),
-        precioHasta: z.number().nullable(),
-        mesesRecomendados: z.string().nullable(),
-        observacion: z.string().nullable(),
-      }),
-    }),
-    accesoConectividad: z.object({
-      ciudadPobladoCercano: z.string().nullable(),
-      distanciaKm: z.number().nullable(),
-      tiempoAutoHoras: z.string().nullable(),
-      coordenadas: z
-        .object({ crudo: z.string(), advertencia: z.string().nullable() })
-        .nullable(),
-      viasTerrestres: z.array(
-        z.object({
-          orden: z.string(),
-          coordenadaInicio: advertenciaSchema,
-          coordenadaFin: advertenciaSchema,
-          distanciaKm: z.number().nullable(),
-          tipoMaterial: z.string().nullable(),
-          estado: z.string().nullable(),
-        }),
-      ),
-      transporteTipos: z.array(z.string()),
-      transporteDetalle: z.array(
-        z.object({
-          nombre: z.string(),
-          estacionTerminal: z.string().nullable(),
-          frecuencia: z.string().nullable(),
-          detalleTraslado: z.string().nullable(),
-        }),
-      ),
-      accesibilidadGeneral: z.record(z.string(), z.string().nullable()),
-      senalizacionAproximacionEstado: z.string().nullable(),
-    }),
-    descripcion: z.string().nullable(),
-    responsables: z.object({
-      elaborado: z.object({
-        nombre: z.string().nullable(),
-        institucion: z.string().nullable(),
-        cargo: z.string().nullable(),
-        email: z.string().nullable(),
-        telefono: z.string().nullable(),
-        fecha: z.string().nullable(),
-      }),
-      validado: z.any(),
-      aprobado: z.any(),
-    }),
-    resumenValoracion: z.object({
-      criterios: z.array(
-        z.object({
-          codigo: z.string(),
-          nombre: z.string(),
-          puntajeMaximo: z.number(),
-          resultado: z.number().nullable(),
-        }),
-      ),
-      totalInformativo: z.number().nullable(),
-    }),
-    accesibilidadDetalle: z.array(
-      z.object({
-        grupo: z.string(),
-        criterio: z.string(),
-        respuesta: z.string().nullable(),
-        observacion: z.string().nullable(),
-      }),
-    ),
-    imagenes: z.array(
-      z.object({ archivo: z.string(), extension: z.string(), tamanoBytes: z.number() }),
-    ),
-    politicas: z.array(
-      z.object({
-        codigo: z.string(),
-        pregunta: z.string(),
-        respuesta: z.string().nullable(),
-        anioElaboracion: z.number().nullable(),
-        especifique: z.string().nullable(),
-      }),
-    ),
-    actividades: z.array(z.object({ nombre: z.string(), marcada: z.boolean() })),
-    promocion: z.object({
-      tienePlanPromocionCantonal: z.string().nullable(),
-      incluidoEnPlan: z.string().nullable(),
-      medios: z.array(
-        z.object({
-          nombre: z.string(),
-          valor: z.string().nullable(),
-          periodicidad: z.string().nullable(),
-        }),
-      ),
-      observacionMedios: z.string().nullable(),
-      formaPartePaquete: z.string().nullable(),
-      detallePaquete: z.string().nullable(),
-      observacion: z.string().nullable(),
-    }),
-    visitantes: z.object({
-      poseeRegistro: z.string().nullable(),
-      tipoRegistro: z.string().nullable(),
-      aniosRegistro: z.number().nullable(),
-      generaReportes: z.string().nullable(),
-      frecuenciaReportes: z.string().nullable(),
-      temporadaAlta: z.object({
-        marcada: z.boolean(),
-        meses: z.string().nullable(),
-        visitantes: z.number().nullable(),
-      }),
-      temporadaBaja: z.object({
-        marcada: z.boolean(),
-        meses: z.string().nullable(),
-        visitantes: z.number().nullable(),
-      }),
-      llegadaNacional: z.array(
-        z.object({
-          ciudad: z.string(),
-          llegadasMensuales: z.number().nullable(),
-          totalAnual: z.number().nullable(),
-        }),
-      ),
-      llegadaExtranjera: z.array(
-        z.object({
-          pais: z.string(),
-          llegadasMensuales: z.number().nullable(),
-          totalAnual: z.number().nullable(),
-        }),
-      ),
-      observacionLlegadas: z.string().nullable(),
-      informanteClave: z.object({
-        nombre: z.string().nullable(),
-        contacto: z.string().nullable(),
-      }),
-      observacion: z.string().nullable(),
-    }),
-    recursoHumano: z.object({
-      personasAdministracionOperacion: z.number().nullable(),
-      personasEspecializadasTurismo: z.number().nullable(),
-      formacion: z.array(
-        z.object({
-          grupo: z.string(),
-          nombre: z.string(),
-          cantidad: z.number().nullable(),
-          detalleOtro: z.string().nullable(),
-        }),
-      ),
-      observacion: z.string().nullable(),
-    }),
-    planta: z.object({
-      alojamiento: z.array(plantaConteoSchema),
-      alimentosBebidas: z.array(plantaConteoSchema),
-      agenciasViaje: z.array(plantaConteoSchema),
-      guia: z.object({
-        local: guiaMetricaSchema,
-        nacional: guiaMetricaSchema,
-        nacionalEspecializado: guiaMetricaSchema,
-        cultura: guiaMetricaSchema,
-        aventura: guiaMetricaSchema,
-      }),
-      observacionPlantaAtractivo: z.string().nullable(),
-      observacionPlantaCiudad: z.string().nullable(),
-      facilidadesEntorno: z.array(
-        z.object({
-          categoria: z.string(),
-          nombre: z.string(),
-          cantidad: z.number().nullable(),
-          coordenadas: z
-            .object({ crudo: z.string(), advertencia: z.string().nullable() })
-            .nullable(),
-          administrador: z.string().nullable(),
-          accesibilidadUniversal: z.boolean().nullable(),
-          estado: z.string().nullable(),
-        }),
-      ),
-      observacionFacilidades: z.string().nullable(),
-      complementarios: z.array(
-        z.object({ nombre: z.string(), enAtractivo: z.boolean(), enCiudad: z.boolean() }),
-      ),
-      observacionComplementarios: z.string().nullable(),
-    }),
-    conservacion: z.object({
-      atractivo: componenteConservacionSchema,
-      entorno: componenteConservacionSchema,
-      declaratoria: z.object({
-        declarante: z.string().nullable(),
-        denominacion: z.string().nullable(),
-        fechaDeclaracion: z.string().nullable(),
-        alcance: z.string().nullable(),
-        observacion: z.string().nullable(),
-      }),
-    }),
-    higieneSeguridad: z.object({
-      serviciosBasicos: z.array(
-        z.object({
-          tipo: z.string(),
-          valorAtractivo: z.string().nullable(),
-          proveedorAtractivo: z.string().nullable(),
-          valorCiudad: z.string().nullable(),
-          proveedorCiudad: z.string().nullable(),
-        }),
-      ),
-      observacionServiciosBasicos: z.string().nullable(),
-      senaletica: z.array(
-        z.object({
-          ambiente: z.string(),
-          nombre: z.string(),
-          cantidadMadera: z.number().nullable(),
-          cantidadAluminio: z.number().nullable(),
-          cantidadOtro: z.number().nullable(),
-          especifiqueOtro: z.string().nullable(),
-          estado: z.string().nullable(),
-        }),
-      ),
-      observacionSenaletica: z.string().nullable(),
-      salud: z.array(
-        z.object({
-          nombre: z.string(),
-          cantidadAtractivo: z.number().nullable(),
-          cantidadCiudad: z.number().nullable(),
-        }),
-      ),
-      observacionSalud: z.string().nullable(),
-      seguridad: z.array(
-        z.object({ nombre: z.string(), detalle: z.string().nullable() }),
-      ),
-      observacionSeguridad: z.string().nullable(),
-      telefoniaInternet: z.array(
-        z.object({
-          scope: z.string(),
-          fija: z.boolean(),
-          movil: z.boolean(),
-          satelital: z.boolean(),
-          lineaTelefonica: z.boolean(),
-          satelite: z.boolean(),
-          telefoniaMovil: z.boolean(),
-          fibraOptica: z.boolean(),
-          redesInalambricas: z.boolean(),
-        }),
-      ),
-      observacionComunicacion: z.string().nullable(),
-      radioPortatil: z.object({
-        usoVisitante: z.boolean(),
-        usoInterno: z.boolean(),
-        usoEmergencia: z.boolean(),
-      }),
-      observacionRadioPortatil: z.string().nullable(),
-      amenazas: z.array(z.object({ nombre: z.string(), marcada: z.boolean() })),
-      contingencia: z.object({
-        existe: z.boolean(),
-        institucion: z.string().nullable(),
-        nombreDocumento: z.string().nullable(),
-        anioElaboracion: z.number().nullable(),
-      }),
-      observacionMultiamenazas: z.string().nullable(),
-    }),
-  }),
+  datos: fichaExtraidaSchema,
   advertencias: z.array(z.string()),
-  imagenes: z.array(
-    z.object({ archivo: z.string(), extension: z.string(), tamanoBytes: z.number() }),
-  ),
 });

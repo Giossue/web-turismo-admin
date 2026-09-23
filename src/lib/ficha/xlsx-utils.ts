@@ -56,17 +56,44 @@ export function leerTexto(worksheet: ExcelJS.Worksheet, ref: string): string {
   return String(value).trim();
 }
 
-/** Placeholders literales de la plantilla que no son datos reales. */
-const PLACEHOLDERS_TEXTO = new Set(["texto", "0"]);
+/** Texto de ejemplo que trae la plantilla en las celdas sin llenar. */
+const PLACEHOLDER_TEXTO = "texto";
 
-/** Texto útil para un campo de texto libre: placeholders y vacío → `null`. */
+/** Vacío o el texto de ejemplo de la plantilla ("texto", sin distinguir mayúsculas). */
+export function esTextoVacio(texto: string): boolean {
+  return texto === "" || texto.toLowerCase() === PLACEHOLDER_TEXTO;
+}
+
+/** Texto útil para un campo de texto libre: placeholders ("texto", "0") y vacío → `null`. */
 export function leerTextoOpcional(
   worksheet: ExcelJS.Worksheet,
   ref: string,
 ): string | null {
   const texto = leerTexto(worksheet, ref);
-  if (texto === "" || PLACEHOLDERS_TEXTO.has(texto.toLowerCase())) return null;
+  if (esTextoVacio(texto) || texto === "0") return null;
   return texto;
+}
+
+/** Número de una celda; vacío, placeholder o texto no numérico → `null` (0 se conserva). */
+export function leerNumeroOpcional(
+  worksheet: ExcelJS.Worksheet,
+  ref: string,
+): number | null {
+  const texto = leerTexto(worksheet, ref);
+  if (esTextoVacio(texto)) return null;
+  const valor = Number(texto);
+  return Number.isFinite(valor) ? valor : null;
+}
+
+/**
+ * Número de una celda donde la plantilla usa 0 como "sin dato" (precios,
+ * distancias): 0, vacío o texto no numérico → `null`.
+ */
+export function leerPositivoOpcional(
+  worksheet: ExcelJS.Worksheet,
+  ref: string,
+): number | null {
+  return Number(leerTexto(worksheet, ref)) || null;
 }
 
 export function separarColumnaFila(ref: string): [string, number] {

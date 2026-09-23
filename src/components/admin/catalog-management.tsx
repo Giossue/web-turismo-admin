@@ -23,7 +23,7 @@ import {
   Tooltip,
 } from "@mui/material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 
 import {
   AdminTable,
@@ -37,61 +37,106 @@ import {
   createAdminCatalog,
   updateAdminCatalog,
   type AdminCatalogKey,
+  type AdminCatalogs,
   type CatalogOption,
 } from "@/lib/admin-api";
 import { activeLabel, activeTone } from "@/lib/admin-labels";
 import { adminKeys, catalogsQueryOptions } from "@/lib/admin-queries";
 import { errorMessage } from "@/lib/errors";
 import { webTokens } from "@/theme/tokens";
-import { ADMIN_SEARCH_DEBOUNCE_MS, useDebouncedValue } from "@/lib/use-debounced-value";
 
-const catalogMeta: Array<{ key: AdminCatalogKey; label: string }> = [
-  { key: "ACCESSIBILITY", label: "Accesibilidad" },
-  { key: "ACTIVITY", label: "Actividades" },
-  { key: "FACILITY", label: "Facilidades" },
-  { key: "ESTABLISHMENT_CLASSIFICATION", label: "Tipos de establecimiento" },
-  { key: "ESTABLISHMENT_CATEGORY", label: "Categorías de catastro" },
-];
+type CatalogListKey = {
+  [K in keyof AdminCatalogs]: AdminCatalogs[K] extends CatalogOption[] ? K : never;
+}[keyof AdminCatalogs];
+
+type CatalogConfig = {
+  label: string;
+  /** Lista de `AdminCatalogs` con las opciones del catálogo. */
+  source: CatalogListKey;
+  /** Catálogo superior obligatorio al crear una opción. */
+  parent?: {
+    label: string;
+    source: CatalogListKey;
+    idOf: (option: CatalogOption) => number | undefined;
+  };
+  createTitle: string;
+  editTitle: string;
+};
+
+const CATALOG_CONFIG: Record<AdminCatalogKey, CatalogConfig> = {
+  ACCESSIBILITY: {
+    label: "Accesibilidad",
+    source: "accessibilityTypes",
+    createTitle: "Agregar opción de catálogo",
+    editTitle: "Editar opción de catálogo",
+  },
+  ACTIVITY: {
+    label: "Actividades",
+    source: "activities",
+    parent: {
+      label: "Grupo de actividad",
+      source: "activityGroups",
+      idOf: (option) => option.groupId,
+    },
+    createTitle: "Agregar opción de catálogo",
+    editTitle: "Editar opción de catálogo",
+  },
+  FACILITY: {
+    label: "Facilidades",
+    source: "facilities",
+    parent: {
+      label: "Categoría de facilidad",
+      source: "facilityCategories",
+      idOf: (option) => option.categoryId,
+    },
+    createTitle: "Agregar opción de catálogo",
+    editTitle: "Editar opción de catálogo",
+  },
+  ESTABLISHMENT_CLASSIFICATION: {
+    label: "Tipos de establecimiento",
+    source: "establishmentClassifications",
+    parent: {
+      label: "Actividad del catastro",
+      source: "establishmentActivities",
+      idOf: (option) => option.activityId,
+    },
+    createTitle: "Agregar tipo de establecimiento",
+    editTitle: "Editar tipo de establecimiento",
+  },
+  ESTABLISHMENT_CATEGORY: {
+    label: "Categorías de catastro",
+    source: "establishmentCategories",
+    parent: {
+      label: "Tipo de establecimiento",
+      source: "establishmentClassifications",
+      idOf: (option) => option.classificationId,
+    },
+    createTitle: "Agregar categoría de catastro",
+    editTitle: "Editar opción de catálogo",
+  },
+};
+
+const CATALOG_KEYS = Object.keys(CATALOG_CONFIG) as AdminCatalogKey[];
 
 const defaultCategoryIcon = "shop-supermarket";
 const catalogIconOptions = [
-  {
-    value: "accommodation-hotel",
-    label: "Hotel",
-    color: "#7a5c3e",
-  },
-  { value: "amenity-cinema", label: "Cine", color: "#7e22ce" },
-  { value: "amenity-library", label: "Biblioteca", color: "#334155" },
-  { value: "amenity-toilets", label: "Baños", color: "#64748b" },
-  { value: "eat-drink-cafe", label: "Cafetería", color: "#8b5e34" },
-  {
-    value: "eat-drink-restaurant",
-    label: "Restaurante",
-    color: "#b45309",
-  },
-  { value: "health-hospital", label: "Salud", color: "#9f1239" },
-  { value: "money-atm", label: "Cajero", color: "#475569" },
-  { value: "money-bank", label: "Banco", color: "#374151" },
-  { value: "outdoor-camping", label: "Camping", color: "#3f6212" },
-  {
-    value: "outdoor-drinking-water",
-    label: "Agua potable",
-    color: "#0f766e",
-  },
-  {
-    value: "religious-place-of-worship",
-    label: "Lugar de culto",
-    color: "#6d28d9",
-  },
-  { value: "shop-supermarket", label: "Supermercado", color: "#be123c" },
-  {
-    value: "tourism-information",
-    label: "Información turística",
-    color: "#0369a1",
-  },
-  { value: "tourism-museum", label: "Museo", color: "#5b21b6" },
-  { value: "tourism-viewpoint", label: "Mirador", color: "#a16207" },
-  { value: "transport-bus-stop", label: "Parada de bus", color: "#155e75" },
+  { value: "accommodation-hotel", label: "Hotel" },
+  { value: "amenity-cinema", label: "Cine" },
+  { value: "amenity-library", label: "Biblioteca" },
+  { value: "amenity-toilets", label: "Baños" },
+  { value: "eat-drink-cafe", label: "Cafetería" },
+  { value: "eat-drink-restaurant", label: "Restaurante" },
+  { value: "health-hospital", label: "Salud" },
+  { value: "money-atm", label: "Cajero" },
+  { value: "money-bank", label: "Banco" },
+  { value: "outdoor-camping", label: "Camping" },
+  { value: "outdoor-drinking-water", label: "Agua potable" },
+  { value: "religious-place-of-worship", label: "Lugar de culto" },
+  { value: "shop-supermarket", label: "Supermercado" },
+  { value: "tourism-information", label: "Información turística" },
+  { value: "tourism-museum", label: "Museo" },
+  { value: "tourism-viewpoint", label: "Mirador" },
+  { value: "transport-bus-stop", label: "Parada de bus" },
 ] as const;
 const catalogIconOptionsWithImages = catalogIconOptions.map((option) => ({
   ...option,
@@ -109,10 +154,14 @@ const categorySchemeLabels: Record<string, string> = {
   MODALIDAD: "Modalidad",
   OTRA: "Otra",
 };
-function normalizeCategoryIcon(value?: string) {
-  return catalogIconOptions.some((option) => option.value === value)
-    ? value!
-    : defaultCategoryIcon;
+type CatalogIcon = (typeof catalogIconOptions)[number]["value"];
+
+function isCatalogIcon(value: string | undefined): value is CatalogIcon {
+  return catalogIconOptions.some((option) => option.value === value);
+}
+
+function normalizeCategoryIcon(value?: string): string {
+  return isCatalogIcon(value) ? value : defaultCategoryIcon;
 }
 
 export function CatalogManagement({
@@ -137,8 +186,11 @@ export function CatalogManagement({
   const [numericValue, setNumericValue] = useState("");
   const [working, setWorking] = useState(false);
   const [page, setPage] = useState(0);
-  const debouncedSearch = useDebouncedValue(search.trim(), ADMIN_SEARCH_DEBOUNCE_MS);
+  // El filtro es local: basta con diferir el render de la tabla, sin debounce.
+  const deferredSearch = useDeferredValue(search.trim().toLocaleLowerCase());
   const catalogsQuery = useQuery(catalogsQueryOptions(token, true));
+  const config = CATALOG_CONFIG[selected];
+  const parent = config.parent;
 
   useEffect(() => {
     if (catalogsQuery.error) {
@@ -147,26 +199,15 @@ export function CatalogManagement({
   }, [catalogsQuery.error, onError]);
 
   const options = useMemo(() => {
-    if (!catalogsQuery.data) return [];
-    const source =
-      selected === "ACCESSIBILITY"
-        ? catalogsQuery.data.accessibilityTypes
-        : selected === "ACTIVITY"
-          ? catalogsQuery.data.activities
-          : selected === "FACILITY"
-            ? catalogsQuery.data.facilities
-            : selected === "ESTABLISHMENT_CLASSIFICATION"
-              ? catalogsQuery.data.establishmentClassifications
-              : catalogsQuery.data.establishmentCategories;
-    const normalized = (search.trim() ? debouncedSearch : "").toLocaleLowerCase();
-    return normalized
+    const source = catalogsQuery.data?.[config.source] ?? [];
+    return deferredSearch
       ? source.filter((item) =>
-          [item.name, item.activityName, item.classificationName]
-            .filter(Boolean)
-            .some((value) => value?.toLocaleLowerCase().includes(normalized)),
+          [item.name, item.activityName, item.classificationName].some((value) =>
+            value?.toLocaleLowerCase().includes(deferredSearch),
+          ),
         )
       : source;
-  }, [catalogsQuery.data, debouncedSearch, search, selected]);
+  }, [catalogsQuery.data, config.source, deferredSearch]);
   const lastPage = Math.max(Math.ceil(options.length / ADMIN_TABLE_PAGE_SIZE) - 1, 0);
   const visiblePage = Math.min(page, lastPage);
   const visibleOptions = options.slice(
@@ -174,23 +215,7 @@ export function CatalogManagement({
     (visiblePage + 1) * ADMIN_TABLE_PAGE_SIZE,
   );
 
-  const requiresParent = selected !== "ACCESSIBILITY";
-  const parentLabel =
-    selected === "ACTIVITY"
-      ? "Grupo de actividad"
-      : selected === "FACILITY"
-        ? "Categoría de facilidad"
-        : selected === "ESTABLISHMENT_CLASSIFICATION"
-          ? "Actividad del catastro"
-          : "Tipo de establecimiento";
-  const parentOptions =
-    selected === "ACTIVITY"
-      ? (catalogsQuery.data?.activityGroups ?? [])
-      : selected === "FACILITY"
-        ? (catalogsQuery.data?.facilityCategories ?? [])
-        : selected === "ESTABLISHMENT_CLASSIFICATION"
-          ? (catalogsQuery.data?.establishmentActivities ?? [])
-          : (catalogsQuery.data?.establishmentClassifications ?? []);
+  const parentOptions = parent ? (catalogsQuery.data?.[parent.source] ?? []) : [];
 
   function resetEditor() {
     setEditing(null);
@@ -215,17 +240,7 @@ export function CatalogManagement({
     setName(option.name);
     setActive(option.active !== false);
     setIcon(normalizeCategoryIcon(option.icon));
-    setParentId(
-      String(
-        selected === "ACTIVITY"
-          ? (option.groupId ?? "")
-          : selected === "FACILITY"
-            ? (option.categoryId ?? "")
-            : selected === "ESTABLISHMENT_CLASSIFICATION"
-              ? (option.activityId ?? "")
-              : (option.classificationId ?? ""),
-      ),
-    );
+    setParentId(String(parent?.idOf(option) ?? ""));
     setScheme(option.scheme ?? "OTRA");
     setNumericValue(option.numericValue == null ? "" : String(option.numericValue));
     onError(null);
@@ -236,8 +251,8 @@ export function CatalogManagement({
       onError("El nombre debe tener al menos 2 caracteres.");
       return;
     }
-    if (creating && requiresParent && !parentId) {
-      onError(`Selecciona ${parentLabel.toLocaleLowerCase()}.`);
+    if (creating && parent && !parentId) {
+      onError(`Selecciona ${parent.label.toLocaleLowerCase()}.`);
       return;
     }
     const parsedNumericValue = numericValue.trim() ? Number(numericValue) : undefined;
@@ -260,7 +275,7 @@ export function CatalogManagement({
           name: name.trim(),
           active,
           ...(selected === "ESTABLISHMENT_CLASSIFICATION" ? { icon } : {}),
-          ...(requiresParent ? { parentId: Number(parentId) } : {}),
+          ...(parent ? { parentId: Number(parentId) } : {}),
           ...(selected === "ESTABLISHMENT_CATEGORY"
             ? {
                 scheme,
@@ -270,8 +285,8 @@ export function CatalogManagement({
               }
             : {}),
         });
-      } else {
-        await updateAdminCatalog(token, selected, editing!.id, {
+      } else if (editing) {
+        await updateAdminCatalog(token, selected, editing.id, {
           name: name.trim(),
           active,
           ...(selected === "ESTABLISHMENT_CLASSIFICATION" ? { icon } : {}),
@@ -298,7 +313,7 @@ export function CatalogManagement({
             startIcon={<AddRounded />}
             onClick={openCreate}
             disabled={catalogsQuery.isLoading}
-            aria-label={`Agregar opción de ${catalogMeta.find((item) => item.key === selected)?.label ?? "catálogo"}`}
+            aria-label={`Agregar opción de ${config.label}`}
           >
             Agregar
           </Button>
@@ -316,8 +331,8 @@ export function CatalogManagement({
             allowScrollButtonsMobile
             aria-label="Tipo de catálogo"
           >
-            {catalogMeta.map((item) => (
-              <Tab key={item.key} value={item.key} label={item.label} />
+            {CATALOG_KEYS.map((key) => (
+              <Tab key={key} value={key} label={CATALOG_CONFIG[key].label} />
             ))}
           </Tabs>
           <SearchField
@@ -402,11 +417,7 @@ export function CatalogManagement({
         maxWidth="sm"
       >
         <DialogTitle>
-          {creating
-            ? `Agregar ${selected === "ESTABLISHMENT_CLASSIFICATION" ? "tipo de establecimiento" : selected === "ESTABLISHMENT_CATEGORY" ? "categoría de catastro" : "opción de catálogo"}`
-            : selected === "ESTABLISHMENT_CLASSIFICATION"
-              ? "Editar tipo de establecimiento"
-              : "Editar opción de catálogo"}
+          {creating ? config.createTitle : config.editTitle}
         </DialogTitle>
         <DialogContent>
           <Stack spacing={webTokens.spacing.control} sx={{ pt: 1 }}>
@@ -418,10 +429,10 @@ export function CatalogManagement({
               autoFocus
               disabled={working}
             />
-            {creating && requiresParent ? (
+            {creating && parent ? (
               <TextField
                 select
-                label={parentLabel}
+                label={parent.label}
                 value={parentId}
                 onChange={(event) => setParentId(event.target.value)}
                 fullWidth

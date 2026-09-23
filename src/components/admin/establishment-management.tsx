@@ -1,7 +1,6 @@
 "use client";
 
 import EditRounded from "@mui/icons-material/EditRounded";
-import LocationOnRounded from "@mui/icons-material/LocationOnRounded";
 import PowerSettingsNewRounded from "@mui/icons-material/PowerSettingsNewRounded";
 import SendRounded from "@mui/icons-material/SendRounded";
 import {
@@ -18,7 +17,6 @@ import {
   TableCell,
   TableHead,
   TableRow,
-  TextField,
   Tooltip,
   Typography,
 } from "@mui/material";
@@ -39,8 +37,10 @@ import {
   ADMIN_TABLE_PAGE_SIZE,
 } from "@/components/ui/admin-table";
 import { CatalogSelect } from "@/components/ui/catalog-select";
-import { CoordinatePickerDialog } from "@/components/admin/coordinate-picker-dialog";
+import { CoordinateFieldset } from "@/components/admin/coordinate-fieldset";
 import { RhfCatalogSelect } from "@/components/ui/form/rhf-select";
+import { RhfTextField } from "@/components/ui/form/rhf-text-field";
+import { maxLen, required } from "@/components/ui/form/rules";
 import { SelectField } from "@/components/ui/form/select-field";
 import { SearchField } from "@/components/ui/search-field";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -61,9 +61,9 @@ import {
 } from "@/lib/admin-labels";
 import { adminKeys, catalogsQueryOptions } from "@/lib/admin-queries";
 import { errorMessage } from "@/lib/errors";
-import { findCatalogIdByName } from "@/lib/values";
+import { useDebouncedValue } from "@/lib/use-debounced-value";
+import { findCatalogIdByName, findCatalogOption } from "@/lib/values";
 import { webTokens } from "@/theme/tokens";
-import { ADMIN_SEARCH_DEBOUNCE_MS, useDebouncedValue } from "@/lib/use-debounced-value";
 
 type EstablishmentFormValues = {
   localityId: string;
@@ -109,6 +109,11 @@ const ACTIVE_FILTER_OPTIONS = [
   { value: "false", label: "Inactivos" },
 ];
 
+const RUC_RULES = {
+  validate: (value: string) =>
+    !value.trim() || /^\d{13}$/.test(value.trim()) || "El RUC debe contener 13 dígitos.",
+};
+
 function toFilterOption(option: { id: number; name: string }) {
   return { value: String(option.id), label: option.name };
 }
@@ -138,27 +143,20 @@ export const EstablishmentManagement = forwardRef<
   const [page, setPage] = useState(0);
   const [editing, setEditing] = useState<AdminEstablishment | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [coordinatePickerOpen, setCoordinatePickerOpen] = useState(false);
-  const debouncedQuery = useDebouncedValue(queryDraft.trim(), ADMIN_SEARCH_DEBOUNCE_MS);
-  const debouncedActivity = useDebouncedValue(activity.trim(), ADMIN_SEARCH_DEBOUNCE_MS);
-  const debouncedClassification = useDebouncedValue(
-    classification.trim(),
-    ADMIN_SEARCH_DEBOUNCE_MS,
-  );
-  const debouncedCategory = useDebouncedValue(category.trim(), ADMIN_SEARCH_DEBOUNCE_MS);
-  const { control, register, reset, setValue, handleSubmit, formState } =
-    useForm<EstablishmentFormValues>({ defaultValues: emptyValues });
+  // Solo el texto libre espera al debounce; los selectores consultan al cambiar.
+  const debouncedQuery = useDebouncedValue(queryDraft.trim());
+  const { control, reset, setValue, handleSubmit } = useForm<EstablishmentFormValues>({
+    defaultValues: emptyValues,
+  });
   const formActivityId = useWatch({ control, name: "activityId" });
   const formClassificationId = useWatch({ control, name: "classificationId" });
-  const latitude = useWatch({ control, name: "latitude" });
-  const longitude = useWatch({ control, name: "longitude" });
 
   const catalogsQuery = useQuery(catalogsQueryOptions(token));
   const establishmentFilters: AdminEstablishmentsOptions = {
     q: debouncedQuery || undefined,
-    activity: debouncedActivity || undefined,
-    classification: debouncedClassification || undefined,
-    category: debouncedCategory || undefined,
+    activity: activity || undefined,
+    classification: classification || undefined,
+    category: category || undefined,
     provinceId: provinceId ? Number(provinceId) : undefined,
     cantonId: cantonId ? Number(cantonId) : undefined,
     localityId: localityId ? Number(localityId) : undefined,
@@ -274,6 +272,7 @@ export const EstablishmentManagement = forwardRef<
       ),
     [catalogs?.establishmentCategories, filterClassificationId],
   );
+  const filterCategoryId = filterCategories.find((option) => option.name === category)?.id;
   const provinces = catalogs?.provinces ?? [];
   const cantons = (catalogs?.cantons ?? []).filter(
     (option) => !provinceId || String(option.provinceId) === provinceId,
@@ -297,40 +296,15 @@ export const EstablishmentManagement = forwardRef<
     setDialogOpen(true);
   }
 
+  /** Las reglas de los campos ya validan coordenadas, RUC y obligatorios. */
   function submitForm(values: EstablishmentFormValues) {
-    const latitudeText = values.latitude.trim();
-    const longitudeText = values.longitude.trim();
-    if (!latitudeText || !longitudeText) {
-      onError("La latitud y la longitud son obligatorias.");
-      return;
-    }
-    const latitude = Number(latitudeText);
-    const longitude = Number(longitudeText);
-    if (
-      !Number.isFinite(latitude) ||
-      latitude < -90 ||
-      latitude > 90 ||
-      !Number.isFinite(longitude) ||
-      longitude < -180 ||
-      longitude > 180
-    ) {
-      onError("La latitud o la longitud no están dentro de un rango válido.");
-      return;
-    }
-    if (values.ruc.trim() && !/^\d{13}$/.test(values.ruc.trim())) {
-      onError("El RUC debe contener 13 dígitos.");
-      return;
-    }
     onError(null);
-    const activityOption = establishmentActivities.find(
-      (option) => String(option.id) === values.activityId,
+    const activityOption = findCatalogOption(establishmentActivities, values.activityId);
+    const classificationOption = findCatalogOption(
+      establishmentClassifications,
+      values.classificationId,
     );
-    const classificationOption = establishmentClassifications.find(
-      (option) => String(option.id) === values.classificationId,
-    );
-    const categoryOption = establishmentCategories.find(
-      (option) => String(option.id) === values.categoryId,
-    );
+    const categoryOption = findCatalogOption(establishmentCategories, values.categoryId);
     saveMutation.mutate({
       localityId: Number(values.localityId),
       numeroRegistro: values.numeroRegistro.trim() || undefined,
@@ -346,8 +320,8 @@ export const EstablishmentManagement = forwardRef<
       categoria: categoryOption?.name ?? (values.categoria.trim() || undefined),
       direccion: values.direccion.trim() || undefined,
       telefono: values.telefono.trim() || undefined,
-      latitude,
-      longitude,
+      latitude: Number(values.latitude),
+      longitude: Number(values.longitude),
     });
   }
 
@@ -363,7 +337,6 @@ export const EstablishmentManagement = forwardRef<
                 setQueryDraft(event.target.value);
                 setPage(0);
               }}
-              slotProps={{ htmlInput: { "aria-label": "Buscar establecimientos" } }}
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6, lg: 2 }}>
@@ -447,13 +420,7 @@ export const EstablishmentManagement = forwardRef<
             <CatalogSelect
               id="establishment-category-filter"
               label="Categoría"
-              value={
-                filterCategories.find((option) => option.name === category)
-                  ? String(
-                      filterCategories.find((option) => option.name === category)?.id,
-                    )
-                  : ""
-              }
+              value={filterCategoryId ? String(filterCategoryId) : ""}
               options={filterCategories}
               disabled={!classification}
               onChange={(value) => {
@@ -484,6 +451,7 @@ export const EstablishmentManagement = forwardRef<
         ariaLabel="Catastro de establecimientos"
         minWidth={760}
         loading={establishmentsQuery.isLoading}
+        error={establishmentsQuery.error ? "No se pudo cargar el catastro." : null}
         empty={!data?.items.length}
         emptyMessage="No hay establecimientos para los filtros seleccionados."
         pagination={{ page, total: data?.total ?? 0, pageSize, onPageChange: setPage }}
@@ -585,9 +553,6 @@ export const EstablishmentManagement = forwardRef<
             spacing={webTokens.spacing.control}
             sx={{ pt: 1 }}
           >
-            <input type="hidden" {...register("actividad")} />
-            <input type="hidden" {...register("clasificacion")} />
-            <input type="hidden" {...register("categoria")} />
             <Grid container spacing={webTokens.spacing.control}>
               <Grid size={{ xs: 12, md: 6 }}>
                 <RhfCatalogSelect
@@ -596,26 +561,24 @@ export const EstablishmentManagement = forwardRef<
                   name="localityId"
                   label="Localidad"
                   options={catalogs?.localities ?? []}
-                  rules={{ required: "Selecciona una localidad." }}
+                  rules={{ required: required("Selecciona una localidad.") }}
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
-                <TextField
+                <RhfTextField
+                  control={control}
+                  name="numeroRegistro"
                   label="Número de registro"
-                  fullWidth
-                  {...register("numeroRegistro", { maxLength: 40 })}
+                  rules={{ maxLength: maxLen(40) }}
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
-                <TextField
+                <RhfTextField
+                  control={control}
+                  name="nombreComercial"
                   label="Nombre comercial"
-                  fullWidth
                   required
-                  error={Boolean(formState.errors.nombreComercial)}
-                  helperText={formState.errors.nombreComercial?.message}
-                  {...register("nombreComercial", {
-                    required: "Ingresa el nombre comercial.",
-                  })}
+                  rules={{ required: required("Ingresa el nombre comercial.") }}
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
@@ -626,14 +589,14 @@ export const EstablishmentManagement = forwardRef<
                   label="Actividad"
                   options={establishmentActivities}
                   required
-                  rules={{ required: "Selecciona una actividad." }}
+                  rules={{ required: required("Selecciona una actividad.") }}
                   onValueChange={(value) => {
                     setValue("classificationId", "");
                     setValue("categoryId", "");
-                    const option = establishmentActivities.find(
-                      (candidate) => String(candidate.id) === value,
+                    setValue(
+                      "actividad",
+                      findCatalogOption(establishmentActivities, value)?.name ?? "",
                     );
-                    setValue("actividad", option?.name ?? "");
                     setValue("clasificacion", "");
                     setValue("categoria", "");
                   }}
@@ -649,10 +612,10 @@ export const EstablishmentManagement = forwardRef<
                   disabled={!formActivityId}
                   onValueChange={(value) => {
                     setValue("categoryId", "");
-                    const option = establishmentClassifications.find(
-                      (candidate) => String(candidate.id) === value,
+                    setValue(
+                      "clasificacion",
+                      findCatalogOption(establishmentClassifications, value)?.name ?? "",
                     );
-                    setValue("clasificacion", option?.name ?? "");
                     setValue("categoria", "");
                   }}
                 />
@@ -665,87 +628,39 @@ export const EstablishmentManagement = forwardRef<
                   label="Categoría"
                   options={establishmentCategories}
                   disabled={!formClassificationId}
-                  onValueChange={(value) => {
-                    const option = establishmentCategories.find(
-                      (candidate) => String(candidate.id) === value,
-                    );
-                    setValue("categoria", option?.name ?? "");
-                  }}
+                  onValueChange={(value) =>
+                    setValue(
+                      "categoria",
+                      findCatalogOption(establishmentCategories, value)?.name ?? "",
+                    )
+                  }
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
-                <TextField label="Razón social" fullWidth {...register("razonSocial")} />
+                <RhfTextField control={control} name="razonSocial" label="Razón social" />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
-                <TextField
+                <RhfTextField
+                  control={control}
+                  name="ruc"
                   label="RUC"
-                  fullWidth
+                  rules={RUC_RULES}
                   slotProps={{ htmlInput: { maxLength: 13 } }}
-                  {...register("ruc")}
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 8 }}>
-                <TextField label="Dirección" fullWidth {...register("direccion")} />
+                <RhfTextField control={control} name="direccion" label="Dirección" />
               </Grid>
               <Grid size={{ xs: 12, md: 4 }}>
-                <TextField label="Teléfono" fullWidth {...register("telefono")} />
+                <RhfTextField control={control} name="telefono" label="Teléfono" />
               </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
-                <TextField
-                  label="Latitud"
-                  fullWidth
-                  required
-                  type="number"
-                  error={Boolean(formState.errors.latitude)}
-                  helperText={formState.errors.latitude?.message}
-                  slotProps={{ htmlInput: { step: "any", min: -90, max: 90 } }}
-                  {...register("latitude", {
-                    required: "Ingresa la latitud.",
-                    validate: (value) => {
-                      const number = Number(value);
-                      return value.trim() !== "" &&
-                        Number.isFinite(number) &&
-                        number >= -90 &&
-                        number <= 90
-                        ? true
-                        : "La latitud debe estar entre -90 y 90.";
-                    },
-                  })}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
-                <TextField
-                  label="Longitud"
-                  fullWidth
-                  required
-                  type="number"
-                  error={Boolean(formState.errors.longitude)}
-                  helperText={formState.errors.longitude?.message}
-                  slotProps={{ htmlInput: { step: "any", min: -180, max: 180 } }}
-                  {...register("longitude", {
-                    required: "Ingresa la longitud.",
-                    validate: (value) => {
-                      const number = Number(value);
-                      return value.trim() !== "" &&
-                        Number.isFinite(number) &&
-                        number >= -180 &&
-                        number <= 180
-                        ? true
-                        : "La longitud debe estar entre -180 y 180.";
-                    },
-                  })}
-                />
-              </Grid>
-              <Grid size={{ xs: 12 }}>
-                <Button
-                  onClick={() => setCoordinatePickerOpen(true)}
-                  startIcon={<LocationOnRounded />}
-                  type="button"
-                  variant="outlined"
-                >
-                  Seleccionar coordenadas en el mapa
-                </Button>
-              </Grid>
+              <CoordinateFieldset
+                control={control}
+                latitudeName="latitude"
+                longitudeName="longitude"
+                fieldSize={{ xs: 12, md: 6 }}
+                onPicked={() => onNotice("Coordenadas seleccionadas en el mapa.")}
+              />
             </Grid>
           </Stack>
         </DialogContent>
@@ -766,19 +681,6 @@ export const EstablishmentManagement = forwardRef<
           </Button>
         </DialogActions>
       </Dialog>
-      <CoordinatePickerDialog
-        key={coordinatePickerOpen ? "coordinate-picker-open" : "coordinate-picker-closed"}
-        initialLatitude={latitude}
-        initialLongitude={longitude}
-        onClose={() => setCoordinatePickerOpen(false)}
-        onConfirm={({ latitude: nextLatitude, longitude: nextLongitude }) => {
-          setValue("latitude", String(nextLatitude), { shouldDirty: true });
-          setValue("longitude", String(nextLongitude), { shouldDirty: true });
-          setCoordinatePickerOpen(false);
-          onNotice("Coordenadas seleccionadas en el mapa.");
-        }}
-        open={coordinatePickerOpen}
-      />
     </Stack>
   );
 });
@@ -814,15 +716,15 @@ function toFormValues(
     ruc: item.ruc ?? "",
     nombreComercial: item.nombreComercial,
     razonSocial: item.razonSocial ?? "",
-    activityId: activityId === null ? "" : String(activityId ?? ""),
-    classificationId: classificationId === null ? "" : String(classificationId ?? ""),
-    categoryId: categoryId === null ? "" : String(categoryId ?? ""),
+    activityId: String(activityId ?? ""),
+    classificationId: String(classificationId ?? ""),
+    categoryId: String(categoryId ?? ""),
     actividad: item.actividad,
     clasificacion: item.clasificacion ?? "",
     categoria: item.categoria ?? "",
     direccion: item.direccion ?? "",
     telefono: item.telefono ?? "",
-    latitude: item.latitude === null ? "" : String(item.latitude),
-    longitude: item.longitude === null ? "" : String(item.longitude),
+    latitude: String(item.latitude),
+    longitude: String(item.longitude),
   };
 }

@@ -7,6 +7,11 @@ import {
   Box,
   Button,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   Divider,
   IconButton,
   Stack,
@@ -19,7 +24,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { FlatSurface } from "@/components/ui/flat-surface";
 import { ContentState } from "@/components/ui/content-state";
-import { SelectField, type SelectOption } from "@/components/ui/form/select-field";
+import { SelectField } from "@/components/ui/form/select-field";
 import { SectionHeader } from "@/components/ui/section-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
@@ -35,14 +40,70 @@ import { webTokens } from "@/theme/tokens";
 
 type MediaTypeCode = AdminMediaItem["typeCode"];
 
-const MEDIA_TYPE_OPTIONS: readonly SelectOption<MediaTypeCode>[] = [
-  { value: "FOTOGRAFIA", label: "Fotografía" },
-  { value: "VIDEO", label: "Video" },
-  { value: "AUDIO", label: "Audio" },
-  { value: "MAPA", label: "Mapa" },
-  { value: "PLAN_CONTINGENCIA", label: "Plan de contingencia" },
-  { value: "OTRO", label: "Otro anexo" },
+const IMAGE_OR_PDF = "image/jpeg,image/png,image/webp,application/pdf";
+const PDF_OR_IMAGE = "application/pdf,image/jpeg,image/png,image/webp";
+
+type MediaTypeOption = {
+  value: MediaTypeCode;
+  label: string;
+  /** Tipos MIME aceptados por el selector de archivos. */
+  accept: string;
+  /** Mensajes al eliminar un archivo de este tipo. */
+  removed: string;
+  removeError: string;
+};
+
+const MEDIA_TYPE_OPTIONS: readonly MediaTypeOption[] = [
+  {
+    value: "FOTOGRAFIA",
+    label: "Fotografía",
+    accept: IMAGE_OR_PDF,
+    removed: "Fotografía eliminada.",
+    removeError: "No se pudo eliminar la fotografía.",
+  },
+  {
+    value: "VIDEO",
+    label: "Video",
+    accept: "video/mp4,video/webm",
+    removed: "Video eliminado.",
+    removeError: "No se pudo eliminar el video.",
+  },
+  {
+    value: "AUDIO",
+    label: "Audio",
+    accept: "audio/mpeg,audio/mp4,audio/wav,audio/ogg",
+    removed: "Audio eliminado.",
+    removeError: "No se pudo eliminar el audio.",
+  },
+  {
+    value: "MAPA",
+    label: "Mapa",
+    accept: IMAGE_OR_PDF,
+    removed: "Mapa eliminado.",
+    removeError: "No se pudo eliminar el mapa.",
+  },
+  {
+    value: "PLAN_CONTINGENCIA",
+    label: "Plan de contingencia",
+    accept: PDF_OR_IMAGE,
+    removed: "Plan de contingencia eliminado.",
+    removeError: "No se pudo eliminar el plan de contingencia.",
+  },
+  {
+    value: "OTRO",
+    label: "Otro anexo",
+    accept: PDF_OR_IMAGE,
+    removed: "Anexo eliminado.",
+    removeError: "No se pudo eliminar el anexo.",
+  },
 ];
+
+function mediaTypeOption(typeCode: MediaTypeCode): MediaTypeOption {
+  return (
+    MEDIA_TYPE_OPTIONS.find((option) => option.value === typeCode) ??
+    MEDIA_TYPE_OPTIONS[MEDIA_TYPE_OPTIONS.length - 1]
+  );
+}
 
 export function MediaManager({
   token,
@@ -63,6 +124,7 @@ export function MediaManager({
   const [sourceAuthor, setSourceAuthor] = useState("");
   const [typeCode, setTypeCode] = useState<MediaTypeCode>("FOTOGRAFIA");
   const [working, setWorking] = useState(false);
+  const [pendingRemoval, setPendingRemoval] = useState<AdminMediaItem | null>(null);
   const mediaQuery = useQuery(centerMediaQueryOptions(token, code));
 
   useEffect(() => {
@@ -94,17 +156,19 @@ export function MediaManager({
   }
 
   async function remove(item: AdminMediaItem) {
-    if (!code || !window.confirm(`¿Eliminar ${item.originalName}?`)) return;
+    if (!code) return;
+    const messages = mediaTypeOption(item.typeCode);
     setWorking(true);
     onError(null);
     try {
       await deleteAdminCenterMedia(token, code, item.id);
       await queryClient.invalidateQueries({ queryKey: adminKeys.media(code) });
-      onNotice("Fotografía eliminada.");
+      onNotice(messages.removed);
     } catch (cause) {
-      onError(errorMessage(cause, "No se pudo eliminar la fotografía."));
+      onError(errorMessage(cause, messages.removeError));
     } finally {
       setWorking(false);
+      setPendingRemoval(null);
     }
   }
 
@@ -149,7 +213,7 @@ export function MediaManager({
             ref={fileInput}
             hidden
             type="file"
-            accept={acceptForType(typeCode)}
+            accept={mediaTypeOption(typeCode).accept}
             onChange={(event) => {
               const file = event.target.files?.[0];
               if (file) void upload(file);
@@ -223,7 +287,7 @@ export function MediaManager({
                 <span>
                   <IconButton
                     aria-label={`Eliminar ${item.originalName}`}
-                    onClick={() => void remove(item)}
+                    onClick={() => setPendingRemoval(item)}
                     disabled={!canEdit || working}
                   >
                     <DeleteOutlineRounded />
@@ -235,17 +299,32 @@ export function MediaManager({
           </Stack>
         ))}
       </Stack>
+      <Dialog
+        open={pendingRemoval !== null}
+        onClose={() => !working && setPendingRemoval(null)}
+        aria-labelledby="media-remove-title"
+        aria-describedby="media-remove-description"
+      >
+        <DialogTitle id="media-remove-title">Eliminar archivo</DialogTitle>
+        <DialogContent>
+          <DialogContentText id="media-remove-description">
+            ¿Eliminar {pendingRemoval?.originalName}?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPendingRemoval(null)} disabled={working}>
+            Cancelar
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={() => pendingRemoval && void remove(pendingRemoval)}
+            disabled={working}
+          >
+            {working ? "Eliminando…" : "Eliminar"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </FlatSurface>
   );
-}
-
-function acceptForType(typeCode: MediaTypeCode): string {
-  if (typeCode === "FOTOGRAFIA" || typeCode === "MAPA") {
-    return "image/jpeg,image/png,image/webp,application/pdf";
-  }
-  if (typeCode === "PLAN_CONTINGENCIA" || typeCode === "OTRO") {
-    return "application/pdf,image/jpeg,image/png,image/webp";
-  }
-  if (typeCode === "VIDEO") return "video/mp4,video/webm";
-  return "audio/mpeg,audio/mp4,audio/wav,audio/ogg";
 }

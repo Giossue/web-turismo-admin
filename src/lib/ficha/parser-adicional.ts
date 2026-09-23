@@ -3,7 +3,7 @@ import type ExcelJS from "exceljs";
 import { POLICY_DEFINITIONS, type PolicyCode } from "@/lib/center-sections/options";
 
 import { leerMarcaDirecta, leerMarcaJuntoAEtiqueta } from "./checkbox";
-import { leerTexto, leerTextoOpcional } from "./xlsx-utils";
+import { leerNumeroOpcional, leerTextoOpcional } from "./xlsx-utils";
 import type {
   FichaActividad,
   FichaFormacionPersonal,
@@ -12,13 +12,6 @@ import type {
   FichaRecursoHumano,
   FichaVisitantes,
 } from "./tipos";
-
-function numeroOpcional(worksheet: ExcelJS.Worksheet, ref: string): number | null {
-  const texto = leerTexto(worksheet, ref);
-  if (texto === "" || texto.toLowerCase() === "texto") return null;
-  const valor = Number(texto);
-  return Number.isFinite(valor) ? valor : null;
-}
 
 /** SI/NO de una pregunta cuyas dos etiquetas ("SI"/"NO") son celdas simples adyacentes. */
 function leerSiNoDirecto(
@@ -81,7 +74,7 @@ export function leerPoliticas(worksheet: ExcelJS.Worksheet): FichaPolitica[] {
       codigo: code,
       pregunta: leerTextoOpcional(worksheet, `B${celdas.fila}`) ?? "",
       respuesta: leerSiNoDirecto(worksheet, celdas.refSi, celdas.refNo),
-      anioElaboracion: celdas.refAnio ? numeroOpcional(worksheet, celdas.refAnio) : null,
+      anioElaboracion: celdas.refAnio ? leerNumeroOpcional(worksheet, celdas.refAnio) : null,
       especifique: celdas.refEspecifique
         ? leerTextoOpcional(worksheet, celdas.refEspecifique)
         : null,
@@ -134,15 +127,15 @@ function leerFormacion(
   return items.map((item) => ({
     grupo,
     nombre: item.nombre,
-    cantidad: item.refCantidad ? numeroOpcional(worksheet, item.refCantidad) : null,
+    cantidad: item.refCantidad ? leerNumeroOpcional(worksheet, item.refCantidad) : null,
     detalleOtro: item.refTexto ? leerTextoOpcional(worksheet, item.refTexto) : null,
   }));
 }
 
 export function leerRecursoHumano(worksheet: ExcelJS.Worksheet): FichaRecursoHumano {
   return {
-    personasAdministracionOperacion: numeroOpcional(worksheet, "L293"),
-    personasEspecializadasTurismo: numeroOpcional(worksheet, "U293"),
+    personasAdministracionOperacion: leerNumeroOpcional(worksheet, "L293"),
+    personasEspecializadasTurismo: leerNumeroOpcional(worksheet, "U293"),
     formacion: [
       ...leerFormacion(worksheet, "EDUCACION", FORMACION_EDUCACION),
       ...leerFormacion(worksheet, "CAPACITACION", FORMACION_CAPACITACION),
@@ -271,8 +264,8 @@ function leerLlegadas<T extends "ciudad" | "pais">(
   return filas
     .map((fila) => ({
       [campo]: leerTextoOpcional(worksheet, `${colEtiqueta}${fila}`),
-      llegadasMensuales: numeroOpcional(worksheet, `${colMensual}${fila}`),
-      totalAnual: numeroOpcional(worksheet, `${colAnual}${fila}`),
+      llegadasMensuales: leerNumeroOpcional(worksheet, `${colMensual}${fila}`),
+      totalAnual: leerNumeroOpcional(worksheet, `${colAnual}${fila}`),
     }))
     .filter((item) => item[campo] !== null) as Array<
     {
@@ -289,18 +282,18 @@ export function leerVisitantes(worksheet: ExcelJS.Worksheet): FichaVisitantes {
       : leerMarcaJuntoAEtiqueta(worksheet, "O276")
         ? "PAPEL"
         : null,
-    aniosRegistro: numeroOpcional(worksheet, "T276"),
+    aniosRegistro: leerNumeroOpcional(worksheet, "T276"),
     generaReportes: leerSiNoDirecto(worksheet, "J277", "L277"),
     frecuenciaReportes: leerTextoOpcional(worksheet, "R277"),
     temporadaAlta: {
       marcada: leerMarcaDirecta(worksheet, "E279") === true,
       meses: leerTextoOpcional(worksheet, "G279"),
-      visitantes: numeroOpcional(worksheet, "S279"),
+      visitantes: leerNumeroOpcional(worksheet, "S279"),
     },
     temporadaBaja: {
       marcada: leerMarcaDirecta(worksheet, "E280") === true,
       meses: leerTextoOpcional(worksheet, "G280"),
-      visitantes: numeroOpcional(worksheet, "S280"),
+      visitantes: leerNumeroOpcional(worksheet, "S280"),
     },
     llegadaNacional: leerLlegadas(worksheet, "ciudad", [283, 284, 285], "E", "G", "J"),
     llegadaExtranjera: leerLlegadas(worksheet, "pais", [283, 284, 285], "O", "Q", "T"),

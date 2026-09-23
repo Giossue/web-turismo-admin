@@ -12,6 +12,7 @@ import {
   Toolbar,
   Tooltip,
 } from "@mui/material";
+import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef, useState } from "react";
 
 import {
@@ -29,6 +30,7 @@ import { OpinionManagement } from "@/components/admin/opinion-management";
 import { ColorModeButton } from "@/components/ui/color-mode-button";
 import { PageHeader } from "@/components/ui/page-header";
 import type { AdminCenterDetail } from "@/lib/admin-api";
+import { adminKeys } from "@/lib/admin-queries";
 import {
   canOperatePanel,
   isAdministrator,
@@ -74,6 +76,7 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
   const token = accessToken ?? "";
   const isAdmin = isAdministrator(user);
   const feedback = useAdminFeedback();
+  const queryClient = useQueryClient();
   const nav = useAdminUrlState(isAdmin);
   const { section, state } = nav;
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -103,8 +106,14 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
   // solo actualiza el código, sin remontar el editor (su key es la sesión).
   const editorSession = state.editorSession;
   const handleEditorSaved = useCallback(
-    (saved: AdminCenterDetail) => editorSaved(saved.code, editorSession),
-    [editorSaved, editorSession],
+    (saved: AdminCenterDetail) => {
+      editorSaved(saved.code, editorSession);
+      // Los listados y el resumen se recargan cuando vuelvan a mostrarse.
+      for (const queryKey of [adminKeys.allCenters(), adminKeys.summary()]) {
+        void queryClient.invalidateQueries({ queryKey, refetchType: "none" });
+      }
+    },
+    [editorSaved, editorSession, queryClient],
   );
   const handleLogout = useCallback(() => void logout(), [logout]);
 

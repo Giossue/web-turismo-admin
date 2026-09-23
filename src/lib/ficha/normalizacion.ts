@@ -1,3 +1,5 @@
+import { esTextoVacio } from "./xlsx-utils";
+
 /**
  * Normaliza texto de catálogo para comparar valores de la ficha ("BOLIVAR",
  * "MANIFESTACIONES_CULTURALES") contra los nombres reales de la base
@@ -73,7 +75,7 @@ export function parsearAltitud(valor: string | number | boolean | null): number 
   if (valor === null || valor === "") return null;
   if (typeof valor === "number") return Math.round(valor);
   const texto = String(valor).trim();
-  if (texto === "" || texto.toLowerCase() === "texto") return null;
+  if (esTextoVacio(texto)) return null;
 
   const soloPuntoMiles = /^\d{1,3}\.\d{3}$/.test(texto);
   if (soloPuntoMiles) return Number(texto.replace(".", ""));

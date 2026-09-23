@@ -1,32 +1,16 @@
-import type { ConservationState } from "@/lib/center-sections/options";
+import type { z } from "zod";
 
-/** Mismos códigos que valida la API para `conservation.*.state`. */
-export type FichaEstadoConservacion = ConservationState;
+import type {
+  fichaComponenteConservacionSchema,
+  fichaConservacionSchema,
+  fichaEstadoConservacionSchema,
+  fichaFactorAlteracionSchema,
+} from "./validacion";
 
-export type FichaFactorAlteracion = {
-  origen: "NATURAL" | "ANTROPICO";
-  nombre: string;
-  marcado: boolean;
-};
-
-export type FichaComponenteConservacion = {
-  estado: FichaEstadoConservacion | null;
-  observacionEstado: string | null;
-  factores: FichaFactorAlteracion[];
-  otroDetalle: string | null;
-  observacionFactores: string | null;
-};
-
-type FichaDeclaratoria = {
-  declarante: string | null;
-  denominacion: string | null;
-  fechaDeclaracion: string | null;
-  alcance: string | null;
-  observacion: string | null;
-};
-
-export type FichaConservacion = {
-  atractivo: FichaComponenteConservacion;
-  entorno: FichaComponenteConservacion;
-  declaratoria: FichaDeclaratoria;
-};
+/** Mismos códigos que valida la API para `conservation.*.state` (`ConservationState`). */
+export type FichaEstadoConservacion = z.infer<typeof fichaEstadoConservacionSchema>;
+export type FichaFactorAlteracion = z.infer<typeof fichaFactorAlteracionSchema>;
+export type FichaComponenteConservacion = z.infer<
+  typeof fichaComponenteConservacionSchema
+>;
+export type FichaConservacion = z.infer<typeof fichaConservacionSchema>;

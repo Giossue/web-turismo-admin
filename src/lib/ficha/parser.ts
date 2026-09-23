@@ -20,6 +20,7 @@ import {
   fechaDesdeSerial,
   horaDesdeFraccionDia,
   leerCelda,
+  leerPositivoOpcional,
   leerTexto,
   leerTextoOpcional,
 } from "./xlsx-utils";
@@ -73,6 +74,19 @@ const CODIGOS_COLUMNAS = [
   "U",
   "V",
 ] as const;
+
+/**
+ * Valida extensión y tamaño antes de leer el contenido del archivo. Lanza
+ * `FichaInvalidaError` con un mensaje para la persona usuaria.
+ */
+export function validarArchivoFicha(nombreArchivo: string, tamanoBytes: number): void {
+  validarExtension(nombreArchivo);
+  if (tamanoBytes > TAMANO_MAXIMO_BYTES) {
+    throw new FichaInvalidaError(
+      `El archivo pesa más de ${TAMANO_MAXIMO_BYTES / (1024 * 1024)} MB.`,
+    );
+  }
+}
 
 function validarExtension(nombreArchivo: string): void {
   const extension = nombreArchivo.split(".").pop()?.toLowerCase() ?? "";
@@ -227,14 +241,8 @@ function leerIngreso(worksheet: ExcelJS.Worksheet): FichaIngreso {
     // en vez de adivinar.
     manejaReservas: null,
     formasPago,
-    precioDesde:
-      leerCelda(worksheet, "E35") === "0"
-        ? null
-        : Number(leerCelda(worksheet, "E35")) || null,
-    precioHasta:
-      leerCelda(worksheet, "G35") === "0"
-        ? null
-        : Number(leerCelda(worksheet, "G35")) || null,
+    precioDesde: leerPositivoOpcional(worksheet, "E35"),
+    precioHasta: leerPositivoOpcional(worksheet, "G35"),
     mesesRecomendados: leerTextoOpcional(worksheet, "H36"),
     observacion: leerTextoOpcional(worksheet, "E37"),
   };
@@ -308,10 +316,7 @@ function leerViasTerrestres(
       orden,
       coordenadaInicio: { crudo: inicioCrudo, advertencia: inicio.advertencia },
       coordenadaFin: { crudo: finCrudo, advertencia: fin.advertencia },
-      distanciaKm:
-        leerTexto(worksheet, `P${fila}`) === "0"
-          ? null
-          : Number(leerTexto(worksheet, `P${fila}`)) || null,
+      distanciaKm: leerPositivoOpcional(worksheet, `P${fila}`),
       tipoMaterial: leerTextoOpcional(worksheet, `R${fila}`),
       estado: leerTextoOpcional(worksheet, `U${fila}`),
     });
@@ -397,10 +402,7 @@ function leerAccesoConectividad(
 
   return {
     ciudadPobladoCercano: leerTextoOpcional(worksheet, "P39"),
-    distanciaKm:
-      leerTexto(worksheet, "F40") === "0"
-        ? null
-        : Number(leerTexto(worksheet, "F40")) || null,
+    distanciaKm: leerPositivoOpcional(worksheet, "F40"),
     tiempoAutoHoras: horaDesdeFraccionDia(leerCelda(worksheet, "L40")),
     coordenadas,
     viasTerrestres: leerViasTerrestres(worksheet, advertencias),
@@ -512,19 +514,15 @@ function leerImagenes(workbook: ExcelJS.Workbook): FichaImagenAnexo[] {
 
 /**
  * Lee y valida la ficha MINTUR (`.xlsx`/`.xlsm`). No escribe nada en ninguna
- * base de datos ni resuelve catálogos — eso lo hace `mapeo-catalogos.ts` con
- * el resultado de esta función. Ver docs/plans/active/importar-ficha-mintur.md.
+ * base de datos ni resuelve catálogos — eso lo hace `resolverCatalogosFicha`
+ * (`catalogos.ts`) con el resultado de esta función. Ver
+ * docs/plans/active/importar-ficha-mintur.md.
  */
 export async function parsearFicha(
   buffer: ArrayBuffer,
   nombreArchivo: string,
 ): Promise<ResultadoParseoFicha> {
-  validarExtension(nombreArchivo);
-  if (buffer.byteLength > TAMANO_MAXIMO_BYTES) {
-    throw new FichaInvalidaError(
-      `El archivo pesa más de ${TAMANO_MAXIMO_BYTES / (1024 * 1024)} MB.`,
-    );
-  }
+  validarArchivoFicha(nombreArchivo, buffer.byteLength);
 
   const workbook = await abrirLibro(buffer);
   const worksheet = validarPlantilla(workbook);
@@ -546,8 +544,6 @@ export async function parsearFicha(
       `Tipo de ingreso: ${caracteristicas.ingreso.tipoSeleccionado.advertencia}`,
     );
   }
-
-  const imagenes = leerImagenes(workbook);
 
   const datos: FichaExtraida = {
     identificacion,
@@ -583,7 +579,7 @@ export async function parsearFicha(
     },
     resumenValoracion: leerResumenValoracion(workbook),
     accesibilidadDetalle: leerAccesibilidadDetalle(workbook),
-    imagenes,
+    imagenes: leerImagenes(workbook),
     politicas: leerPoliticas(worksheet),
     actividades: leerActividades(worksheet),
     promocion: leerPromocion(worksheet),
@@ -601,5 +597,5 @@ export async function parsearFicha(
     );
   }
 
-  return { datos, advertencias, imagenes };
+  return { datos, advertencias };
 }

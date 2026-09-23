@@ -1,7 +1,7 @@
 import type ExcelJS from "exceljs";
 
 import { leerMarcaDirecta, leerMarcaJuntoAEtiqueta } from "./checkbox";
-import { leerTexto, leerTextoOpcional } from "./xlsx-utils";
+import { leerNumeroOpcional, leerTextoOpcional } from "./xlsx-utils";
 import type {
   FichaAmenaza,
   FichaHigieneSeguridad,
@@ -12,13 +12,6 @@ import type {
   FichaServicioSeguridad,
   FichaTelefoniaInternet,
 } from "./tipos-higiene";
-
-function numeroOpcional(worksheet: ExcelJS.Worksheet, ref: string): number | null {
-  const texto = leerTexto(worksheet, ref);
-  if (texto === "" || texto.toLowerCase() === "texto") return null;
-  const valor = Number(texto);
-  return Number.isFinite(valor) ? valor : null;
-}
 
 // --- 7.1 Servicios básicos (filas 158-166) — valores de texto, no checkboxes ---
 const SERVICIOS_BASICOS: Array<{
@@ -120,9 +113,9 @@ function leerSenaletica(worksheet: ExcelJS.Worksheet): FichaSenaleticaItem[] {
     return {
       ambiente: item.ambiente,
       nombre: item.nombre,
-      cantidadMadera: numeroOpcional(worksheet, `J${item.fila}`),
-      cantidadAluminio: numeroOpcional(worksheet, `L${item.fila}`),
-      cantidadOtro: numeroOpcional(worksheet, `N${item.fila}`),
+      cantidadMadera: leerNumeroOpcional(worksheet, `J${item.fila}`),
+      cantidadAluminio: leerNumeroOpcional(worksheet, `L${item.fila}`),
+      cantidadOtro: leerNumeroOpcional(worksheet, `N${item.fila}`),
       especifiqueOtro: leerTextoOpcional(worksheet, `P${item.fila}`),
       estado,
     };
@@ -143,8 +136,8 @@ function leerSalud(worksheet: ExcelJS.Worksheet): FichaServicioSalud[] {
     const fila = 197 + i;
     return {
       nombre,
-      cantidadAtractivo: numeroOpcional(worksheet, `G${fila}`),
-      cantidadCiudad: numeroOpcional(worksheet, `R${fila}`),
+      cantidadAtractivo: leerNumeroOpcional(worksheet, `G${fila}`),
+      cantidadCiudad: leerNumeroOpcional(worksheet, `R${fila}`),
     };
   });
 }
@@ -255,7 +248,7 @@ export function leerHigieneSeguridad(
       existe: leerMarcaJuntoAEtiqueta(worksheet, "B222:F222") === true,
       institucion: leerTextoOpcional(worksheet, "K222"),
       nombreDocumento: leerTextoOpcional(worksheet, "P222"),
-      anioElaboracion: numeroOpcional(worksheet, "U222"),
+      anioElaboracion: leerNumeroOpcional(worksheet, "U222"),
     },
     observacionMultiamenazas: leerTextoOpcional(worksheet, "E223"),
   };

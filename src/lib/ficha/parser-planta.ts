@@ -2,7 +2,7 @@ import type ExcelJS from "exceljs";
 
 import { leerMarcaDirecta, leerMarcaJuntoAEtiqueta } from "./checkbox";
 import { parsearCoordenadaPar } from "./parser-comun";
-import { leerTexto, leerTextoOpcional } from "./xlsx-utils";
+import { leerNumeroOpcional, leerTexto, leerTextoOpcional } from "./xlsx-utils";
 import type {
   FichaFacilidadEntorno,
   FichaGuiaTuristica,
@@ -10,13 +10,6 @@ import type {
   FichaPlantaConteo,
   FichaServicioComplementario,
 } from "./tipos-planta";
-
-function numeroOpcional(worksheet: ExcelJS.Worksheet, ref: string): number | null {
-  const texto = leerTexto(worksheet, ref);
-  if (texto === "" || texto.toLowerCase() === "texto") return null;
-  const valor = Number(texto);
-  return Number.isFinite(valor) ? valor : null;
-}
 
 /**
  * Lee una fila de la tabla de planta turística (5.1): un nombre fijo (ej.
@@ -36,12 +29,12 @@ function leerFilaConteo(
   const [c1, c2, c3] = colsCiudad;
   return {
     nombre,
-    establecimientosAtractivo: a1 ? numeroOpcional(worksheet, `${a1}${fila}`) : null,
-    segundaMetricaAtractivo: a2 ? numeroOpcional(worksheet, `${a2}${fila}`) : null,
-    terceraMetricaAtractivo: a3 ? numeroOpcional(worksheet, `${a3}${fila}`) : null,
-    establecimientosCiudad: c1 ? numeroOpcional(worksheet, `${c1}${fila}`) : null,
-    segundaMetricaCiudad: c2 ? numeroOpcional(worksheet, `${c2}${fila}`) : null,
-    terceraMetricaCiudad: c3 ? numeroOpcional(worksheet, `${c3}${fila}`) : null,
+    establecimientosAtractivo: a1 ? leerNumeroOpcional(worksheet, `${a1}${fila}`) : null,
+    segundaMetricaAtractivo: a2 ? leerNumeroOpcional(worksheet, `${a2}${fila}`) : null,
+    terceraMetricaAtractivo: a3 ? leerNumeroOpcional(worksheet, `${a3}${fila}`) : null,
+    establecimientosCiudad: c1 ? leerNumeroOpcional(worksheet, `${c1}${fila}`) : null,
+    segundaMetricaCiudad: c2 ? leerNumeroOpcional(worksheet, `${c2}${fila}`) : null,
+    terceraMetricaCiudad: c3 ? leerNumeroOpcional(worksheet, `${c3}${fila}`) : null,
   };
 }
 
@@ -81,24 +74,24 @@ function leerPlantaTuristica(worksheet: ExcelJS.Worksheet): {
   // conteo en la columna K/V de su propia fila (98 y 99 respectivamente).
   const guia: FichaGuiaTuristica = {
     local: {
-      atractivo: numeroOpcional(worksheet, "D99"),
-      ciudad: numeroOpcional(worksheet, "O99"),
+      atractivo: leerNumeroOpcional(worksheet, "D99"),
+      ciudad: leerNumeroOpcional(worksheet, "O99"),
     },
     nacional: {
-      atractivo: numeroOpcional(worksheet, "E99"),
-      ciudad: numeroOpcional(worksheet, "P99"),
+      atractivo: leerNumeroOpcional(worksheet, "E99"),
+      ciudad: leerNumeroOpcional(worksheet, "P99"),
     },
     nacionalEspecializado: {
-      atractivo: numeroOpcional(worksheet, "G99"),
-      ciudad: numeroOpcional(worksheet, "R99"),
+      atractivo: leerNumeroOpcional(worksheet, "G99"),
+      ciudad: leerNumeroOpcional(worksheet, "R99"),
     },
     cultura: {
-      atractivo: numeroOpcional(worksheet, "K98"),
-      ciudad: numeroOpcional(worksheet, "V98"),
+      atractivo: leerNumeroOpcional(worksheet, "K98"),
+      ciudad: leerNumeroOpcional(worksheet, "V98"),
     },
     aventura: {
-      atractivo: numeroOpcional(worksheet, "K99"),
-      ciudad: numeroOpcional(worksheet, "V99"),
+      atractivo: leerNumeroOpcional(worksheet, "K99"),
+      ciudad: leerNumeroOpcional(worksheet, "V99"),
     },
   };
 
@@ -174,7 +167,7 @@ function leerFacilidadesEntorno(worksheet: ExcelJS.Worksheet): FichaFacilidadEnt
     return {
       categoria: item.categoria,
       nombre: item.nombre,
-      cantidad: numeroOpcional(worksheet, `J${item.fila}`),
+      cantidad: leerNumeroOpcional(worksheet, `J${item.fila}`),
       coordenadas,
       administrador: leerTextoOpcional(worksheet, `O${item.fila}`),
       accesibilidadUniversal: leerMarcaDirecta(worksheet, `R${item.fila}`),
