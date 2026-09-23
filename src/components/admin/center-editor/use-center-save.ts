@@ -18,7 +18,8 @@ import { errorMessage } from "@/lib/errors";
 import { ApiError } from "@/lib/http";
 
 /** Mensaje de la API ante un conflicto de versión (409). */
-const CONFLICT_MESSAGE = "La ficha cambió mientras la editabas. Recarga antes de guardar.";
+const CONFLICT_MESSAGE =
+  "La ficha cambió mientras la editabas. Recarga antes de guardar.";
 
 type SaveVariables = { values: CenterFormValues; submitForReview: boolean };
 
@@ -51,8 +52,12 @@ export function useCenterSave({
   // actualizar esa ficha en lugar de crear otra.
   const createdCodeRef = useRef<string | null>(null);
   const scope = centerSaveScope(code ?? "new");
-  const storeDetail = (detail: AdminCenterDetail) =>
-    queryClient.setQueryData(adminKeys.center(detail.code), detail);
+  const storeDetail = async (detail: AdminCenterDetail) => {
+    const queryKey = adminKeys.center(detail.code);
+    // Una lectura en curso no debe pisar lo recién guardado (y su versión).
+    await queryClient.cancelQueries({ queryKey, exact: true });
+    queryClient.setQueryData(queryKey, detail);
+  };
 
   const saveMutation = useMutation({
     scope,
@@ -71,7 +76,7 @@ export function useCenterSave({
         createdCodeRef.current = saved.code;
       }
       if (!submitForReview) return saved;
-      storeDetail(saved);
+      await storeDetail(saved);
       return submitAdminCenterReview(token, saved.code);
     },
     onSuccess: storeDetail,

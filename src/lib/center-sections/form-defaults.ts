@@ -176,7 +176,14 @@ export function emptyVisitorSeason(): VisitorSeasonForm {
 }
 
 export function emptyVisitorOrigin(): VisitorOriginForm {
-  return { type: "NACIONAL", place: "", month: "", year: "", quantity: "", observation: "" };
+  return {
+    type: "NACIONAL",
+    place: "",
+    month: "",
+    year: "",
+    quantity: "",
+    observation: "",
+  };
 }
 
 export function emptyVisitorInformant(): VisitorInformantForm {

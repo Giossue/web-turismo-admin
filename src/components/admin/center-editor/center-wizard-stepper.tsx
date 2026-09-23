@@ -100,7 +100,9 @@ export function CenterWizardStepper({
                             ? "primary.main"
                             : "action.disabledBackground",
                         color:
-                          selected || completed ? "primary.contrastText" : "text.secondary",
+                          selected || completed
+                            ? "primary.contrastText"
+                            : "text.secondary",
                         fontSize: { xs: "0.72rem", sm: "0.78rem" },
                         fontWeight: 700,
                       }}

@@ -108,10 +108,11 @@ previa) inspeccioné `information_schema` para 135 tablas. Confirmado:
 ### 2.3 La app (evidencia)
 
 - El formulario vive en `src/components/admin/center-editor.tsx` (paso "Identificación y
-  clasificación" + "Ubicación") y `src/components/admin/center-section-workflow.tsx` (6843
-  líneas; el resto de los 14 pasos). No hay Zod ni ningún resolver de validación instalado
-  (`grep` sin resultados) — la validación actual es manual con las reglas de
-  `react-hook-form` (`register(name, { required, maxLength })`). Zod sería una dependencia
+  clasificación" + "Ubicación") y `src/components/admin/center-section-workflow.tsx` +
+  `src/components/admin/center-sections/` (el resto de los 14 pasos; un componente de campos
+  por apartado en `fields/`). No hay Zod ni ningún resolver de validación instalado
+  (`grep` sin resultados) — la validación es manual con las reglas de `react-hook-form`
+  (`rules` de los campos `Rhf*` de `src/components/ui/form/`). Zod sería una dependencia
   nueva, no un reemplazo de algo existente.
 - `src/lib/admin-api.ts` expone `type CenterDraft` con campos **tipados** solo para:
   `name`, `subtypeId`, `touristZoneId`, `parishId`, `productLineId`, `scenarioId`,
@@ -123,14 +124,14 @@ previa) inspeccioné `information_schema` para 135 tablas. Confirmado:
   `sections: Partial<Record<AdminCenterSectionCode, Record<string, unknown>>>`, que se guarda
   con `saveAdminCenterSection(token, code, sectionCode, content, version)`.
 - **Forma exacta del `content` de las 8 secciones genéricas — ahora confirmada** leyendo
-  directamente los tipos y el armado del payload en `center-section-workflow.tsx` (tipos en
-  líneas 260-480, armado del `content` en líneas 5427-5660). Detalle completo en la nueva
-  sección 3.1. Confirmé también que `politicas` usa códigos como `PLAN_DESARROLLO_GAD`,
+  directamente los tipos y el armado del payload (hoy en `src/lib/center-sections/`: tipos en
+  `form-types.ts`, armado del `content` en `to-section-content.ts` y lectura inversa en
+  `create-section-values.ts`). Detalle completo en la nueva sección 3.1. Confirmé también que `politicas` usa códigos como `PLAN_DESARROLLO_GAD`,
   `PLANIFICACION_TERRITORIAL`, `REGULACIONES_APLICABLES`, `ORDENANZAS_APLICABLES`, que
   coinciden con `preguntas_politica.codigo`.
 - Hallazgo adicional relevante: las respuestas tipo SI/NO en toda la app usan un enum de
   **cuatro** valores, no un booleano: `SectionResponse = "SI" | "NO" | "SIN_INFORMACION" |
-"NO_APLICA"` (`center-section-workflow.tsx:51-58`). Esto encaja con algo que ya había visto
+"NO_APLICA"` (`SECTION_RESPONSE_OPTIONS` en `src/lib/center-sections/options.ts`). Esto encaja con algo que ya había visto
   en el Excel pero no había interpretado bien: los encabezados de casi todas las secciones
   (`Q38=SI S38=NO U38=S/I`, y lo mismo en filas 73/127/155/224/233/258/274/292) no son
   decoración — "S/I" (Sin información) es un tercer estado real por pregunta, que mapea
@@ -140,7 +141,7 @@ previa) inspeccioné `information_schema` para 135 tablas. Confirmado:
 - Los 14 códigos de sección (`identificacion`, `ubicacion-admin`, `caracteristicas`,
   `accesibilidad`, `planta`, `conservacion`, `higiene-seguridad`, `politicas`, `actividades`,
   `promocion`, `visitantes`, `recurso-humano`, `descripcion`, `anexos`) están definidos en
-  `center-section-workflow.tsx:68-181` y corresponden 1:1 al orden de las secciones 1–14 de la
+  `src/lib/center-sections/definitions.ts` y corresponden 1:1 al orden de las secciones 1–14 de la
   ficha (identificación+ubicación cubren las secciones 1 y 2 del PDF).
 - Botón "Importar ficha": debe ir en `center-editor.tsx`, junto al encabezado del paso
   "Identificación y clasificación" (donde hoy está el botón "Nueva ficha" en
@@ -245,8 +246,8 @@ general de la sección 2.4. Se listan los campos escalares/tabulares confirmados
 
 ### 3.1 Forma confirmada del `content` de las 8 secciones genéricas
 
-Confirmado leyendo `center-section-workflow.tsx` (tipos y armado real del payload, no
-inferido). `mapearFichaAFormulario` debe producir exactamente estas formas para
+Confirmado leyendo los tipos y el armado real del payload (hoy en
+`src/lib/center-sections/form-types.ts` y `to-section-content.ts`), no inferido. `mapearFichaAFormulario` debe producir exactamente estas formas para
 `saveAdminCenterSection(token, code, sectionCode, content, version)`:
 
 | `sectionCode`       | Forma de `content`                                                                                                                                                                                                                                                                                                                                 | Enums confirmados                                                                                                                                                                                                                                                                                                                                            |

@@ -409,7 +409,12 @@ function fixtureValues(definition: SectionDefinition): SectionFormValues {
               quantity: "2",
               observation: "Registrada en campo",
             },
-            { label: "Fila adicional", response: "NO_APLICA", quantity: "", observation: "" },
+            {
+              label: "Fila adicional",
+              response: "NO_APLICA",
+              quantity: "",
+              observation: "",
+            },
           ]
         : [],
     ...sectionFixtures[definition.code],
@@ -470,7 +475,9 @@ describe("lectura del contenido guardado", () => {
   test("descarta valores cerrados desconocidos", () => {
     const values = createSectionValues(definitionOf("higiene-seguridad"), {
       hygieneSafety: {
-        entries: [{ kind: "OTRO", scope: "LEJOS", condition: "EXCELENTE", response: "X" }],
+        entries: [
+          { kind: "OTRO", scope: "LEJOS", condition: "EXCELENTE", response: "X" },
+        ],
       },
     });
     expect(values.hygieneEntries[0]).toMatchObject({
@@ -484,6 +491,8 @@ describe("lectura del contenido guardado", () => {
 
 describe("parseMonths", () => {
   test("ordena, quita repetidos y descarta meses fuera de 1–12", () => {
-    expect(parseMonths(["12", "1", " 7 ", "1", "13", "0", "abc", ""])).toEqual([1, 7, 12]);
+    expect(parseMonths(["12", "1", " 7 ", "1", "13", "0", "abc", ""])).toEqual([
+      1, 7, 12,
+    ]);
   });
 });

@@ -173,7 +173,10 @@ export const fichaPoliticaSchema = z.object({
   especifique: texto,
 });
 
-export const fichaActividadSchema = z.object({ nombre: z.string(), marcada: z.boolean() });
+export const fichaActividadSchema = z.object({
+  nombre: z.string(),
+  marcada: z.boolean(),
+});
 
 export const fichaPromocionSchema = z.object({
   tienePlanPromocionCantonal: siNo,

@@ -51,13 +51,11 @@ export function CoordinatePickerDialog({
   initialLongitude,
   onClose,
   onConfirm,
-  open = true,
 }: Readonly<{
   initialLatitude?: string | number | null;
   initialLongitude?: string | number | null;
   onClose: () => void;
   onConfirm: (coordinate: Coordinate) => void;
-  open?: boolean;
 }>) {
   // Color concreto (no una variable CSS): MapLibre lo aplica como atributo SVG.
   const markerColor = useTheme().palette.primary.main;
@@ -119,7 +117,7 @@ export function CoordinatePickerDialog({
       fullWidth
       maxWidth="lg"
       onClose={onClose}
-      open={open}
+      open
     >
       <DialogTitle id="coordinate-picker-title" sx={{ pr: 7 }}>
         Seleccionar ubicación

@@ -31,7 +31,11 @@ import {
 } from "../shared/section-rules";
 import type { SectionFieldsProps } from "./types";
 
-type RowProps = { index: number; catalogs: AdminCatalogs | null; removeButton: ReactNode };
+type RowProps = {
+  index: number;
+  catalogs: AdminCatalogs | null;
+  removeButton: ReactNode;
+};
 
 const PLANT_QUANTITIES = ["quantity1", "quantity2", "quantity3"] as const;
 
@@ -62,7 +66,11 @@ export function PlantFields({ catalogs }: SectionFieldsProps) {
         renderRow={(index, removeButton) => (
           <Grid container spacing={webTokens.spacing.control}>
             <Grid size={{ xs: 12, md: 3 }}>
-              <SectionSelect name={`plant.${index}.scope`} label="Ámbito" options={scopes} />
+              <SectionSelect
+                name={`plant.${index}.scope`}
+                label="Ámbito"
+                options={scopes}
+              />
             </Grid>
             <CatalogOrFreeText
               catalogName={`plant.${index}.typeId`}

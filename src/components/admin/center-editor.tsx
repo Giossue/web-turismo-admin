@@ -76,7 +76,8 @@ export function CenterEditor({
   // La ficha vive solo en la caché de TanStack; el formulario se sincroniza con
   // ella y conserva los cambios que la persona aún no guardó.
   const serverValues = useMemo(
-    () => (detail && catalogs ? toFormValues(editorDraftOf(detail), catalogs) : undefined),
+    () =>
+      detail && catalogs ? toFormValues(editorDraftOf(detail), catalogs) : undefined,
     [catalogs, detail],
   );
   const form = useForm<CenterFormValues>({

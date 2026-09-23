@@ -56,7 +56,11 @@ function PolicyRow({ index, question }: { index: number; question: string }) {
           <SectionResponseSelect name={`policies.${index}.response`} />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-          <SectionNumberField name={`policies.${index}.year`} label="Año" {...YEAR_LIMITS} />
+          <SectionNumberField
+            name={`policies.${index}.year`}
+            label="Año"
+            {...YEAR_LIMITS}
+          />
         </Grid>
         <Grid size={{ xs: 12, md: 2 }}>
           <SectionTextField

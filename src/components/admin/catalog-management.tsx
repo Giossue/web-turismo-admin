@@ -416,9 +416,7 @@ export function CatalogManagement({
         fullWidth
         maxWidth="sm"
       >
-        <DialogTitle>
-          {creating ? config.createTitle : config.editTitle}
-        </DialogTitle>
+        <DialogTitle>{creating ? config.createTitle : config.editTitle}</DialogTitle>
         <DialogContent>
           <Stack spacing={webTokens.spacing.control} sx={{ pt: 1 }}>
             <TextField

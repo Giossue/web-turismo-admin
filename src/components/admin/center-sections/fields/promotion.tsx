@@ -100,7 +100,10 @@ function MediaRow({
   return (
     <Grid container spacing={webTokens.spacing.control} alignItems="flex-start">
       <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-        <SectionResponseSelect name={`promotionMedia.${index}.response`} label="Utilizado" />
+        <SectionResponseSelect
+          name={`promotionMedia.${index}.response`}
+          label="Utilizado"
+        />
       </Grid>
       <Grid size={{ xs: 12, sm: 6, md: 3 }}>
         <SectionCatalogSelect

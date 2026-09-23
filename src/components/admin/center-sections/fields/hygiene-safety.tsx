@@ -83,7 +83,11 @@ export function HygieneSafetyFields({ catalogs }: SectionFieldsProps) {
         createEmpty={emptyHygieneEntry}
         removeLabel="Eliminar registro"
         renderRow={(index, removeButton) => (
-          <HygieneEntryRow index={index} catalogs={catalogs} removeButton={removeButton} />
+          <HygieneEntryRow
+            index={index}
+            catalogs={catalogs}
+            removeButton={removeButton}
+          />
         )}
       />
       <RadiosGroup />
@@ -105,7 +109,8 @@ function HygieneEntryRow({
   const kind = useWatch({ control, name: `hygieneEntries.${index}.kind` });
   const response = useWatch({ control, name: `hygieneEntries.${index}.response` });
   // Las amenazas siempre admiten detalle; el resto solo si el servicio existe.
-  const detailEnabled = kind === "THREAT" || (response !== "NO" && response !== "NO_APLICA");
+  const detailEnabled =
+    kind === "THREAT" || (response !== "NO" && response !== "NO_APLICA");
   const typeOptions = typeOptionsFor(catalogs, kind);
   const signageMaterials = catalogs?.signageMaterials ?? [];
 
@@ -251,7 +256,10 @@ function ContingencyGroup() {
   return (
     <FieldGroup title="Plan de contingencia">
       <Grid size={{ xs: 12, sm: 4 }}>
-        <SectionResponseSelect name="hygieneContingency.exists" label="¿Existe un plan?" />
+        <SectionResponseSelect
+          name="hygieneContingency.exists"
+          label="¿Existe un plan?"
+        />
       </Grid>
       <Grid size={{ xs: 12, sm: 4 }}>
         <SectionTextField

@@ -163,7 +163,10 @@ export function ConservationFields({ catalogs }: SectionFieldsProps) {
               <SectionTextField
                 name={`declarations.${index}.denomination`}
                 label="Denominación"
-                rules={{ required: required("Indica la denominación"), ...textRules(250) }}
+                rules={{
+                  required: required("Indica la denominación"),
+                  ...textRules(250),
+                }}
               />
             </Grid>
             <Grid size={{ xs: 10, sm: 5, md: 3 }}>

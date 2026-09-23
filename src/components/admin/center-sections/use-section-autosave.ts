@@ -7,11 +7,7 @@ import {
   type AdminCenterDetail,
   type AdminCenterSections,
 } from "@/lib/admin-api";
-import {
-  adminKeys,
-  centerSaveScope,
-  getCachedCenterVersion,
-} from "@/lib/admin-queries";
+import { adminKeys, centerSaveScope, getCachedCenterVersion } from "@/lib/admin-queries";
 import { createSectionValues } from "@/lib/center-sections/create-section-values";
 import type { SectionDefinition } from "@/lib/center-sections/definitions";
 import type { SectionFormValues } from "@/lib/center-sections/form-types";
@@ -188,7 +184,11 @@ export function useSectionAutosave({
   const scheduleSave = useEffectEvent((values: SectionFormValues) => {
     if (!code || !canEdit) return;
     clearTimer();
-    if (isUnchanged(contentKey(definition, values))) return;
+    if (isUnchanged(contentKey(definition, values))) {
+      // Nada pendiente de guardar: el aviso anterior de este apartado ya no aplica.
+      clearReportedError();
+      return;
+    }
     timerRef.current = setTimeout(() => flush(), AUTOSAVE_DELAY_MS);
   });
 

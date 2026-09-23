@@ -122,7 +122,10 @@ export function VisitorsFields({ catalogs }: SectionFieldsProps) {
               <SectionTextField
                 name={`visitorOrigins.${index}.place`}
                 label="Ciudad o país"
-                rules={{ required: required("Indica la ciudad o el país"), ...textRules(150) }}
+                rules={{
+                  required: required("Indica la ciudad o el país"),
+                  ...textRules(150),
+                }}
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 1.5 }}>

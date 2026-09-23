@@ -35,7 +35,10 @@ export function LocationPanel({
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <RhfTextField<CenterFormValues> name="address.street" label="Calle principal" />
+            <RhfTextField<CenterFormValues>
+              name="address.street"
+              label="Calle principal"
+            />
           </Grid>
           <Grid size={{ xs: 12, sm: 3 }}>
             <RhfTextField<CenterFormValues> name="address.number" label="Número" />
@@ -86,10 +89,16 @@ export function LocationPanel({
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <RhfTextField<CenterFormValues> name="administration.position" label="Cargo" />
+            <RhfTextField<CenterFormValues>
+              name="administration.position"
+              label="Cargo"
+            />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <RhfTextField<CenterFormValues> name="administration.phone" label="Teléfono" />
+            <RhfTextField<CenterFormValues>
+              name="administration.phone"
+              label="Teléfono"
+            />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
             <RhfTextField<CenterFormValues>

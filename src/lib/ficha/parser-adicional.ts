@@ -74,7 +74,9 @@ export function leerPoliticas(worksheet: ExcelJS.Worksheet): FichaPolitica[] {
       codigo: code,
       pregunta: leerTextoOpcional(worksheet, `B${celdas.fila}`) ?? "",
       respuesta: leerSiNoDirecto(worksheet, celdas.refSi, celdas.refNo),
-      anioElaboracion: celdas.refAnio ? leerNumeroOpcional(worksheet, celdas.refAnio) : null,
+      anioElaboracion: celdas.refAnio
+        ? leerNumeroOpcional(worksheet, celdas.refAnio)
+        : null,
       especifique: celdas.refEspecifique
         ? leerTextoOpcional(worksheet, celdas.refEspecifique)
         : null,

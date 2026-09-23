@@ -267,7 +267,9 @@ const writeHumanResources: SectionWriter = (values) => ({
       administrationOperation: toNullableNumber(
         values.humanResourceSummary.administrationOperation,
       ),
-      specializedTourism: toNullableNumber(values.humanResourceSummary.specializedTourism),
+      specializedTourism: toNullableNumber(
+        values.humanResourceSummary.specializedTourism,
+      ),
       observation: values.humanResourceSummary.observation.trim(),
     },
     training: values.humanResourceTraining.map((training) => ({

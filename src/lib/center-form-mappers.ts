@@ -38,7 +38,10 @@ const SECTIONS_INFERRED_FROM_DRAFT: ReadonlyArray<
   ["caracteristicas", (draft) => Boolean(draft.productLineId && draft.scenarioId)],
   ["actividades", (draft) => Boolean(draft.activities?.some((item) => item.active))],
   ["descripcion", (draft) => Boolean(draft.description?.trim())],
-  ["accesibilidad", (draft) => Boolean(draft.accessibility?.some((item) => item.applies))],
+  [
+    "accesibilidad",
+    (draft) => Boolean(draft.accessibility?.some((item) => item.applies)),
+  ],
   ["planta", (draft) => Boolean(draft.facilities?.length)],
 ];
 
@@ -132,7 +135,8 @@ export function centerCatalogOptions(
     parishes: childrenOf(catalogs?.parishes, "cantonId", cantonId),
     zones: cantonId
       ? (catalogs?.zones ?? []).filter(
-          (zone) => zone.localityId !== undefined && localityIds.has(Number(zone.localityId)),
+          (zone) =>
+            zone.localityId !== undefined && localityIds.has(Number(zone.localityId)),
         )
       : [],
     activities: activityOptionsFor(catalogs, categoryId),

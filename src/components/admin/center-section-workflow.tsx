@@ -7,10 +7,7 @@ import { useMemo } from "react";
 import { SectionCard } from "@/components/admin/center-sections/section-card";
 import { ContentState } from "@/components/ui/content-state";
 import type { AdminCatalogs, AdminCenterDetail, AdminMediaItem } from "@/lib/admin-api";
-import {
-  centerMediaQueryOptions,
-  centerSectionsQueryOptions,
-} from "@/lib/admin-queries";
+import { centerMediaQueryOptions, centerSectionsQueryOptions } from "@/lib/admin-queries";
 import {
   centerSectionDefinitions,
   type CenterSectionCode,

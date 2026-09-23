@@ -36,7 +36,11 @@ import {
 } from "../shared/section-rules";
 import type { SectionFieldsProps } from "./types";
 
-type RowProps = { index: number; catalogs: AdminCatalogs | null; removeButton: ReactNode };
+type RowProps = {
+  index: number;
+  catalogs: AdminCatalogs | null;
+  removeButton: ReactNode;
+};
 
 const ROAD_COORDINATES = [
   { key: "startLatitude", label: "Latitud inicial", limits: LATITUDE_LIMITS },
@@ -145,7 +149,11 @@ export function AccessibilityFields({ catalogs, sugerencias }: SectionFieldsProp
         createEmpty={emptyTransportType}
         removeLabel="Eliminar tipo de transporte"
         renderRow={(index, removeButton) => (
-          <TransportTypeRow index={index} catalogs={catalogs} removeButton={removeButton} />
+          <TransportTypeRow
+            index={index}
+            catalogs={catalogs}
+            removeButton={removeButton}
+          />
         )}
       />
 

@@ -272,7 +272,9 @@ export const EstablishmentManagement = forwardRef<
       ),
     [catalogs?.establishmentCategories, filterClassificationId],
   );
-  const filterCategoryId = filterCategories.find((option) => option.name === category)?.id;
+  const filterCategoryId = filterCategories.find(
+    (option) => option.name === category,
+  )?.id;
   const provinces = catalogs?.provinces ?? [];
   const cantons = (catalogs?.cantons ?? []).filter(
     (option) => !provinceId || String(option.provinceId) === provinceId,
