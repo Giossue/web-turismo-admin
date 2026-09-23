@@ -39,7 +39,8 @@ export const adminKeys = {
     [...adminKeys.all, "opinion-history", reviewCode] as const,
   summary: () => [...adminKeys.all, "summary"] as const,
   allCenters: () => [...adminKeys.all, "centers"] as const,
-  centers: (filters: AdminCentersOptions) => [...adminKeys.allCenters(), filters] as const,
+  centers: (filters: AdminCentersOptions) =>
+    [...adminKeys.allCenters(), filters] as const,
   allOpinions: () => [...adminKeys.all, "opinions"] as const,
   opinions: (filters: { limit: number; offset: number }) =>
     [...adminKeys.allOpinions(), filters] as const,

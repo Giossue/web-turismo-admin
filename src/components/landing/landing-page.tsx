@@ -1,10 +1,9 @@
-"use client";
-
 import ArrowForwardRounded from "@mui/icons-material/ArrowForwardRounded";
 import ExploreRounded from "@mui/icons-material/ExploreRounded";
 import FactCheckRounded from "@mui/icons-material/FactCheckRounded";
 import MapRounded from "@mui/icons-material/MapRounded";
 import VerifiedRounded from "@mui/icons-material/VerifiedRounded";
+import type { SvgIconComponent } from "@mui/icons-material";
 import {
   Box,
   Button,
@@ -19,6 +18,26 @@ import {
 
 import type { PublishedCenter } from "@/lib/api";
 import { webTokens } from "@/theme/tokens";
+
+type Feature = { Icon: SvgIconComponent; title: string; description: string };
+
+const FEATURES: readonly Feature[] = [
+  {
+    Icon: FactCheckRounded,
+    title: "Registro y revisión",
+    description: "Cada ficha sigue un flujo auditable antes de publicarse.",
+  },
+  {
+    Icon: MapRounded,
+    title: "Mapa y rutas",
+    description: "La información validada alimenta mapas, búsqueda y navegación.",
+  },
+  {
+    Icon: VerifiedRounded,
+    title: "Datos confiables",
+    description: "El contenido publicado conserva responsables y trazabilidad.",
+  },
+];
 
 type LandingPageProps = {
   centers: PublishedCenter[];
@@ -131,27 +150,13 @@ export function LandingPage({ centers, apiOnline }: LandingPageProps) {
         </Stack>
 
         <Grid container spacing={webTokens.spacing.publicGrid}>
-          {[
-            [
-              <FactCheckRounded key="fact" />,
-              "Registro y revisión",
-              "Cada ficha sigue un flujo auditable antes de publicarse.",
-            ],
-            [
-              <MapRounded key="map" />,
-              "Mapa y rutas",
-              "La información validada alimenta mapas, búsqueda y navegación.",
-            ],
-            [
-              <VerifiedRounded key="verified" />,
-              "Datos confiables",
-              "El contenido publicado conserva responsables y trazabilidad.",
-            ],
-          ].map(([icon, title, description]) => (
-            <Grid key={title as string} size={{ xs: 12, md: 4 }}>
+          {FEATURES.map(({ Icon, title, description }) => (
+            <Grid key={title} size={{ xs: 12, md: 4 }}>
               <Card sx={{ height: "100%" }}>
                 <CardContent sx={{ p: webTokens.spacing.publicCard }}>
-                  <Box sx={{ color: "primary.main", mb: 2 }}>{icon}</Box>
+                  <Box sx={{ color: "primary.main", mb: 2 }}>
+                    <Icon />
+                  </Box>
                   <Typography variant="h6" gutterBottom>
                     {title}
                   </Typography>

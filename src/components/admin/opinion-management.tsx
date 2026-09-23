@@ -260,7 +260,9 @@ export function OpinionManagement({ token }: { token: string }) {
               item: intent.item,
               action: intent.action,
               reason:
-                intent.action === "REJECT" ? review.reason.trim() || undefined : undefined,
+                intent.action === "REJECT"
+                  ? review.reason.trim() || undefined
+                  : undefined,
             })
           }
         >
@@ -313,7 +315,9 @@ function OpinionHistoryDetail({ history }: { history: AdminOpinionHistory }) {
                 />
               </Stack>
               <OpinionRating rating={version.rating} />
-              <Typography variant="body2">{version.comment || "Sin comentario"}</Typography>
+              <Typography variant="body2">
+                {version.comment || "Sin comentario"}
+              </Typography>
               <Typography color="text.secondary" variant="caption">
                 Enviada: {formatDateTime(version.submittedAt)}
                 {version.reviewedAt

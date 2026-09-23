@@ -1,159 +1,50 @@
 "use client";
 
 import ArrowBackRounded from "@mui/icons-material/ArrowBackRounded";
-import ArrowForwardRounded from "@mui/icons-material/ArrowForwardRounded";
-import AccessTimeRounded from "@mui/icons-material/AccessTimeRounded";
-import AccessibleRounded from "@mui/icons-material/AccessibleRounded";
-import BusinessRounded from "@mui/icons-material/BusinessRounded";
-import CategoryRounded from "@mui/icons-material/CategoryRounded";
 import CloudUploadRounded from "@mui/icons-material/CloudUploadRounded";
-import DirectionsWalkRounded from "@mui/icons-material/DirectionsWalkRounded";
-import FactCheckRounded from "@mui/icons-material/FactCheckRounded";
-import MapRounded from "@mui/icons-material/MapRounded";
-import MiscellaneousServicesRounded from "@mui/icons-material/MiscellaneousServicesRounded";
 import PublishRounded from "@mui/icons-material/PublishRounded";
-import {
-  Alert,
-  Box,
-  Button,
-  ButtonBase,
-  Checkbox,
-  Divider,
-  FormControlLabel,
-  Grid,
-  Stack,
-  TextField,
-  Typography,
-} from "@mui/material";
+import { Alert, Button, Stack, Typography } from "@mui/material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useForm, useWatch } from "react-hook-form";
+import { FormProvider, useForm } from "react-hook-form";
 
-import { FlatSurface } from "@/components/ui/flat-surface";
-import { ContentState } from "@/components/ui/content-state";
-import { CoordinatePickerDialog } from "@/components/admin/coordinate-picker-dialog";
-import { MediaManager } from "@/components/admin/media-manager";
-import { CenterReviewDiff } from "@/components/admin/center-review-diff";
-import { ContinuousCenterSectionWorkflow } from "@/components/admin/center-section-workflow";
-import { RhfCatalogSelect } from "@/components/ui/form/rhf-select";
-import { PageHeader } from "@/components/ui/page-header";
-import { SectionHeader } from "@/components/ui/section-header";
+import { CenterFormPanel } from "@/components/admin/center-editor/center-form-panels";
+import { CenterSummaryStep } from "@/components/admin/center-editor/center-summary-step";
 import {
-  createAdminCenter,
-  getAdminCenter,
-  importFichaFile,
-  publishAdminCenter,
-  saveAdminCenter,
-  submitAdminCenterReview,
-  type AdminCenterDetail,
-  type AdminCatalogs,
-  type CenterDraft,
-  type SaveCenterInput,
-} from "@/lib/admin-api";
+  CenterWizardNavigation,
+  CenterWizardStepper,
+} from "@/components/admin/center-editor/center-wizard-stepper";
+import { useCenterAutosave } from "@/components/admin/center-editor/use-center-autosave";
+import { useCenterSave } from "@/components/admin/center-editor/use-center-save";
+import { useFichaImport } from "@/components/admin/center-editor/use-ficha-import";
+import { ContinuousCenterSectionWorkflow } from "@/components/admin/center-section-workflow";
+import { MediaManager } from "@/components/admin/media-manager";
+import { ContentState } from "@/components/ui/content-state";
+import { EditableContext } from "@/components/ui/form/editable-context";
+import { PageHeader } from "@/components/ui/page-header";
+import { getAdminCenter, type AdminCenterDetail } from "@/lib/admin-api";
 import { adminKeys, catalogsQueryOptions } from "@/lib/admin-queries";
+import {
+  CENTER_CREATE_FIELDS,
+  CENTER_STEP_FIELDS,
+  emptyCenterFormValues,
+  isReadyToCreate,
+  type CenterFormValues,
+} from "@/lib/center-form";
+import { editorDraftOf, toFormValues, withEditorDraft } from "@/lib/center-form-mappers";
 import { centerSectionDefinitions } from "@/lib/center-sections/definitions";
 import { errorMessage } from "@/lib/errors";
-import type { SugerenciasSecciones } from "@/lib/ficha/sugerencias-secciones";
-import { findCatalogOption, toOptionalNumber } from "@/lib/values";
 import { webTokens } from "@/theme/tokens";
-
-export type FormValues = {
-  name: string;
-  categoryId: string;
-  typeId: string;
-  subtypeId: string;
-  touristZoneId: string;
-  provinceId: string;
-  cantonId: string;
-  parishId: string;
-  productLineId: string;
-  scenarioId: string;
-  hierarchyId: string;
-  latitude: string;
-  longitude: string;
-  altitudeMeters: string;
-  description: string;
-  address: {
-    barrio: string;
-    street: string;
-    number: string;
-    crossStreet: string;
-  };
-  administration: {
-    type: string;
-    institution: string;
-    name: string;
-    position: string;
-    phone: string;
-    email: string;
-    observation: string;
-  };
-  admission: {
-    incomeTypeId: string;
-    attentionModeId: string;
-    opensAt: string;
-    closesAt: string;
-    otherAttention: string;
-    reservations: boolean;
-    priceFrom: string;
-    priceTo: string;
-    observation: string;
-  };
-  activityIds: string[];
-  accessibilityIds: string[];
-  facilityIds: string[];
-  facilityQuantities: Record<string, string>;
-  facilityObservations: Record<string, string>;
-};
-
-const emptyValues: FormValues = {
-  name: "",
-  categoryId: "",
-  typeId: "",
-  subtypeId: "",
-  touristZoneId: "",
-  provinceId: "",
-  cantonId: "",
-  parishId: "",
-  productLineId: "",
-  scenarioId: "",
-  hierarchyId: "",
-  latitude: "",
-  longitude: "",
-  altitudeMeters: "",
-  description: "",
-  address: { barrio: "", street: "", number: "", crossStreet: "" },
-  administration: {
-    type: "",
-    institution: "",
-    name: "",
-    position: "",
-    phone: "",
-    email: "",
-    observation: "",
-  },
-  admission: {
-    incomeTypeId: "",
-    attentionModeId: "",
-    opensAt: "",
-    closesAt: "",
-    otherAttention: "",
-    reservations: false,
-    priceFrom: "",
-    priceTo: "",
-    observation: "",
-  },
-  activityIds: [],
-  accessibilityIds: [],
-  facilityIds: [],
-  facilityQuantities: {},
-  facilityObservations: {},
-};
 
 const centerWizardSteps = centerSectionDefinitions.map((section) => ({
   key: section.code,
   title: section.title,
 }));
+const SUMMARY_STEP = centerSectionDefinitions.length;
+const EDITABLE_STATES = new Set(["BORRADOR", "RECHAZADO", "PUBLICADO"]);
+const REQUIRED_FIELDS_MESSAGE = "Completa los campos obligatorios para continuar.";
+
+const alwaysReady = () => true;
 
 export function CenterEditor({
   token,
@@ -170,27 +61,6 @@ export function CenterEditor({
   onNotice: (message: string) => void;
   onError: (message: string | null) => void;
 }) {
-  const [detailOverride, setDetailOverride] = useState<AdminCenterDetail | null>(null);
-  const [working, setWorking] = useState<"auto" | "review" | "publish" | null>(null);
-  const [activeStep, setActiveStep] = useState(0);
-  const [importing, setImporting] = useState(false);
-  const [importWarnings, setImportWarnings] = useState<string[]>([]);
-  const [sugerenciasImportadas, setSugerenciasImportadas] =
-    useState<SugerenciasSecciones | null>(null);
-  const [coordinatePickerOpen, setCoordinatePickerOpen] = useState(false);
-  const importInputRef = useRef<HTMLInputElement | null>(null);
-  const {
-    control,
-    register,
-    reset,
-    handleSubmit,
-    getValues,
-    setValue,
-    subscribe,
-    formState: { errors, isDirty },
-  } = useForm<FormValues>({
-    defaultValues: emptyValues,
-  });
   const queryClient = useQueryClient();
   const catalogsQuery = useQuery(catalogsQueryOptions(token));
   const centerQuery = useQuery({
@@ -199,351 +69,98 @@ export function CenterEditor({
     enabled: token.length > 0 && code !== null,
   });
   const catalogs = catalogsQuery.data ?? null;
-  const rawDetail = detailOverride ?? centerQuery.data ?? null;
   const detail = useMemo(
-    () => (rawDetail ? withEditorDraft(rawDetail) : null),
-    [rawDetail],
+    () => (centerQuery.data ? withEditorDraft(centerQuery.data) : null),
+    [centerQuery.data],
   );
-  const loading = catalogsQuery.isLoading || centerQuery.isLoading;
-  const effectiveCode = detail?.code ?? code;
-  const isNew = effectiveCode === null;
-  const reportError = useCallback(
-    (message: string | null) => onError(message),
-    [onError],
+  // La ficha vive solo en la caché de TanStack; el formulario se sincroniza con
+  // ella y conserva los cambios que la persona aún no guardó.
+  const serverValues = useMemo(
+    () => (detail && catalogs ? toFormValues(editorDraftOf(detail), catalogs) : undefined),
+    [catalogs, detail],
   );
+  const form = useForm<CenterFormValues>({
+    mode: "onChange",
+    defaultValues: emptyCenterFormValues,
+    values: serverValues,
+    resetOptions: { keepDirtyValues: true },
+  });
+  const [activeStep, setActiveStep] = useState(0);
+  const importInputRef = useRef<HTMLInputElement | null>(null);
+
+  const isNew = code === null;
+  const state = detail?.status.code ?? "BORRADOR";
+  const canEdit = isNew || EDITABLE_STATES.has(state);
+  const canReview = !isNew && (state === "BORRADOR" || state === "RECHAZADO");
+  const canPublish = state === "APROBADO";
+  const activeSectionCode =
+    activeStep < SUMMARY_STEP ? centerSectionDefinitions[activeStep].code : null;
+
+  const centerSave = useCenterSave({ token, code, catalogs, onSaved, onNotice, onError });
+  const autosave = useCenterAutosave(form, {
+    enabled: canEdit,
+    canSave: isNew ? isReadyToCreate : alwaysReady,
+    save: (values) => centerSave.save(values, { silent: true }),
+  });
+  const fichaImport = useFichaImport({
+    token,
+    catalogs,
+    form,
+    onImported: autosave.markChanged,
+    onNotice,
+    onError,
+  });
+
   const handleDetailChanged = useCallback(
     (saved: AdminCenterDetail) => {
-      setDetailOverride(saved);
       queryClient.setQueryData(adminKeys.center(saved.code), saved);
       onSaved(saved);
     },
     [onSaved, queryClient],
   );
-
-  useEffect(() => {
-    if (detail && catalogs && !isDirty) {
-      reset(toFormValues(detail.draft ?? detail.published, catalogs));
-    }
-  }, [catalogs, detail, isDirty, reset]);
+  const notifyCoordinatesPicked = useCallback(
+    () => onNotice("Coordenadas seleccionadas en el mapa."),
+    [onNotice],
+  );
 
   const queryError = catalogsQuery.error ?? centerQuery.error;
-  const queryErrorMessage = queryError
-    ? errorMessage(queryError, "No se pudo cargar la ficha.")
-    : null;
   useEffect(() => {
-    if (queryErrorMessage) onError(queryErrorMessage);
-  }, [onError, queryErrorMessage]);
-  const state = detail?.status.code ?? "BORRADOR";
-  const canEdit =
-    isNew || state === "BORRADOR" || state === "RECHAZADO" || state === "PUBLICADO";
-  const categoryId = useWatch({ control, name: "categoryId" });
-  const typeId = useWatch({ control, name: "typeId" });
-  const provinceId = useWatch({ control, name: "provinceId" });
-  const cantonId = useWatch({ control, name: "cantonId" });
-  const parishId = useWatch({ control, name: "parishId" });
-  const activityIds = useWatch({ control, name: "activityIds" });
-  const selectedFacilityIds = useWatch({ control, name: "facilityIds" }) ?? [];
-  const latitude = useWatch({ control, name: "latitude" });
-  const longitude = useWatch({ control, name: "longitude" });
-  const typeOptions = (catalogs?.types ?? []).filter(
-    (option) => Boolean(categoryId) && Number(option.categoryId) === Number(categoryId),
-  );
-  const subtypeOptions = (catalogs?.subtypes ?? []).filter(
-    (option) => Boolean(typeId) && Number(option.typeId) === Number(typeId),
-  );
-  const cantonOptions = (catalogs?.cantons ?? []).filter(
-    (option) => Boolean(provinceId) && Number(option.provinceId) === Number(provinceId),
-  );
-  const parishOptions = (catalogs?.parishes ?? []).filter(
-    (option) => Boolean(cantonId) && Number(option.cantonId) === Number(cantonId),
-  );
-  const localityOptions = (catalogs?.localities ?? []).filter(
-    (option) =>
-      (!provinceId || Number(option.provinceId) === Number(provinceId)) &&
-      (!cantonId || Number(option.cantonId) === Number(cantonId)),
-  );
-  const zoneOptions = (catalogs?.zones ?? []).filter((option) => {
-    if (!cantonId) return false;
-    if (option.localityId === undefined) return false;
-    return localityOptions.some(
-      (locality) => Number(locality.id) === Number(option.localityId),
-    );
-  });
-  const activityOptions = (catalogs?.activities ?? []).filter(
-    (option) => Boolean(categoryId) && Number(option.categoryId) === Number(categoryId),
-  );
-  const canReview = state === "BORRADOR" || state === "RECHAZADO";
-  const canPublish = state === "APROBADO";
-  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const skipNextAutoSaveRef = useRef(false);
-  const autoSaveVersionRef = useRef(0);
-  const lastAttemptedAutoSaveVersionRef = useRef<number | null>(null);
-  const pendingAutoSaveRef = useRef(false);
-  const summaryStepIndex = centerSectionDefinitions.length;
-  const isSectionStep = activeStep >= 0 && activeStep < summaryStepIndex;
-  const isSummaryStep = activeStep === summaryStepIndex;
-  const activeSectionCode = isSectionStep
-    ? (centerSectionDefinitions[activeStep]?.code ?? null)
-    : null;
-
-  useEffect(() => {
-    if (
-      canEdit &&
-      typeId &&
-      !typeOptions.some((option) => Number(option.id) === Number(typeId))
-    ) {
-      setValue("typeId", "");
-      setValue("subtypeId", "");
-    }
-  }, [canEdit, setValue, typeId, typeOptions]);
-
-  useEffect(() => {
-    if (!canEdit) return;
-    const subtype = getValues("subtypeId");
-    if (
-      subtype &&
-      !subtypeOptions.some((option) => Number(option.id) === Number(subtype))
-    ) {
-      setValue("subtypeId", "");
-    }
-  }, [canEdit, getValues, setValue, subtypeOptions]);
-
-  useEffect(() => {
-    if (
-      canEdit &&
-      cantonId &&
-      !cantonOptions.some((option) => Number(option.id) === Number(cantonId))
-    ) {
-      setValue("cantonId", "");
-      setValue("parishId", "");
-    }
-  }, [canEdit, cantonId, cantonOptions, setValue]);
-
-  useEffect(() => {
-    if (
-      canEdit &&
-      parishId &&
-      !parishOptions.some((option) => Number(option.id) === Number(parishId))
-    ) {
-      setValue("parishId", "");
-    }
-  }, [canEdit, parishId, parishOptions, setValue]);
-
-  useEffect(() => {
-    if (!canEdit) return;
-    const touristZoneId = getValues("touristZoneId");
-    if (
-      touristZoneId &&
-      !zoneOptions.some((option) => Number(option.id) === Number(touristZoneId))
-    ) {
-      setValue("touristZoneId", "");
-    }
-  }, [canEdit, getValues, setValue, zoneOptions]);
-
-  useEffect(() => {
-    if (!canEdit) return;
-    const currentActivityIds = activityIds ?? [];
-    const validActivityIds = new Set(activityOptions.map((option) => String(option.id)));
-    const nextActivityIds = currentActivityIds.filter((id) =>
-      validActivityIds.has(String(id)),
-    );
-    if (nextActivityIds.length !== currentActivityIds.length) {
-      setValue("activityIds", nextActivityIds);
-    }
-  }, [activityIds, activityOptions, canEdit, setValue]);
-
-  const save = useCallback(
-    async (values: FormValues, submitForReview = false, silent = false) => {
-      const submittedVersion = autoSaveVersionRef.current;
-      const submittedSignature = JSON.stringify(values);
-      if (autoSaveTimerRef.current) {
-        clearTimeout(autoSaveTimerRef.current);
-        autoSaveTimerRef.current = null;
-      }
-      pendingAutoSaveRef.current = false;
-      lastAttemptedAutoSaveVersionRef.current = submittedVersion;
-      setWorking(submitForReview ? "review" : "auto");
-      reportError(null);
-      try {
-        const input = toPayload(values, detail?.version);
-        let saved = isNew
-          ? await createAdminCenter(token, input)
-          : await saveAdminCenter(token, effectiveCode as string, input);
-        if (submitForReview) saved = await submitAdminCenterReview(token, saved.code);
-        const latestSignature = JSON.stringify(getValues());
-        const hasChangesSinceSubmit = latestSignature !== submittedSignature;
-        setDetailOverride(saved);
-        queryClient.setQueryData(adminKeys.center(saved.code), saved);
-        const normalizedSaved = withEditorDraft(saved);
-        if (catalogs && !hasChangesSinceSubmit) {
-          skipNextAutoSaveRef.current = true;
-          reset(
-            toFormValues(normalizedSaved.draft ?? normalizedSaved.published, catalogs),
-          );
-        } else if (hasChangesSinceSubmit) {
-          pendingAutoSaveRef.current = true;
-        }
-        onSaved(saved);
-        if (!silent) {
-          onNotice(
-            submitForReview
-              ? "La ficha fue enviada a revisión."
-              : "La ficha fue actualizada.",
-          );
-        }
-        return true;
-      } catch (cause) {
-        reportError(errorMessage(cause, "No se pudo actualizar la ficha."));
-        return false;
-      } finally {
-        setWorking(null);
-      }
-    },
-    [
-      catalogs,
-      detail,
-      effectiveCode,
-      getValues,
-      isNew,
-      onNotice,
-      onSaved,
-      reportError,
-      queryClient,
-      reset,
-      token,
-    ],
-  );
-
-  const handleImportFile = useCallback(
-    async (file: File) => {
-      setImporting(true);
-      setImportWarnings([]);
-      reportError(null);
-      try {
-        const imported = await importFichaFile(token, file);
-        reset({ ...emptyValues, ...imported.formulario });
-        setImportWarnings(imported.advertencias);
-        setSugerenciasImportadas(imported.sugerenciasSecciones ?? null);
-        onNotice(
-          "Se precargó el formulario desde la ficha. Revisa las advertencias antes de guardar.",
-        );
-      } catch (cause) {
-        reportError(errorMessage(cause, "No se pudo importar la ficha."));
-      } finally {
-        setImporting(false);
-      }
-    },
-    [onNotice, reportError, reset, token],
-  );
-
-  const scheduleAutoSave = useCallback(() => {
-    if (!canEdit || working !== null || skipNextAutoSaveRef.current) return;
-    const version = autoSaveVersionRef.current;
-    if (lastAttemptedAutoSaveVersionRef.current === version) return;
-    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-    autoSaveTimerRef.current = setTimeout(() => {
-      autoSaveTimerRef.current = null;
-      lastAttemptedAutoSaveVersionRef.current = version;
-      pendingAutoSaveRef.current = false;
-      void handleSubmit(
-        (values) => save(values, false, true),
-        () => {
-          reportError(null);
-        },
-      )();
-    }, 2_000);
-  }, [canEdit, handleSubmit, reportError, save, working]);
-
-  useEffect(() => {
-    const unsubscribe = subscribe({
-      formState: { values: true, isDirty: true },
-      callback: ({ isDirty: subscribedIsDirty }) => {
-        autoSaveVersionRef.current += 1;
-        if (!subscribedIsDirty) {
-          pendingAutoSaveRef.current = false;
-          skipNextAutoSaveRef.current = false;
-          return;
-        }
-        if (!canEdit || skipNextAutoSaveRef.current) return;
-        pendingAutoSaveRef.current = true;
-        scheduleAutoSave();
-      },
-    });
-    return () => {
-      unsubscribe();
-      if (autoSaveTimerRef.current) {
-        clearTimeout(autoSaveTimerRef.current);
-        autoSaveTimerRef.current = null;
-      }
-    };
-  }, [canEdit, scheduleAutoSave, subscribe]);
-
-  useEffect(() => {
-    if (working === null && pendingAutoSaveRef.current) {
-      pendingAutoSaveRef.current = false;
-      scheduleAutoSave();
-    }
-  }, [scheduleAutoSave, working]);
+    if (queryError) onError(errorMessage(queryError, "No se pudo cargar la ficha."));
+  }, [onError, queryError]);
 
   async function goNext() {
-    if (activeStep >= summaryStepIndex) return;
-    const nextStep = activeStep + 1;
-    if (activeStep === 0) {
-      await handleSubmit(
-        async (values) => {
-          const persisted = isDirty || isNew ? await save(values, false, true) : true;
-          if (persisted) setActiveStep(nextStep);
-        },
-        () => reportError("Completa los campos obligatorios para continuar."),
-      )();
+    if (activeSectionCode === null) return;
+    const fields = isNew ? CENTER_CREATE_FIELDS : CENTER_STEP_FIELDS[activeSectionCode];
+    if (fields && !(await form.trigger([...fields], { shouldFocus: true }))) {
+      onError(REQUIRED_FIELDS_MESSAGE);
       return;
     }
-    setActiveStep(nextStep);
-  }
-
-  function goPrevious() {
-    setActiveStep((current) => Math.max(0, current - 1));
-  }
-
-  function selectStep(step: number) {
-    if (step > 0 && !effectiveCode) return;
-    setActiveStep(step);
-  }
-
-  async function publish() {
-    if (!detail) return;
-    setWorking("publish");
-    reportError(null);
-    try {
-      const published = await publishAdminCenter(token, detail.code);
-      const normalizedPublished = withEditorDraft(published);
-      setDetailOverride(published);
-      queryClient.setQueryData(adminKeys.center(published.code), published);
-      if (catalogs) {
-        reset(
-          toFormValues(
-            normalizedPublished.draft ?? normalizedPublished.published,
-            catalogs,
-          ),
-        );
-      }
-      onSaved(published);
-      onNotice("La ficha fue publicada en la aplicación móvil.");
-    } catch (cause) {
-      reportError(errorMessage(cause, "No se pudo publicar la ficha."));
-    } finally {
-      setWorking(null);
+    if (isNew) {
+      // La API asigna el código al crear; sin código no hay más pasos.
+      if (!(await autosave.flush({ force: true }))) return;
+    } else {
+      void autosave.flush();
     }
+    setActiveStep(activeStep + 1);
   }
 
-  if (loading) {
+  async function submitForReview() {
+    if (!(await form.trigger(undefined, { shouldFocus: true }))) {
+      onError(REQUIRED_FIELDS_MESSAGE);
+      return;
+    }
+    autosave.discard();
+    await centerSave.save(form.getValues(), { submitForReview: true });
+  }
+
+  if (catalogsQuery.isLoading || centerQuery.isLoading) {
     return <ContentState status="loading" label="Cargando ficha" />;
   }
 
   return (
     <Stack spacing={webTokens.spacing.control}>
       <PageHeader
-        title={isNew ? "Nueva ficha turística" : `Editar ficha ${detail?.code ?? code}`}
+        title={isNew ? "Nueva ficha turística" : `Editar ficha ${code}`}
         description="Completa la información institucional y adjunta fotos verificadas antes de publicar."
         titleVariant="h5"
         headingComponent="h2"
@@ -560,21 +177,21 @@ export function CenterEditor({
               variant="outlined"
               startIcon={<CloudUploadRounded />}
               onClick={() => importInputRef.current?.click()}
-              disabled={importing}
+              disabled={fichaImport.importing}
             >
-              {importing ? "Importando…" : "Importar ficha (.xlsx / .xlsm)"}
+              {fichaImport.importing ? "Importando…" : "Importar ficha (.xlsx / .xlsm)"}
             </Button>
           ) : null,
-          canReview && !isNew ? (
+          canReview ? (
             <Button
               key="review"
               type="button"
               variant="contained"
               startIcon={<CloudUploadRounded />}
-              onClick={() => void handleSubmit((values) => save(values, true))()}
-              disabled={working !== null}
+              onClick={() => void submitForReview()}
+              disabled={centerSave.working}
             >
-              {working === "review" ? "Enviando…" : "Enviar a revisión"}
+              {centerSave.reviewing ? "Enviando…" : "Enviar a revisión"}
             </Button>
           ) : null,
           canPublish ? (
@@ -583,10 +200,10 @@ export function CenterEditor({
               type="button"
               variant="contained"
               startIcon={<PublishRounded />}
-              onClick={() => void publish()}
-              disabled={working !== null}
+              onClick={() => void centerSave.publish()}
+              disabled={centerSave.working}
             >
-              {working === "publish" ? "Publicando…" : "Publicar"}
+              {centerSave.publishing ? "Publicando…" : "Publicar"}
             </Button>
           ) : null,
         ]}
@@ -599,17 +216,17 @@ export function CenterEditor({
         onChange={(event) => {
           const file = event.target.files?.[0];
           event.target.value = "";
-          if (file) void handleImportFile(file);
+          if (file) fichaImport.importFile(file);
         }}
       />
-      {importWarnings.length > 0 ? (
-        <Alert severity="warning" onClose={() => setImportWarnings([])}>
+      {fichaImport.warnings.length > 0 ? (
+        <Alert severity="warning" onClose={fichaImport.dismissWarnings}>
           <Typography variant="subtitle2" component="p" sx={{ mb: 0.5 }}>
             La ficha se precargó con advertencias — revísalas antes de guardar:
           </Typography>
           <Stack component="ul" sx={{ m: 0, pl: 2.5 }}>
-            {importWarnings.map((warning, index) => (
-              <Typography key={index} component="li" variant="body2">
+            {fichaImport.warnings.map((warning) => (
+              <Typography key={warning} component="li" variant="body2">
                 {warning}
               </Typography>
             ))}
@@ -630,1055 +247,57 @@ export function CenterEditor({
       <CenterWizardStepper
         steps={centerWizardSteps}
         activeStep={activeStep}
-        canNavigate={Boolean(effectiveCode)}
-        onSelect={selectStep}
+        canNavigate={!isNew}
+        onSelect={(step) => {
+          if (step === 0 || !isNew) setActiveStep(step);
+        }}
       />
 
-      <Box sx={{ display: activeSectionCode === "anexos" ? "block" : "none" }}>
+      {activeSectionCode === "anexos" ? (
         <MediaManager
           token={token}
-          code={effectiveCode}
+          code={code}
           canEdit={canEdit || state === "APROBADO"}
           onNotice={onNotice}
-          onError={reportError}
+          onError={onError}
         />
-      </Box>
+      ) : null}
 
       <ContinuousCenterSectionWorkflow
         token={token}
-        code={effectiveCode}
+        code={code}
         detail={detail}
         catalogs={catalogs}
         canEdit={canEdit}
         activeSectionCode={activeSectionCode}
-        visible={isSectionStep}
-        showOverview={false}
+        visible={activeSectionCode !== null}
         onDetailChanged={handleDetailChanged}
-        onError={reportError}
-        sugerenciasImportadas={sugerenciasImportadas}
+        onError={onError}
+        sugerenciasImportadas={fichaImport.sugerencias}
       />
 
-      <Box sx={{ display: isSectionStep ? "block" : "none" }}>
-        <FlatSurface
-          id="center-section-identificacion"
-          padding="default"
-          sx={{ display: activeSectionCode === "identificacion" ? "block" : "none" }}
-        >
-          <Stack spacing={webTokens.spacing.section}>
-            <SectionHeader
-              icon={<CategoryRounded />}
-              title="Identificación y clasificación"
-              description="Estos campos determinan el código institucional y la ubicación territorial."
+      {activeSectionCode ? (
+        <FormProvider {...form}>
+          <EditableContext value={canEdit}>
+            <CenterFormPanel
+              sectionCode={activeSectionCode}
+              catalogs={catalogs}
+              isNew={isNew}
+              onCoordinatesPicked={notifyCoordinatesPicked}
             />
-            <Grid container spacing={webTokens.spacing.control}>
-              <Grid size={{ xs: 12, md: 8 }}>
-                <TextField
-                  label="Nombre del atractivo"
-                  fullWidth
-                  required
-                  disabled={!canEdit}
-                  error={Boolean(errors.name)}
-                  helperText={errors.name?.message}
-                  {...register("name", {
-                    required: "El nombre es obligatorio",
-                    maxLength: { value: 180, message: "Máximo 180 caracteres" },
-                  })}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, md: 4 }}>
-                <RhfCatalogSelect
-                  label="Categoría"
-                  name="categoryId"
-                  options={catalogs?.categories ?? []}
-                  control={control}
-                  disabled={!canEdit}
-                  required
-                  onValueChange={() => {
-                    setValue("typeId", "");
-                    setValue("subtypeId", "");
-                  }}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
-                <RhfCatalogSelect
-                  label="Tipo"
-                  name="typeId"
-                  options={typeOptions}
-                  control={control}
-                  disabled={!canEdit || !categoryId}
-                  required
-                  onValueChange={() => setValue("subtypeId", "")}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
-                <RhfCatalogSelect
-                  label="Subtipo"
-                  name="subtypeId"
-                  options={subtypeOptions}
-                  control={control}
-                  disabled={!canEdit || !typeId}
-                  required
-                />
-              </Grid>
-              <Grid size={{ xs: 12, md: 4 }}>
-                <RhfCatalogSelect
-                  label="Provincia"
-                  name="provinceId"
-                  options={catalogs?.provinces ?? []}
-                  control={control}
-                  disabled={!canEdit}
-                  required
-                  onValueChange={() => {
-                    setValue("cantonId", "");
-                    setValue("parishId", "");
-                  }}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, md: 4 }}>
-                <RhfCatalogSelect
-                  label="Cantón"
-                  name="cantonId"
-                  options={cantonOptions}
-                  control={control}
-                  disabled={!canEdit || !provinceId}
-                  required
-                  onValueChange={() => setValue("parishId", "")}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, md: 4 }}>
-                <RhfCatalogSelect
-                  label="Parroquia"
-                  name="parishId"
-                  options={parishOptions}
-                  control={control}
-                  disabled={!canEdit || !cantonId}
-                  required
-                />
-              </Grid>
-              <Grid size={{ xs: 12, md: 4 }}>
-                <RhfCatalogSelect
-                  label="Zona turística"
-                  name="touristZoneId"
-                  options={zoneOptions}
-                  control={control}
-                  disabled={!canEdit || !cantonId}
-                  required
-                />
-              </Grid>
-              <Grid size={{ xs: 12, md: 4 }}>
-                <RhfCatalogSelect
-                  label="Línea de producto"
-                  name="productLineId"
-                  options={catalogs?.lines ?? []}
-                  control={control}
-                  disabled={!canEdit}
-                  required
-                />
-              </Grid>
-              <Grid size={{ xs: 12, md: 4 }}>
-                <RhfCatalogSelect
-                  label="Escenario"
-                  name="scenarioId"
-                  options={catalogs?.scenarios ?? []}
-                  control={control}
-                  disabled={!canEdit}
-                  required
-                />
-              </Grid>
-            </Grid>
-          </Stack>
-        </FlatSurface>
-
-        <FlatSurface
-          id="center-section-ubicacion-admin"
-          padding="default"
-          sx={{ display: activeSectionCode === "ubicacion-admin" ? "block" : "none" }}
-        >
-          <Stack spacing={webTokens.spacing.section}>
-            <SectionHeader
-              icon={<MapRounded />}
-              title="Ubicación"
-              description="La API sincroniza las coordenadas con PostGIS."
-            />
-            <Grid container spacing={webTokens.spacing.control}>
-              <Grid size={{ xs: 12, sm: 8 }}>
-                <TextField
-                  label="Barrio, sector o comuna"
-                  fullWidth
-                  disabled={!canEdit}
-                  {...register("address.barrio")}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <TextField
-                  label="Calle principal"
-                  fullWidth
-                  disabled={!canEdit}
-                  {...register("address.street")}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 3 }}>
-                <TextField
-                  label="Número"
-                  fullWidth
-                  disabled={!canEdit}
-                  {...register("address.number")}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 3 }}>
-                <TextField
-                  label="Calle transversal"
-                  fullWidth
-                  disabled={!canEdit}
-                  {...register("address.crossStreet")}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <TextField
-                  label="Latitud"
-                  type="number"
-                  fullWidth
-                  required
-                  disabled={!canEdit}
-                  {...register("latitude", { required: "La latitud es obligatoria" })}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <TextField
-                  label="Longitud"
-                  type="number"
-                  fullWidth
-                  required
-                  disabled={!canEdit}
-                  {...register("longitude", { required: "La longitud es obligatoria" })}
-                />
-              </Grid>
-              <Grid size={{ xs: 12 }}>
-                <Button
-                  disabled={!canEdit}
-                  onClick={() => setCoordinatePickerOpen(true)}
-                  startIcon={<MapRounded />}
-                  type="button"
-                  variant="outlined"
-                >
-                  Seleccionar coordenadas en el mapa
-                </Button>
-              </Grid>
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <TextField
-                  label="Altitud (msnm)"
-                  type="number"
-                  fullWidth
-                  disabled={!canEdit}
-                  {...register("altitudeMeters")}
-                />
-              </Grid>
-            </Grid>
-          </Stack>
-        </FlatSurface>
-
-        <FlatSurface
-          padding="default"
-          sx={{ display: activeSectionCode === "ubicacion-admin" ? "block" : "none" }}
-        >
-          <Stack spacing={webTokens.spacing.section}>
-            <SectionHeader
-              icon={<BusinessRounded />}
-              title="Administración"
-              description="Contacto institucional responsable del atractivo."
-            />
-            <Grid container spacing={webTokens.spacing.control}>
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <TextField
-                  label="Tipo de administrador"
-                  fullWidth
-                  disabled={!canEdit}
-                  {...register("administration.type")}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 8 }}>
-                <TextField
-                  label="Institución"
-                  fullWidth
-                  disabled={!canEdit}
-                  {...register("administration.institution")}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <TextField
-                  label="Nombre del responsable"
-                  fullWidth
-                  disabled={!canEdit}
-                  {...register("administration.name")}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <TextField
-                  label="Cargo"
-                  fullWidth
-                  disabled={!canEdit}
-                  {...register("administration.position")}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <TextField
-                  label="Teléfono"
-                  fullWidth
-                  disabled={!canEdit}
-                  {...register("administration.phone")}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <TextField
-                  label="Correo"
-                  type="email"
-                  fullWidth
-                  disabled={!canEdit}
-                  {...register("administration.email")}
-                />
-              </Grid>
-              <Grid size={12}>
-                <TextField
-                  label="Observación"
-                  fullWidth
-                  multiline
-                  minRows={2}
-                  disabled={!canEdit}
-                  {...register("administration.observation")}
-                />
-              </Grid>
-            </Grid>
-          </Stack>
-        </FlatSurface>
-
-        <FlatSurface
-          id="center-section-descripcion"
-          padding="default"
-          sx={{ display: activeSectionCode === "descripcion" ? "block" : "none" }}
-        >
-          <Stack spacing={webTokens.spacing.section}>
-            <SectionHeader
-              icon={<FactCheckRounded />}
-              title="Descripción del atractivo"
-              description="Redacta la descripción pública de la ficha, con un máximo de 500 caracteres."
-            />
-            <TextField
-              label="Descripción"
-              fullWidth
-              multiline
-              minRows={6}
-              disabled={!canEdit}
-              {...register("description", {
-                maxLength: { value: 500, message: "Máximo 500 caracteres" },
-              })}
-              error={Boolean(errors.description)}
-              helperText={errors.description?.message}
-            />
-          </Stack>
-        </FlatSurface>
-
-        <FlatSurface
-          id="center-section-caracteristicas"
-          padding="default"
-          sx={{ display: activeSectionCode === "caracteristicas" ? "block" : "none" }}
-        >
-          <Stack spacing={webTokens.spacing.section}>
-            <SectionHeader
-              icon={<AccessTimeRounded />}
-              title="Ingreso y atención"
-              description="Información que se mostrará en la ficha pública cuando se publique."
-            />
-            <Grid container spacing={webTokens.spacing.control}>
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <RhfCatalogSelect
-                  label="Tipo de ingreso"
-                  name="admission.incomeTypeId"
-                  options={catalogs?.incomeTypes ?? []}
-                  control={control}
-                  disabled={!canEdit}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <TextField
-                  label="Hora de ingreso"
-                  type="time"
-                  fullWidth
-                  disabled={!canEdit}
-                  slotProps={{ inputLabel: { shrink: true } }}
-                  {...register("admission.opensAt")}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <TextField
-                  label="Hora de salida"
-                  type="time"
-                  fullWidth
-                  disabled={!canEdit}
-                  slotProps={{ inputLabel: { shrink: true } }}
-                  {...register("admission.closesAt")}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <RhfCatalogSelect
-                  label="Modalidad de atención"
-                  name="admission.attentionModeId"
-                  options={catalogs?.attentionModes ?? []}
-                  control={control}
-                  disabled={!canEdit}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      disabled={!canEdit}
-                      {...register("admission.reservations")}
-                    />
-                  }
-                  label="Maneja un sistema de reservas"
-                  sx={{ minHeight: 56, alignItems: "center" }}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <TextField
-                  label="Precio desde"
-                  type="number"
-                  fullWidth
-                  disabled={!canEdit}
-                  {...register("admission.priceFrom")}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <TextField
-                  label="Precio hasta"
-                  type="number"
-                  fullWidth
-                  disabled={!canEdit}
-                  {...register("admission.priceTo")}
-                />
-              </Grid>
-              <Grid size={12}>
-                <TextField
-                  label="Otra modalidad o detalle"
-                  fullWidth
-                  disabled={!canEdit}
-                  {...register("admission.otherAttention")}
-                />
-              </Grid>
-              <Grid size={12}>
-                <TextField
-                  label="Observación"
-                  fullWidth
-                  multiline
-                  minRows={2}
-                  disabled={!canEdit}
-                  {...register("admission.observation")}
-                />
-              </Grid>
-            </Grid>
-          </Stack>
-        </FlatSurface>
-        <FlatSurface
-          id="center-section-actividades"
-          padding="default"
-          sx={{ display: activeSectionCode === "actividades" ? "block" : "none" }}
-        >
-          <Stack spacing={webTokens.spacing.section}>
-            <SectionHeader
-              icon={<DirectionsWalkRounded />}
-              title="Actividades"
-              description="Selecciona únicamente las actividades que se practican en el atractivo."
-            />
-            <OptionGrid
-              options={activityOptions}
-              selectedName="activityIds"
-              register={register}
-              disabled={!canEdit || !categoryId}
-            />
-          </Stack>
-        </FlatSurface>
-        <FlatSurface
-          id="center-section-accesibilidad"
-          padding="default"
-          sx={{ display: activeSectionCode === "accesibilidad" ? "block" : "none" }}
-        >
-          <Stack spacing={webTokens.spacing.section}>
-            <SectionHeader
-              icon={<AccessibleRounded />}
-              title="Accesibilidad"
-              description="Registra las condiciones verificadas para orientar a turistas."
-            />
-            <OptionGrid
-              options={catalogs?.accessibilityTypes ?? []}
-              selectedName="accessibilityIds"
-              register={register}
-              disabled={!canEdit}
-            />
-          </Stack>
-        </FlatSurface>
-        <FlatSurface
-          id="center-section-planta"
-          padding="default"
-          sx={{ display: activeSectionCode === "planta" ? "block" : "none" }}
-        >
-          <Stack spacing={webTokens.spacing.section}>
-            <SectionHeader
-              icon={<MiscellaneousServicesRounded />}
-              title="Facilidades"
-              description="Indica los servicios y elementos disponibles en el entorno."
-            />
-            <OptionGrid
-              options={catalogs?.facilities ?? []}
-              selectedName="facilityIds"
-              register={register}
-              disabled={!canEdit}
-              selectedIds={selectedFacilityIds}
-            />
-          </Stack>
-        </FlatSurface>
-      </Box>
-
-      {isSummaryStep ? <CenterSummaryStep detail={detail} catalogs={catalogs} /> : null}
+          </EditableContext>
+        </FormProvider>
+      ) : (
+        <CenterSummaryStep detail={detail} catalogs={catalogs} />
+      )}
 
       <CenterWizardNavigation
         activeStep={activeStep}
-        lastStep={summaryStepIndex}
-        working={working !== null}
-        onPrevious={goPrevious}
+        lastStep={SUMMARY_STEP}
+        working={centerSave.working}
+        onPrevious={() => setActiveStep((current) => Math.max(0, current - 1))}
         onNext={() => void goNext()}
       />
-      <CoordinatePickerDialog
-        key={coordinatePickerOpen ? "coordinate-picker-open" : "coordinate-picker-closed"}
-        initialLatitude={latitude}
-        initialLongitude={longitude}
-        onClose={() => setCoordinatePickerOpen(false)}
-        onConfirm={({ latitude: nextLatitude, longitude: nextLongitude }) => {
-          setValue("latitude", String(nextLatitude), {
-            shouldDirty: true,
-            shouldValidate: true,
-          });
-          setValue("longitude", String(nextLongitude), {
-            shouldDirty: true,
-            shouldValidate: true,
-          });
-          setCoordinatePickerOpen(false);
-          onNotice("Coordenadas seleccionadas en el mapa.");
-        }}
-        open={coordinatePickerOpen}
-      />
     </Stack>
   );
-}
-
-function CenterWizardStepper({
-  steps,
-  activeStep,
-  canNavigate,
-  onSelect,
-}: {
-  steps: ReadonlyArray<{ key: string; title: string }>;
-  activeStep: number;
-  canNavigate: boolean;
-  onSelect: (step: number) => void;
-}) {
-  const isSummary = activeStep >= steps.length;
-  return (
-    <FlatSurface padding="compact">
-      <Stack spacing={webTokens.spacing.control}>
-        <Box
-          component="nav"
-          aria-label="Secciones de la ficha turística"
-          role="tablist"
-          sx={{
-            display: "grid",
-            gridTemplateColumns: {
-              xs: "repeat(2, minmax(0, 1fr))",
-              sm: "repeat(4, minmax(0, 1fr))",
-              md: "repeat(7, minmax(0, 1fr))",
-            },
-            gap: { xs: 1, sm: 1.25 },
-          }}
-        >
-          {steps.map((step, index) => {
-            const completed = isSummary || index < activeStep;
-            const selected = !isSummary && index === activeStep;
-            return (
-              <ButtonBase
-                key={step.key}
-                component="button"
-                type="button"
-                role="tab"
-                aria-label={`Sección ${index + 1}: ${step.title}`}
-                aria-selected={selected}
-                aria-current={selected ? "step" : undefined}
-                disabled={index > 0 && !canNavigate}
-                onClick={() => onSelect(index)}
-                title={step.title}
-                sx={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "stretch",
-                  justifyContent: "flex-start",
-                  minWidth: 0,
-                  minHeight: { xs: 64, sm: 78 },
-                  p: { xs: 1, sm: 1.25 },
-                  border: 1,
-                  borderColor: selected ? "primary.main" : "divider",
-                  borderRadius: 1.5,
-                  bgcolor: selected ? "action.selected" : "transparent",
-                  textAlign: "left",
-                  transition: "border-color 120ms ease, background-color 120ms ease",
-                  "&:hover": {
-                    borderColor: selected ? "primary.main" : "text.secondary",
-                    bgcolor: selected ? "action.selected" : "action.hover",
-                  },
-                  "&.Mui-disabled": {
-                    opacity: 0.55,
-                  },
-                }}
-              >
-                <Stack direction="row" alignItems="center" gap={1} minWidth={0}>
-                  <Box
-                    component="span"
-                    sx={{
-                      display: "grid",
-                      placeItems: "center",
-                      flex: "0 0 auto",
-                      width: { xs: 24, sm: 28 },
-                      height: { xs: 24, sm: 28 },
-                      borderRadius: "50%",
-                      bgcolor:
-                        selected || completed
-                          ? "primary.main"
-                          : "action.disabledBackground",
-                      color:
-                        selected || completed ? "primary.contrastText" : "text.secondary",
-                      fontSize: { xs: "0.72rem", sm: "0.78rem" },
-                      fontWeight: 700,
-                    }}
-                  >
-                    {index + 1}
-                  </Box>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    noWrap
-                    sx={{ minWidth: 0, textOverflow: "ellipsis", overflow: "hidden" }}
-                  >
-                    {completed ? "Completada" : selected ? "Actual" : "Pendiente"}
-                  </Typography>
-                </Stack>
-                <Typography
-                  variant="body2"
-                  sx={{
-                    mt: 0.75,
-                    minWidth: 0,
-                    fontWeight: selected ? 700 : 500,
-                    lineHeight: 1.2,
-                    display: "-webkit-box",
-                    overflow: "hidden",
-                    overflowWrap: "anywhere",
-                    WebkitBoxOrient: "vertical",
-                    WebkitLineClamp: 2,
-                  }}
-                >
-                  {step.title}
-                </Typography>
-              </ButtonBase>
-            );
-          })}
-        </Box>
-      </Stack>
-    </FlatSurface>
-  );
-}
-
-function CenterWizardNavigation({
-  activeStep,
-  lastStep,
-  working,
-  onPrevious,
-  onNext,
-}: {
-  activeStep: number;
-  lastStep: number;
-  working: boolean;
-  onPrevious: () => void;
-  onNext: () => void;
-}) {
-  return (
-    <Stack
-      direction={{ xs: "column-reverse", sm: "row" }}
-      alignItems={{ sm: "center" }}
-      justifyContent="space-between"
-      gap={webTokens.spacing.control}
-    >
-      <Button
-        type="button"
-        variant="outlined"
-        onClick={onPrevious}
-        disabled={activeStep === 0 || working}
-        startIcon={<ArrowBackRounded />}
-      >
-        Anterior
-      </Button>
-      {activeStep < lastStep ? (
-        <Button
-          type="button"
-          variant="contained"
-          onClick={onNext}
-          disabled={working}
-          endIcon={<ArrowForwardRounded />}
-        >
-          Siguiente
-        </Button>
-      ) : (
-        <Typography variant="body2" color="text.secondary">
-          Revisión final de la ficha
-        </Typography>
-      )}
-    </Stack>
-  );
-}
-
-function CenterSummaryStep({
-  detail,
-  catalogs,
-}: {
-  detail: AdminCenterDetail | null;
-  catalogs: AdminCatalogs | null;
-}) {
-  const draft = detail?.draft ?? detail?.published ?? null;
-  const sectionValues = draft?.sections ?? {};
-  const completedSections = centerSectionDefinitions.filter(
-    (section) => sectionValues[section.code] !== undefined,
-  ).length;
-  const summaryRows = [
-    ["Nombre", draft?.name ?? "Pendiente"],
-    ["Subtipo", findCatalogName(catalogs?.subtypes, draft?.subtypeId)],
-    ["Zona turística", findCatalogName(catalogs?.zones, draft?.touristZoneId)],
-    ["Parroquia", findCatalogName(catalogs?.parishes, draft?.parishId)],
-    ["Coordenadas", formatCoordinates(draft?.latitude, draft?.longitude)],
-    ["Estado", detail?.status.name ?? "Pendiente"],
-  ];
-
-  return (
-    <Stack spacing={webTokens.spacing.section}>
-      <FlatSurface padding="default">
-        <Stack spacing={webTokens.spacing.section}>
-          <SectionHeader
-            icon={<FactCheckRounded />}
-            title="Resumen de la ficha"
-            description="Revisa los datos principales y el avance de cada apartado antes de enviarla a revisión."
-          />
-          <Grid container spacing={webTokens.spacing.control}>
-            {summaryRows.map(([label, value]) => (
-              <Grid key={label} size={{ xs: 12, sm: 6, md: 4 }}>
-                <Typography variant="caption" color="text.secondary" display="block">
-                  {label}
-                </Typography>
-                <Typography variant="body1" fontWeight={600}>
-                  {value}
-                </Typography>
-              </Grid>
-            ))}
-          </Grid>
-          <Divider />
-          <Typography variant="body2" color="text.secondary">
-            {completedSections} de {centerSectionDefinitions.length} apartados tienen
-            información registrada.
-          </Typography>
-          <Grid container spacing={webTokens.spacing.inline}>
-            {centerSectionDefinitions.map((section) => (
-              <Grid key={section.code} size={{ xs: 12, sm: 6, md: 4 }}>
-                <Box
-                  sx={{
-                    border: 1,
-                    borderColor: "divider",
-                    borderRadius: `${webTokens.shape.radius}px`,
-                    p: webTokens.spacing.inline,
-                  }}
-                >
-                  <Typography variant="body2" fontWeight={600}>
-                    {section.title}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {sectionValues[section.code]
-                      ? "Información registrada"
-                      : "Pendiente de completar"}
-                  </Typography>
-                </Box>
-              </Grid>
-            ))}
-          </Grid>
-        </Stack>
-      </FlatSurface>
-      <CenterReviewDiff detail={detail} catalogs={catalogs} />
-    </Stack>
-  );
-}
-
-function findCatalogName(
-  options: Array<{ id: number; name: string }> | undefined,
-  id: number | undefined,
-) {
-  return findCatalogOption(options, id)?.name ?? "Pendiente";
-}
-
-function formatCoordinates(latitude: number | undefined, longitude: number | undefined) {
-  if (latitude === undefined || longitude === undefined) return "Pendiente";
-  return `${latitude}, ${longitude}`;
-}
-
-function OptionGrid({
-  options,
-  selectedName,
-  register,
-  disabled,
-  selectedIds = [],
-}: {
-  options: Array<{ id: number; name: string; categoryId?: number; groupId?: number }>;
-  selectedName: "activityIds" | "accessibilityIds" | "facilityIds";
-  register: ReturnType<typeof useForm<FormValues>>["register"];
-  disabled: boolean;
-  selectedIds?: string[];
-}) {
-  if (options.length === 0) {
-    return <Typography color="text.secondary">No hay opciones configuradas.</Typography>;
-  }
-  return (
-    <Grid container spacing={webTokens.spacing.inline}>
-      {options.map((option) => (
-        <Grid key={option.id} size={{ xs: 12, sm: 6, md: 4 }}>
-          <FormControlLabel
-            control={
-              <Checkbox
-                value={String(option.id)}
-                disabled={disabled}
-                {...register(selectedName)}
-              />
-            }
-            label={option.name}
-          />
-          {selectedName === "facilityIds" && selectedIds.includes(String(option.id)) ? (
-            <Stack spacing={1} sx={{ pl: 4, pr: 1, pb: 1 }}>
-              <TextField
-                label="Cantidad"
-                type="number"
-                size="small"
-                fullWidth
-                disabled={disabled}
-                slotProps={{ htmlInput: { min: 0, step: 1 } }}
-                {...register(`facilityQuantities.${option.id}` as never)}
-              />
-              <TextField
-                label="Observación de la facilidad"
-                size="small"
-                fullWidth
-                disabled={disabled}
-                {...register(`facilityObservations.${option.id}` as never)}
-              />
-            </Stack>
-          ) : null}
-        </Grid>
-      ))}
-    </Grid>
-  );
-}
-
-function withEditorDraft(detail: AdminCenterDetail): AdminCenterDetail {
-  if (!detail.draft) return detail;
-
-  const sections: Record<string, unknown> = {
-    ...(detail.published.sections ?? {}),
-    ...(detail.draft.sections ?? {}),
-  };
-  const draft: CenterDraft = {
-    ...detail.published,
-    ...detail.draft,
-    sections,
-  };
-
-  if (
-    sections.identificacion === undefined &&
-    draft.name &&
-    draft.subtypeId &&
-    draft.touristZoneId &&
-    draft.parishId &&
-    draft.productLineId &&
-    draft.scenarioId
-  ) {
-    sections.identificacion = { schemaVersion: 1, response: "SI", observation: "" };
-  }
-  if (
-    sections["ubicacion-admin"] === undefined &&
-    Number.isFinite(draft.latitude) &&
-    Number.isFinite(draft.longitude)
-  ) {
-    sections["ubicacion-admin"] = {
-      schemaVersion: 1,
-      response: "SI",
-      observation: "",
-    };
-  }
-  if (sections.caracteristicas === undefined && draft.productLineId && draft.scenarioId) {
-    sections.caracteristicas = { schemaVersion: 1, response: "SI", observation: "" };
-  }
-  if (
-    sections.actividades === undefined &&
-    draft.activities?.some((activity) => activity.active)
-  ) {
-    sections.actividades = { schemaVersion: 1, response: "SI", observation: "" };
-  }
-  if (sections.descripcion === undefined && draft.description?.trim()) {
-    sections.descripcion = { schemaVersion: 1, response: "SI", observation: "" };
-  }
-  if (
-    sections.accesibilidad === undefined &&
-    draft.accessibility?.some((item) => item.applies)
-  ) {
-    sections.accesibilidad = { schemaVersion: 1, response: "SI", observation: "" };
-  }
-  if (sections.planta === undefined && draft.facilities?.length) {
-    sections.planta = { schemaVersion: 1, response: "SI", observation: "" };
-  }
-
-  return { ...detail, draft };
-}
-
-function toFormValues(
-  data: CenterDraft | null | undefined,
-  catalogs: AdminCatalogs,
-): FormValues {
-  if (!data) return emptyValues;
-  const subtype = findCatalogOption(catalogs.subtypes, data.subtypeId);
-  const type = findCatalogOption(catalogs.types, subtype?.typeId);
-  const parish = findCatalogOption(catalogs.parishes, data.parishId);
-  const canton = findCatalogOption(catalogs.cantons, parish?.cantonId);
-  return {
-    name: data.name ?? "",
-    categoryId: String(type?.categoryId ?? ""),
-    typeId: String(subtype?.typeId ?? ""),
-    subtypeId: String(data.subtypeId ?? ""),
-    touristZoneId: String(data.touristZoneId ?? ""),
-    provinceId: String(canton?.provinceId ?? ""),
-    cantonId: String(parish?.cantonId ?? ""),
-    parishId: String(data.parishId ?? ""),
-    productLineId: String(data.productLineId ?? ""),
-    scenarioId: String(data.scenarioId ?? ""),
-    hierarchyId: String(data.hierarchyId ?? ""),
-    latitude: String(data.latitude ?? ""),
-    longitude: String(data.longitude ?? ""),
-    altitudeMeters: data.altitudeMeters == null ? "" : String(data.altitudeMeters),
-    description: data.description ?? "",
-    address: {
-      barrio: data.address?.barrio ?? "",
-      street: data.address?.street ?? "",
-      number: data.address?.number ?? "",
-      crossStreet: data.address?.crossStreet ?? "",
-    },
-    administration: {
-      type: data.administration?.type ?? "",
-      institution: data.administration?.institution ?? "",
-      name: data.administration?.name ?? "",
-      position: data.administration?.position ?? "",
-      phone: data.administration?.phone ?? "",
-      email: data.administration?.email ?? "",
-      observation: data.administration?.observation ?? "",
-    },
-    admission: {
-      incomeTypeId: String(data.admission?.incomeTypeId ?? ""),
-      attentionModeId: String(data.admission?.attentionModeId ?? ""),
-      opensAt: data.admission?.opensAt ?? "",
-      closesAt: data.admission?.closesAt ?? "",
-      otherAttention: data.admission?.otherAttention ?? "",
-      reservations: data.admission?.reservations ?? false,
-      priceFrom:
-        data.admission?.priceFrom == null ? "" : String(data.admission.priceFrom),
-      priceTo: data.admission?.priceTo == null ? "" : String(data.admission.priceTo),
-      observation: data.admission?.observation ?? "",
-    },
-    activityIds: (data.activities ?? [])
-      .filter((item) => item.active)
-      .map((item) => String(item.activityId)),
-    accessibilityIds: (data.accessibility ?? [])
-      .filter((item) => item.applies)
-      .map((item) => String(item.typeId)),
-    facilityIds: (data.facilities ?? []).map((item) => String(item.typeId)),
-    facilityQuantities: Object.fromEntries(
-      (data.facilities ?? []).map((item) => [
-        String(item.typeId),
-        item.quantity == null ? "" : String(item.quantity),
-      ]),
-    ),
-    facilityObservations: Object.fromEntries(
-      (data.facilities ?? []).map((item) => [
-        String(item.typeId),
-        item.observation ?? "",
-      ]),
-    ),
-  };
-}
-
-function toPayload(values: FormValues, version?: number): SaveCenterInput {
-  const payload: SaveCenterInput = {
-    name: values.name.trim(),
-    subtypeId: toOptionalNumber(values.subtypeId),
-    touristZoneId: toOptionalNumber(values.touristZoneId),
-    parishId: toOptionalNumber(values.parishId),
-    productLineId: toOptionalNumber(values.productLineId),
-    scenarioId: toOptionalNumber(values.scenarioId),
-    hierarchyId: toOptionalNumber(values.hierarchyId),
-    latitude: toOptionalNumber(values.latitude),
-    longitude: toOptionalNumber(values.longitude),
-    altitudeMeters: toOptionalNumber(values.altitudeMeters),
-    description: values.description.trim() || undefined,
-    address: {
-      barrio: values.address.barrio.trim() || undefined,
-      street: values.address.street.trim() || undefined,
-      number: values.address.number.trim() || undefined,
-      crossStreet: values.address.crossStreet.trim() || undefined,
-    },
-    administration: values.administration.name.trim()
-      ? {
-          type: values.administration.type.trim() || "OTRO",
-          institution: values.administration.institution.trim() || undefined,
-          name: values.administration.name.trim(),
-          position: values.administration.position.trim() || undefined,
-          phone: values.administration.phone.trim() || undefined,
-          email: values.administration.email.trim() || undefined,
-          observation: values.administration.observation.trim() || undefined,
-        }
-      : undefined,
-    admission:
-      toOptionalNumber(values.admission.incomeTypeId) &&
-      toOptionalNumber(values.admission.attentionModeId)
-        ? {
-            incomeTypeId: toOptionalNumber(values.admission.incomeTypeId) as number,
-            attentionModeId: toOptionalNumber(values.admission.attentionModeId) as number,
-            opensAt: values.admission.opensAt || undefined,
-            closesAt: values.admission.closesAt || undefined,
-            otherAttention: values.admission.otherAttention.trim() || undefined,
-            priceFrom: toOptionalNumber(values.admission.priceFrom),
-            priceTo: toOptionalNumber(values.admission.priceTo),
-            reservations: values.admission.reservations,
-            observation: values.admission.observation.trim() || undefined,
-          }
-        : undefined,
-    activities: values.activityIds.map((id) => ({
-      activityId: Number(id),
-      active: true,
-    })),
-    accessibility: values.accessibilityIds.map((id) => ({
-      typeId: Number(id),
-      applies: true,
-    })),
-    facilities: values.facilityIds.map((id) => ({
-      typeId: Number(id),
-      quantity: toOptionalNumber(values.facilityQuantities[id]) ?? 1,
-      observation: (values.facilityObservations[id] ?? "").trim() || undefined,
-    })),
-    version,
-  };
-  return payload;
 }

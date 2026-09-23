@@ -94,6 +94,14 @@ function childrenOf(
   return (options ?? []).filter((option) => Number(option[parentKey]) === parent);
 }
 
+/** Actividades del catálogo que corresponden a la categoría seleccionada. */
+export function activityOptionsFor(
+  catalogs: AdminCatalogs | null | undefined,
+  categoryId: string,
+): CatalogOption[] {
+  return childrenOf(catalogs?.activities, "categoryId", categoryId);
+}
+
 function matchesOptional(value: number | undefined, selectedId: string): boolean {
   return !selectedId || Number(value) === Number(selectedId);
 }
@@ -127,7 +135,7 @@ export function centerCatalogOptions(
           (zone) => zone.localityId !== undefined && localityIds.has(Number(zone.localityId)),
         )
       : [],
-    activities: childrenOf(catalogs?.activities, "categoryId", categoryId),
+    activities: activityOptionsFor(catalogs, categoryId),
   };
 }
 

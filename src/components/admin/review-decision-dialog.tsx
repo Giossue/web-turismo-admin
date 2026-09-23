@@ -74,7 +74,9 @@ export function ReviewDecisionDialog({
               helperText={helperText}
               autoFocus
               slotProps={
-                reasonMaxLength ? { htmlInput: { maxLength: reasonMaxLength } } : undefined
+                reasonMaxLength
+                  ? { htmlInput: { maxLength: reasonMaxLength } }
+                  : undefined
               }
             />
           ) : null}

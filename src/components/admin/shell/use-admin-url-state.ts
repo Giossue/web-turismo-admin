@@ -20,11 +20,7 @@ import { resolveSection, type AdminSection } from "./sections";
  */
 export function useAdminUrlState(isAdmin: boolean) {
   const searchParams = useSearchParams();
-  const [state, dispatch] = useReducer(
-    adminNavReducer,
-    searchParams,
-    parseAdminNavState,
-  );
+  const [state, dispatch] = useReducer(adminNavReducer, searchParams, parseAdminNavState);
   const section = resolveSection(state.section, isAdmin);
   const debouncedQuery = useDebouncedValue(
     state.queryDraft.trim(),

@@ -7,6 +7,11 @@ export type PublishedCenter = {
   province?: string | null;
 };
 
+/**
+ * Consulta pública para la landing (Server Component). La página se renderiza
+ * por solicitud (`connection()`); la caché de datos de Next.js reutiliza cada
+ * respuesta durante 60 s para no consultar la API en cada visita.
+ */
 async function get<T>(path: string): Promise<T> {
   const { response, body } = await sendApiRequest<T>(apiEndpoint(path), {
     next: { revalidate: 60 },
