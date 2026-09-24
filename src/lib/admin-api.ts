@@ -6,6 +6,24 @@ import { ApiError, apiEndpoint, sendApiRequest, toApiError, toQueryString } from
 /** Página de resultados de un listado administrativo. */
 export type Page<T> = { items: T[]; total: number; limit: number; offset: number };
 
+export type EditorialAssistance = {
+  suggestion: string | null;
+  observations: string[];
+  requiresReview: true;
+};
+
+export function assistCenterDescription(
+  token: string,
+  code: string,
+  input: { description: string; mode: "rewrite" | "review" },
+): Promise<EditorialAssistance> {
+  return post<EditorialAssistance>(
+    `/admin/ai/centers/${encodeURIComponent(code)}/description`,
+    token,
+    input,
+  );
+}
+
 /** Acción de revisión para fichas, catastros y opiniones. */
 export type ReviewAction = "APPROVE" | "REJECT";
 

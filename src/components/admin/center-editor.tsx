@@ -311,6 +311,8 @@ export function CenterEditor({
               sectionCode={activeSectionCode}
               catalogs={catalogs}
               isNew={isNew}
+              code={code}
+              token={token}
               onCoordinatesPicked={notifyCoordinatesPicked}
             />
           </EditableContext>
