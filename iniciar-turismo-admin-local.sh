@@ -29,7 +29,8 @@ Uso:
 
 El modo completo abre pestañas para API y admin, Metro y Android. Espera un dispositivo
 Android USB autorizado; instala y abre la variante de desarrollo sin reemplazar la app
-publicada. Puedes indicar otra ruta con TURISMO_MONOREPO_DIR.
+publicada. La app móvil usa EXPO_PUBLIC_API_URL de apps/mobile/.env. Puedes indicar otra
+ruta con TURISMO_MONOREPO_DIR o cambiar la API móvil con TURISMO_MOBILE_API_URL.
 Admin: http://localhost:3002/admin.
 EOF
 }
@@ -150,6 +151,21 @@ wait_for_url() {
   return 1
 }
 
+mobile_api_url() {
+  local env_file="${TURISMO_MONOREPO_DIR:-$MONOREPO_DIR}/apps/mobile/.env"
+  local configured="${TURISMO_MOBILE_API_URL:-}"
+  if [[ -z "$configured" ]]; then
+    configured="$(sed -n 's/^EXPO_PUBLIC_API_URL=//p' "$env_file" | head -n 1)"
+  fi
+  configured="${configured%\"}"
+  configured="${configured#\"}"
+  configured="${configured%\'}"
+  configured="${configured#\'}"
+  [[ "$configured" == http://* || "$configured" == https://* ]] ||
+    fail "Configura EXPO_PUBLIC_API_URL en apps/mobile/.env o TURISMO_MOBILE_API_URL."
+  printf '%s\n' "${configured%/}"
+}
+
 select_android_device() {
   local configured_serial="${ANDROID_SERIAL:-}"
 
@@ -220,10 +236,12 @@ ensure_development_native_project() {
 
 run_android() {
   local api_port="${API_PORT:-3000}"
+  local mobile_url
   local device_serial=""
   local device_name
 
-  wait_for_url "la API" "http://127.0.0.1:${api_port}/api/v1/health" || return 1
+  mobile_url="$(mobile_api_url)"
+  wait_for_url "la API móvil" "${mobile_url}/health" || return 1
   wait_for_url "Metro" "http://127.0.0.1:8081/status" || return 1
   adb start-server >/dev/null || return 1
   info "Conecta y desbloquea el teléfono; acepta la autorización USB si aparece."
@@ -235,11 +253,13 @@ run_android() {
 
   export ANDROID_SERIAL="$device_serial"
   export APP_VARIANT=development
-  export EXPO_PUBLIC_API_URL="http://127.0.0.1:${api_port}/api/v1"
+  export EXPO_PUBLIC_API_URL="$mobile_url"
   export EXPO_PACKAGER_PROXY_URL=http://127.0.0.1:8081
   export NODE_OPTIONS="${NODE_OPTIONS:+${NODE_OPTIONS} }--dns-result-order=ipv4first"
   info "Dispositivo Android listo: $device_serial"
-  adb -s "$device_serial" reverse "tcp:${api_port}" "tcp:${api_port}" || return 1
+  if [[ "$mobile_url" == http://127.0.0.1:* || "$mobile_url" == http://localhost:* ]]; then
+    adb -s "$device_serial" reverse "tcp:${api_port}" "tcp:${api_port}" || return 1
+  fi
   adb -s "$device_serial" reverse tcp:8081 tcp:8081 || return 1
   device_name="$(expo_device_name "$device_serial")"
   [[ -n "$device_name" ]] || {
@@ -267,9 +287,9 @@ run_mode() {
     metro)
       cd -- "${TURISMO_MONOREPO_DIR:-$MONOREPO_DIR}"
       export APP_VARIANT=development
-      export EXPO_PUBLIC_API_URL="http://127.0.0.1:${API_PORT:-3000}/api/v1"
+      export EXPO_PUBLIC_API_URL="$(mobile_api_url)"
       export NODE_OPTIONS="${NODE_OPTIONS:+${NODE_OPTIONS} }--dns-result-order=ipv4first"
-      info "Iniciando Metro para la app Android en http://localhost:8081"
+      info "Iniciando Metro para la app Android en http://localhost:8081 (API: $EXPO_PUBLIC_API_URL)"
       run_and_hold "Metro" corepack pnpm --filter @turismo/mobile exec expo start \
         --dev-client --localhost
       ;;

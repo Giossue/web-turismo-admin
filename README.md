@@ -20,6 +20,12 @@ lo regenera para desarrollo y comprueba los plugins de Gradle antes de compilar.
 `apps/mobile/.env` en el monorepo. Usa `TURISMO_MONOREPO_DIR` si está en otra ruta.
 Comprueba los requisitos sin arrancar nada con `./iniciar-turismo-admin-local.sh --check`.
 
+La app móvil instalada localmente usa `EXPO_PUBLIC_API_URL` de
+`apps/mobile/.env`. Si apunta a la API remota, la app trabaja con los datos de
+producción mediante esa API; nunca se conecta directamente a PostgreSQL. El admin
+del lanzador sigue usando la API y la base locales. Para cambiar solo la API móvil
+en una ejecución, define `TURISMO_MOBILE_API_URL`.
+
 Si la API ya está disponible y solo necesitas esta web, usa
 `./iniciar-turismo-admin-local.sh --web-only`. Este modo respeta las variables de entorno
 de Next.js; por defecto, la API se espera en `http://localhost:3000/api/v1`. Cierra la
