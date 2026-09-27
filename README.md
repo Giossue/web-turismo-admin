@@ -5,7 +5,27 @@ es el único cliente para turistas; este repositorio no contiene una versión we
 
 ## Arranque local
 
-La forma recomendada es arrancar todo desde el monorepo principal:
+Para abrir la app Android y el admin al mismo tiempo en Kitty desde este repositorio:
+
+```bash
+./iniciar-turismo-admin-local.sh
+```
+
+El lanzador abre tres pestañas: API y admin, Metro y Android. Usa `scripts/dev-local.sh`
+del monorepo vecino para iniciar PostgreSQL/PostGIS local, aplicar migraciones y datos de
+demostración, y arrancar la API y esta web. La pestaña Android espera un dispositivo USB
+autorizado, configura `adb reverse`, compila la variante de desarrollo y la abre sin
+reemplazar la app publicada. Si el proyecto Android generado corresponde a otra variante,
+lo regenera para desarrollo y comprueba los plugins de Gradle antes de compilar. Necesitas Android SDK, JDK 17 y
+`apps/mobile/.env` en el monorepo. Usa `TURISMO_MONOREPO_DIR` si está en otra ruta.
+Comprueba los requisitos sin arrancar nada con `./iniciar-turismo-admin-local.sh --check`.
+
+Si la API ya está disponible y solo necesitas esta web, usa
+`./iniciar-turismo-admin-local.sh --web-only`. Este modo respeta las variables de entorno
+de Next.js; por defecto, la API se espera en `http://localhost:3000/api/v1`. Cierra la
+ventana de Kitty para detener la sesión completa; Ctrl+C detiene solo la pestaña activa.
+
+El mismo entorno también se puede arrancar desde el monorepo principal:
 
 ```bash
 cd ../app-turismo-vinculacion
