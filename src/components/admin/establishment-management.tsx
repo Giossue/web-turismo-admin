@@ -499,7 +499,12 @@ export const EstablishmentManagement = forwardRef<
                   required
                   loading={catalogsQuery.isPending}
                   disabled={saveMutation.isPending}
-                  rules={{ required: required("Selecciona una localidad.") }}
+                  rules={{
+                    required: required("Selecciona una localidad."),
+                    validate: (value) =>
+                      localities.some((option) => String(option.id) === value) ||
+                      "Selecciona una localidad disponible.",
+                  }}
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>

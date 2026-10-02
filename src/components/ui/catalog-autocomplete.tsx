@@ -58,7 +58,7 @@ export function CatalogAutocomplete({
       getOptionDisabled={(option) => Boolean(option.disabled)}
       filterOptions={filterCatalogOptions}
       clearText="Limpiar selección"
-      openText="Mostrar localidades"
+      openText="Mostrar opciones"
       closeText="Cerrar opciones"
       loadingText="Cargando opciones…"
       noOptionsText="No se encontraron resultados"
@@ -85,7 +85,7 @@ export function CatalogAutocomplete({
             htmlInput: {
               ...params.inputProps,
               name,
-              onBlur: (event) => {
+              onBlur: (event: React.FocusEvent<HTMLInputElement>) => {
                 params.inputProps.onBlur?.(event);
                 onBlur?.();
               },
