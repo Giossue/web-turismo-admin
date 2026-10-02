@@ -83,7 +83,7 @@ export const adminSectionConfig: Record<AdminSection, AdminSectionConfig> = {
   },
   catalogs: {
     title: "Catálogos",
-    description: "Administra las opciones técnicas disponibles para nuevas fichas.",
+    description: "Administra las opciones disponibles para fichas y establecimientos.",
     navLabel: "Catálogos",
     icon: CategoryRounded,
     adminOnly: true,

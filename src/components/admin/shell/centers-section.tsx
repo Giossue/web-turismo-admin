@@ -28,7 +28,7 @@ import {
 import { SelectField } from "@/components/ui/form/select-field";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { deleteAdminCenter, type AdminCenter, type ReviewAction } from "@/lib/admin-api";
-import { activeLabel, centerStatusTone } from "@/lib/admin-labels";
+import { centerStatusTone } from "@/lib/admin-labels";
 import { adminKeys, centersPageQueryOptions } from "@/lib/admin-queries";
 import { errorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
@@ -93,20 +93,13 @@ export function CentersSection({
       },
       {
         field: "status",
-        headerName: "Estado",
-        width: 160,
+        headerName: "Estado de la ficha",
+        width: 180,
         filterable: false,
         valueGetter: (_value, row) => row.status.code,
         renderCell: ({ row }) => (
           <StatusBadge label={row.status.name} tone={centerStatusTone(row.status.code)} />
         ),
-      },
-      {
-        field: "active",
-        headerName: "Estado operativo",
-        width: 165,
-        filterable: false,
-        valueFormatter: (value: boolean) => activeLabel(value),
       },
       {
         field: "requestedBy",
@@ -197,7 +190,7 @@ export function CentersSection({
         >
           <SelectField
             id="center-status"
-            label="Estado"
+            label="Estado de la ficha"
             value={status}
             options={CENTER_STATUS_FILTER_OPTIONS}
             onChange={(value) => onStatusChange(value || "ALL")}
@@ -231,7 +224,7 @@ export function CenterTable({
   return (
     <AdminTable
       ariaLabel="Centros turísticos"
-      minWidth={review ? 860 : 760}
+      minWidth={review ? 720 : 620}
       loading={loading}
       error={error}
       empty={centers.length === 0}
@@ -241,8 +234,7 @@ export function CenterTable({
       <TableHead>
         <TableRow>
           <TableCell>Ficha</TableCell>
-          <TableCell>Estado</TableCell>
-          <TableCell>Estado operativo</TableCell>
+          <TableCell>Estado de la ficha</TableCell>
           <TableCell>Solicitó</TableCell>
           <TableCell>Actualizada</TableCell>
           <TableCell align="right">Acciones</TableCell>
@@ -263,7 +255,6 @@ export function CenterTable({
                 tone={centerStatusTone(center.status.code)}
               />
             </TableCell>
-            <TableCell>{activeLabel(center.active)}</TableCell>
             <TableCell>{center.requestedBy ?? "—"}</TableCell>
             <TableCell>{formatDate(center.updatedAt)}</TableCell>
             <TableCell align="right">

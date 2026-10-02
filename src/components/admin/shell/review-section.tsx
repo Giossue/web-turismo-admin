@@ -270,7 +270,7 @@ function EstablishmentReviewTable({
           <TableRow>
             <TableCell>Establecimiento</TableCell>
             <TableCell>Ubicación</TableCell>
-            <TableCell>Actividad / clasificación</TableCell>
+            <TableCell>Actividad / tipo de establecimiento</TableCell>
             <TableCell>Registro y RUC</TableCell>
             <TableCell>Enviado por</TableCell>
             <TableCell align="right">Acciones</TableCell>
@@ -291,7 +291,7 @@ function EstablishmentReviewTable({
               <TableCell>
                 {item.actividad}
                 <Typography variant="caption" display="block" color="text.secondary">
-                  {item.clasificacion ?? "Sin clasificación"}
+                  {item.clasificacion ?? "Sin tipo de establecimiento"}
                 </Typography>
               </TableCell>
               <TableCell>

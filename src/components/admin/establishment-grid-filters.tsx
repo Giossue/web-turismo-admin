@@ -43,7 +43,11 @@ export function EstablishmentGridFilters({
         label={label}
         value={values[field]}
         options={establishmentFilterOptions(field, values, catalogs)}
-        emptyLabel={field === "cantonId" || field === "active" ? "Todos" : "Todas"}
+        emptyLabel={
+          field === "cantonId" || field === "classification" || field === "active"
+            ? "Todos"
+            : "Todas"
+        }
         disabled={!isEstablishmentFilterAvailable(field, values)}
         onChange={(value) => onChange(field, value)}
       />

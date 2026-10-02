@@ -5,7 +5,7 @@ export const establishmentFilterFields = [
   { value: "cantonId", label: "Cantón" },
   { value: "localityId", label: "Localidad" },
   { value: "activity", label: "Actividad" },
-  { value: "classification", label: "Clasificación" },
+  { value: "classification", label: "Tipo de establecimiento" },
   { value: "category", label: "Categoría" },
   { value: "active", label: "Estado" },
 ] as const;

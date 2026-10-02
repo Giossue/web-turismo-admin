@@ -74,13 +74,19 @@ Centros turísticos y Catastro usan MUI X DataGrid Community v8, compatible con 
 La barra conserva el buscador y agrupa los criterios detrás de **Filtros**, con un contador
 de criterios activos. Los controles y la paginación se presentan en español.
 
-Centros muestra un selector de Estado; la búsqueda, el estado y la página conservan
-su estado en la URL. Catastro agrupa los siete criterios admitidos por la API en campos
+Centros muestra una sola columna y un selector de **Estado de la ficha**. La búsqueda,
+el estado y la página se conservan en la URL. Catastro agrupa los siete criterios
+admitidos por la API en campos
 con nombres de uso diario: ubicación, tipo de establecimiento y estado. Ambos paneles
 incluyen Limpiar filtros y Ver resultados. Cambiar un criterio reinicia la
-página y conserva las dependencias entre ubicación, actividad, clasificación y categoría.
+página y conserva las dependencias entre ubicación, actividad, tipo de establecimiento y categoría.
 Los filtros y la paginación se ejecutan en la API; el grid no filtra únicamente las filas
 de la página actual ni ofrece operadores u ordenaciones que la API no admite.
+
+El estado de la ficha incluye Borrador, En revisión, Aprobado, Publicado, Rechazado e
+Inactivo. La tabla omite la columna Activa/Inactiva: activar un borrador no lo publica.
+El estado corresponde a la versión en trabajo; si se edita un centro ya publicado,
+la versión anterior sigue visible en la app hasta publicar los cambios o desactivar la ficha.
 
 La activación y desactivación se controla dentro de **Editar**, con un interruptor cuyo
 cambio se aplica al pulsar **Guardar**. En Catastro, este control es exclusivo del administrador.
@@ -100,6 +106,19 @@ La edición Community tiene licencia MIT y admite un criterio en su modelo nativ
 el filtrado combinado nativo pertenece a Pro. Los filtros combinados de Catastro usan
 el estado de dominio y las consultas existentes de la API, con un panel personalizado.
 Referencia: [filtrado de MUI X v8](https://v8.mui.com/x/react-data-grid/filtering/).
+
+### Catálogos de tipos y categorías
+
+La pestaña **Tipos y categorías** reúne los catálogos del catastro en un flujo dependiente:
+actividad de catastro → selección de tipo de establecimiento → categorías del tipo.
+Por ejemplo, Alojamiento → Hotel → 3 Estrellas. El tipo define el servicio y su pin; la
+categoría conserva el sistema registrado, como estrellas, tenedores, tazas o categoría única.
+Las acciones de gestión se aplican al nivel visible, y las categorías se crean para el
+tipo seleccionado.
+
+La pestaña **Actividades de fichas** administra las actividades de centros y atractivos
+turísticos. Es un catálogo distinto de las actividades de catastro, como Alojamiento o
+Alimentos, bebidas y entretenimiento.
 
 ## Integración
 

@@ -223,7 +223,7 @@ export const EstablishmentManagement = forwardRef<
         editing?.classificationId
           ? {
               id: editing.classificationId,
-              name: editing.clasificacion ?? "Clasificación anterior",
+              name: editing.clasificacion ?? "Tipo de establecimiento anterior",
               activityId: editing.activityId ?? undefined,
             }
           : null,
@@ -539,7 +539,7 @@ export const EstablishmentManagement = forwardRef<
                   id="establishment-classification"
                   control={control}
                   name="classificationId"
-                  label="Clasificación"
+                  label="Tipo de establecimiento"
                   options={establishmentClassifications}
                   disabled={!formActivityId}
                   onValueChange={(value) => {

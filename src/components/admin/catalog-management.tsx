@@ -1,7 +1,11 @@
 "use client";
 
+import AddRounded from "@mui/icons-material/AddRounded";
+import ArrowBackRounded from "@mui/icons-material/ArrowBackRounded";
+import ArrowForwardRounded from "@mui/icons-material/ArrowForwardRounded";
 import EditRounded from "@mui/icons-material/EditRounded";
 import {
+  Box,
   Button,
   Dialog,
   DialogActions,
@@ -20,16 +24,10 @@ import {
   TableRow,
   TextField,
   Tooltip,
+  Typography,
 } from "@mui/material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  forwardRef,
-  useDeferredValue,
-  useEffect,
-  useImperativeHandle,
-  useMemo,
-  useState,
-} from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 
 import {
   AdminTable,
@@ -38,6 +36,7 @@ import {
 } from "@/components/ui/admin-table";
 import { DeleteRecordAction } from "@/components/admin/delete-record-action";
 import { CatalogIconSelect } from "@/components/ui/catalog-icon-select";
+import { CatalogSelect } from "@/components/ui/catalog-select";
 import { SearchField } from "@/components/ui/search-field";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
@@ -80,7 +79,7 @@ const CATALOG_CONFIG: Record<AdminCatalogKey, CatalogConfig> = {
     editTitle: "Editar opción de catálogo",
   },
   ACTIVITY: {
-    label: "Actividades",
+    label: "Actividades de fichas",
     source: "activities",
     parent: {
       label: "Grupo de actividad",
@@ -113,19 +112,26 @@ const CATALOG_CONFIG: Record<AdminCatalogKey, CatalogConfig> = {
     editTitle: "Editar tipo de establecimiento",
   },
   ESTABLISHMENT_CATEGORY: {
-    label: "Categorías de catastro",
+    label: "Categorías por tipo",
     source: "establishmentCategories",
     parent: {
       label: "Tipo de establecimiento",
       source: "establishmentClassifications",
       idOf: (option) => option.classificationId,
     },
-    createTitle: "Agregar categoría de catastro",
-    editTitle: "Editar opción de catálogo",
+    createTitle: "Agregar categoría",
+    editTitle: "Editar categoría",
   },
 };
 
-const CATALOG_KEYS = Object.keys(CATALOG_CONFIG) as AdminCatalogKey[];
+type CatalogTabKey = "ACCESSIBILITY" | "ACTIVITY" | "FACILITY" | "ESTABLISHMENTS";
+
+const CATALOG_TABS: { key: CatalogTabKey; label: string }[] = [
+  { key: "ACCESSIBILITY", label: CATALOG_CONFIG.ACCESSIBILITY.label },
+  { key: "ACTIVITY", label: CATALOG_CONFIG.ACTIVITY.label },
+  { key: "FACILITY", label: CATALOG_CONFIG.FACILITY.label },
+  { key: "ESTABLISHMENTS", label: "Tipos y categorías" },
+];
 
 const defaultCategoryIcon = "shop-supermarket";
 const catalogIconOptions = [
@@ -173,23 +179,22 @@ function normalizeCategoryIcon(value?: string): string {
   return isCatalogIcon(value) ? value : defaultCategoryIcon;
 }
 
-export type CatalogManagementRef = {
-  openCreate: () => void;
-};
-
-export const CatalogManagement = forwardRef<
-  CatalogManagementRef,
-  {
-    token: string;
-    onNotice: (message: string) => void;
-    onError: (message: string | null) => void;
-  }
->(function CatalogManagement({ token, onNotice, onError }, ref) {
+export function CatalogManagement({
+  token,
+  onNotice,
+  onError,
+}: {
+  token: string;
+  onNotice: (message: string) => void;
+  onError: (message: string | null) => void;
+}) {
   const queryClient = useQueryClient();
-  const [selected, setSelected] = useState<AdminCatalogKey>("ACCESSIBILITY");
+  const [selected, setSelected] = useState<CatalogTabKey>("ACCESSIBILITY");
+  const [activityId, setActivityId] = useState("");
+  const [typeId, setTypeId] = useState("");
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<CatalogOption | null>(null);
-  const [creating, setCreating] = useState(false);
+  const [editorCatalog, setEditorCatalog] = useState<AdminCatalogKey | null>(null);
   const [name, setName] = useState("");
   const [active, setActive] = useState(true);
   const [icon, setIcon] = useState(defaultCategoryIcon);
@@ -201,8 +206,27 @@ export const CatalogManagement = forwardRef<
   // El filtro es local: basta con diferir el render de la tabla, sin debounce.
   const deferredSearch = useDeferredValue(search.trim().toLocaleLowerCase());
   const catalogsQuery = useQuery(catalogsQueryOptions(token, true));
-  const config = CATALOG_CONFIG[selected];
+  const catalogs = catalogsQuery.data;
+  const establishmentActivities = catalogs?.establishmentActivities;
+  const selectedActivity = findCatalogOption(establishmentActivities, activityId);
+  const establishmentTypes = useMemo(
+    () =>
+      (catalogs?.establishmentClassifications ?? []).filter(
+        (option) => !selectedActivity || option.activityId === selectedActivity.id,
+      ),
+    [catalogs?.establishmentClassifications, selectedActivity],
+  );
+  const selectedType = findCatalogOption(establishmentTypes, typeId);
+  const isEstablishments = selected === "ESTABLISHMENTS";
+  const visibleCatalog: AdminCatalogKey = isEstablishments
+    ? selectedType
+      ? "ESTABLISHMENT_CATEGORY"
+      : "ESTABLISHMENT_CLASSIFICATION"
+    : selected;
+  // El diálogo conserva su catálogo aunque una recarga cambie el nivel visible.
+  const config = CATALOG_CONFIG[editorCatalog ?? visibleCatalog];
   const parent = config.parent;
+  const creating = editorCatalog !== null && editing === null;
 
   useEffect(() => {
     if (catalogsQuery.error) {
@@ -211,21 +235,25 @@ export const CatalogManagement = forwardRef<
   }, [catalogsQuery.error, onError]);
 
   const options = useMemo(() => {
-    const source = catalogsQuery.data?.[config.source] ?? [];
+    const source =
+      visibleCatalog === "ESTABLISHMENT_CLASSIFICATION"
+        ? establishmentTypes
+        : visibleCatalog === "ESTABLISHMENT_CATEGORY"
+          ? (catalogs?.establishmentCategories ?? []).filter(
+              (option) => option.classificationId === selectedType?.id,
+            )
+          : (catalogs?.[CATALOG_CONFIG[visibleCatalog].source] ?? []);
     return deferredSearch
       ? source.filter((item) =>
           [
             item.name,
             item.activityName ??
-              findCatalogOption(
-                catalogsQuery.data?.establishmentActivities,
-                item.activityId,
-              )?.name,
+              findCatalogOption(catalogs?.establishmentActivities, item.activityId)?.name,
             item.classificationName,
           ].some((value) => value?.toLocaleLowerCase().includes(deferredSearch)),
         )
       : source;
-  }, [catalogsQuery.data, config.source, deferredSearch]);
+  }, [catalogs, visibleCatalog, establishmentTypes, selectedType, deferredSearch]);
   const lastPage = Math.max(Math.ceil(options.length / ADMIN_TABLE_PAGE_SIZE) - 1, 0);
   const visiblePage = Math.min(page, lastPage);
   const visibleOptions = options.slice(
@@ -233,16 +261,23 @@ export const CatalogManagement = forwardRef<
     (visiblePage + 1) * ADMIN_TABLE_PAGE_SIZE,
   );
 
-  const parentOptions = parent ? (catalogsQuery.data?.[parent.source] ?? []) : [];
-  const establishmentActivities = catalogsQuery.data?.establishmentActivities;
+  const parentOptions = parent ? (catalogs?.[parent.source] ?? []) : [];
   /** La API solo envía `activityId` en los tipos de establecimiento; el nombre se resuelve aquí. */
   const activityNameOf = (option: CatalogOption) =>
     option.activityName ??
     findCatalogOption(establishmentActivities, option.activityId)?.name;
 
+  function selectType(value: string) {
+    const option = findCatalogOption(catalogs?.establishmentClassifications, value);
+    setTypeId(value);
+    if (option?.activityId) setActivityId(String(option.activityId));
+    setSearch("");
+    setPage(0);
+  }
+
   function resetEditor() {
     setEditing(null);
-    setCreating(false);
+    setEditorCatalog(null);
     setName("");
     setActive(true);
     setIcon(defaultCategoryIcon);
@@ -251,27 +286,34 @@ export const CatalogManagement = forwardRef<
     setNumericValue("");
   }
 
-  function openCreate() {
+  function openCreate(catalog: AdminCatalogKey = visibleCatalog) {
     resetEditor();
-    setCreating(true);
+    setEditorCatalog(catalog);
+    setParentId(
+      catalog === "ESTABLISHMENT_CLASSIFICATION" && selectedActivity?.active !== false
+        ? String(selectedActivity?.id ?? "")
+        : catalog === "ESTABLISHMENT_CATEGORY"
+          ? String(selectedType?.id ?? "")
+          : "",
+    );
     onError(null);
   }
-  useImperativeHandle(ref, () => ({ openCreate }));
 
-  function openEdit(option: CatalogOption) {
-    setCreating(false);
+  function openEdit(option: CatalogOption, catalog: AdminCatalogKey = visibleCatalog) {
+    setEditorCatalog(catalog);
     setEditing(option);
     setName(option.name);
     setActive(option.active !== false);
     setIcon(normalizeCategoryIcon(option.icon));
-    setParentId(String(parent?.idOf(option) ?? ""));
+    setParentId(String(CATALOG_CONFIG[catalog].parent?.idOf(option) ?? ""));
     setScheme(option.scheme ?? "OTRA");
     setNumericValue(option.numericValue == null ? "" : String(option.numericValue));
     onError(null);
   }
 
   async function save() {
-    if ((!editing && !creating) || name.trim().length < 2) {
+    if (working || !editorCatalog) return;
+    if (name.trim().length < 2) {
       onError("El nombre debe tener al menos 2 caracteres.");
       return;
     }
@@ -282,7 +324,7 @@ export const CatalogManagement = forwardRef<
     const parsedNumericValue = numericValue.trim() ? Number(numericValue) : undefined;
     if (
       creating &&
-      selected === "ESTABLISHMENT_CATEGORY" &&
+      editorCatalog === "ESTABLISHMENT_CATEGORY" &&
       parsedNumericValue !== undefined &&
       (!Number.isInteger(parsedNumericValue) ||
         parsedNumericValue < 1 ||
@@ -295,12 +337,12 @@ export const CatalogManagement = forwardRef<
     onError(null);
     try {
       if (creating) {
-        await createAdminCatalog(token, selected, {
+        await createAdminCatalog(token, editorCatalog, {
           name: name.trim(),
           active,
-          ...(selected === "ESTABLISHMENT_CLASSIFICATION" ? { icon } : {}),
+          ...(editorCatalog === "ESTABLISHMENT_CLASSIFICATION" ? { icon } : {}),
           ...(parent ? { parentId: Number(parentId) } : {}),
-          ...(selected === "ESTABLISHMENT_CATEGORY"
+          ...(editorCatalog === "ESTABLISHMENT_CATEGORY"
             ? {
                 scheme,
                 ...(parsedNumericValue !== undefined
@@ -310,13 +352,21 @@ export const CatalogManagement = forwardRef<
             : {}),
         });
       } else if (editing) {
-        await updateAdminCatalog(token, selected, editing.id, {
+        await updateAdminCatalog(token, editorCatalog, editing.id, {
           name: name.trim(),
           active,
-          ...(selected === "ESTABLISHMENT_CLASSIFICATION" ? { icon } : {}),
+          ...(editorCatalog === "ESTABLISHMENT_CLASSIFICATION" ? { icon } : {}),
         });
       }
       await queryClient.invalidateQueries({ queryKey: adminKeys.allCatalogs() });
+      if (creating) {
+        setSearch("");
+        setPage(0);
+        if (editorCatalog === "ESTABLISHMENT_CLASSIFICATION") {
+          setActivityId(parentId);
+          setTypeId("");
+        }
+      }
       resetEditor();
       onNotice(
         creating ? "Opción creada y auditada." : "Catálogo actualizado y auditado.",
@@ -330,25 +380,177 @@ export const CatalogManagement = forwardRef<
 
   return (
     <Stack spacing={webTokens.spacing.control}>
-      <AdminTableToolbar>
-        <Stack spacing={webTokens.spacing.control}>
-          <Tabs
-            value={selected}
-            onChange={(_, value: AdminCatalogKey) => {
-              setSelected(value);
-              setSearch("");
-              setPage(0);
-            }}
-            variant="scrollable"
-            allowScrollButtonsMobile
-            aria-label="Tipo de catálogo"
-          >
-            {CATALOG_KEYS.map((key) => (
-              <Tab key={key} value={key} label={CATALOG_CONFIG[key].label} />
-            ))}
-          </Tabs>
+      <Tabs
+        value={selected}
+        onChange={(_, value: CatalogTabKey) => {
+          setSelected(value);
+          setSearch("");
+          setPage(0);
+        }}
+        variant="scrollable"
+        allowScrollButtonsMobile
+        aria-label="Tipo de catálogo"
+      >
+        {CATALOG_TABS.map(({ key, label }) => (
+          <Tab
+            key={key}
+            value={key}
+            label={label}
+            id={`catalog-tab-${key}`}
+            aria-controls="catalog-panel"
+          />
+        ))}
+      </Tabs>
+
+      <Stack
+        id="catalog-panel"
+        role="tabpanel"
+        aria-labelledby={`catalog-tab-${selected}`}
+        spacing={webTokens.spacing.control}
+      >
+        {isEstablishments ? (
+          <>
+            <Typography variant="body2" color="text.secondary">
+              El tipo identifica el negocio, como Hotel o Restaurante. Cada tipo tiene sus
+              propias categorías, como 3 Estrellas o 3 Tenedores.
+            </Typography>
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              gap={webTokens.spacing.control}
+            >
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <CatalogSelect
+                  id="catalog-establishment-activity"
+                  label="Actividad del catastro"
+                  value={activityId}
+                  options={(establishmentActivities ?? []).map((option) => ({
+                    ...option,
+                    displayName:
+                      option.active === false ? `${option.name} (inactiva)` : option.name,
+                  }))}
+                  emptyLabel="Todas las actividades"
+                  disabled={catalogsQuery.isLoading || Boolean(catalogsQuery.error)}
+                  onChange={(value) => {
+                    setActivityId(value);
+                    setTypeId("");
+                    setSearch("");
+                    setPage(0);
+                  }}
+                />
+              </Box>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <CatalogSelect
+                  id="catalog-establishment-type"
+                  label="Tipo de establecimiento"
+                  value={typeId}
+                  options={establishmentTypes.map((option) => ({
+                    ...option,
+                    displayName: [
+                      option.name,
+                      !selectedActivity ? activityNameOf(option) : undefined,
+                      option.active === false ? "inactivo" : undefined,
+                    ]
+                      .filter(Boolean)
+                      .join(" · "),
+                  }))}
+                  emptyLabel="Ver tipos de establecimiento"
+                  disabled={catalogsQuery.isLoading || Boolean(catalogsQuery.error)}
+                  onChange={selectType}
+                />
+              </Box>
+            </Stack>
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              alignItems={{ sm: "center" }}
+              gap={webTokens.spacing.inline}
+            >
+              {selectedType ? (
+                <Button
+                  startIcon={<ArrowBackRounded />}
+                  onClick={() => selectType("")}
+                  sx={{ alignSelf: "flex-start" }}
+                >
+                  Ver tipos
+                </Button>
+              ) : null}
+              <Typography variant="h6" component="h2" sx={{ overflowWrap: "anywhere" }}>
+                {selectedType
+                  ? `Categorías de ${selectedType.name}`
+                  : "Tipos de establecimiento"}
+              </Typography>
+              {selectedType ? (
+                <Tooltip title="Editar tipo de establecimiento">
+                  <IconButton
+                    aria-label={`Editar tipo de establecimiento ${selectedType.name}`}
+                    onClick={() => openEdit(selectedType, "ESTABLISHMENT_CLASSIFICATION")}
+                    sx={{ alignSelf: "flex-start" }}
+                  >
+                    <EditRounded fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              ) : null}
+            </Stack>
+            {selectedType?.active === false ? (
+              <Typography variant="body2" color="text.secondary">
+                Este tipo está inactivo. Puedes editar sus categorías existentes; activa
+                el tipo para agregar nuevas categorías.
+              </Typography>
+            ) : null}
+          </>
+        ) : selected === "ACTIVITY" ? (
+          <Typography variant="body2" color="text.secondary">
+            Actividades que se realizan en centros y atractivos turísticos. Las
+            actividades del catastro se consultan en Tipos y categorías.
+          </Typography>
+        ) : null}
+
+        <AdminTableToolbar
+          actions={
+            <Stack direction={{ xs: "column", sm: "row" }} gap={webTokens.spacing.inline}>
+              {isEstablishments && selectedType ? (
+                <Button
+                  variant="outlined"
+                  startIcon={<AddRounded />}
+                  onClick={() => openCreate("ESTABLISHMENT_CLASSIFICATION")}
+                  disabled={
+                    catalogsQuery.isLoading ||
+                    Boolean(catalogsQuery.error) ||
+                    !establishmentActivities?.some((option) => option.active !== false)
+                  }
+                >
+                  Agregar tipo
+                </Button>
+              ) : null}
+              <Button
+                variant="contained"
+                startIcon={<AddRounded />}
+                onClick={() => openCreate()}
+                disabled={
+                  catalogsQuery.isLoading ||
+                  Boolean(catalogsQuery.error) ||
+                  (visibleCatalog === "ESTABLISHMENT_CATEGORY" &&
+                    selectedType?.active === false) ||
+                  (visibleCatalog === "ESTABLISHMENT_CLASSIFICATION" &&
+                    !establishmentActivities?.some((option) => option.active !== false))
+                }
+              >
+                {isEstablishments
+                  ? selectedType
+                    ? `Agregar categoría para ${selectedType.name}`
+                    : "Agregar tipo de establecimiento"
+                  : "Agregar opción"}
+              </Button>
+            </Stack>
+          }
+        >
           <SearchField
-            label="Buscar opción"
+            label={
+              isEstablishments
+                ? selectedType
+                  ? "Buscar categoría"
+                  : "Buscar tipo de establecimiento"
+                : "Buscar opción"
+            }
             value={search}
             onChange={(event) => {
               setSearch(event.target.value);
@@ -356,99 +558,137 @@ export const CatalogManagement = forwardRef<
             }}
             sx={{ width: { xs: "100%", sm: 360 } }}
           />
-        </Stack>
-      </AdminTableToolbar>
+        </AdminTableToolbar>
 
-      <AdminTable
-        ariaLabel="Opciones del catálogo"
-        minWidth={560}
-        loading={catalogsQuery.isLoading}
-        error={catalogsQuery.error ? "No se pudieron cargar los catálogos." : null}
-        empty={options.length === 0}
-        emptyMessage="No hay opciones que coincidan con la búsqueda."
-        pagination={{ page: visiblePage, total: options.length, onPageChange: setPage }}
-      >
-        <TableHead>
-          <TableRow>
-            <TableCell>Nombre</TableCell>
-            {selected === "ESTABLISHMENT_CATEGORY" ? (
-              <>
-                <TableCell>Actividad</TableCell>
-                <TableCell>Tipo</TableCell>
-                <TableCell>Sistema</TableCell>
-              </>
-            ) : selected === "ESTABLISHMENT_CLASSIFICATION" ? (
-              <TableCell>Actividad</TableCell>
-            ) : null}
-            <TableCell>Estado</TableCell>
-            <TableCell align="right">Acciones</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {visibleOptions.map((option) => (
-            <TableRow key={option.id} hover>
-              <TableCell component="th" scope="row">
-                {option.displayName ?? option.name}
+        <AdminTable
+          ariaLabel={
+            isEstablishments
+              ? selectedType
+                ? `Categorías de ${selectedType.name}`
+                : "Tipos de establecimiento"
+              : "Opciones del catálogo"
+          }
+          minWidth={560}
+          loading={catalogsQuery.isLoading}
+          error={catalogsQuery.error ? "No se pudieron cargar los catálogos." : null}
+          empty={options.length === 0}
+          emptyMessage={
+            deferredSearch
+              ? "No hay opciones que coincidan con la búsqueda."
+              : selectedType && isEstablishments
+                ? "Este tipo de establecimiento aún no tiene categorías."
+                : isEstablishments
+                  ? "No hay tipos de establecimiento para esta actividad."
+                  : "No hay opciones en este catálogo."
+          }
+          pagination={{ page: visiblePage, total: options.length, onPageChange: setPage }}
+        >
+          <TableHead>
+            <TableRow>
+              <TableCell>
+                {visibleCatalog === "ESTABLISHMENT_CATEGORY"
+                  ? "Categoría"
+                  : visibleCatalog === "ESTABLISHMENT_CLASSIFICATION"
+                    ? "Tipo de establecimiento"
+                    : "Nombre"}
               </TableCell>
-              {selected === "ESTABLISHMENT_CATEGORY" ? (
-                <>
-                  <TableCell>{option.activityName ?? "—"}</TableCell>
-                  <TableCell>{option.classificationName ?? "—"}</TableCell>
+              {visibleCatalog === "ESTABLISHMENT_CATEGORY" ? (
+                <TableCell>Sistema de categoría</TableCell>
+              ) : visibleCatalog === "ESTABLISHMENT_CLASSIFICATION" ? (
+                <TableCell>Actividad</TableCell>
+              ) : null}
+              <TableCell>Estado</TableCell>
+              <TableCell align="right">Acciones</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {visibleOptions.map((option) => (
+              <TableRow key={option.id} hover>
+                <TableCell component="th" scope="row">
+                  {isEstablishments ? option.name : (option.displayName ?? option.name)}
+                </TableCell>
+                {visibleCatalog === "ESTABLISHMENT_CATEGORY" ? (
                   <TableCell>
                     {categorySchemeLabels[option.scheme ?? ""] ?? option.scheme ?? "—"}
                   </TableCell>
-                </>
-              ) : selected === "ESTABLISHMENT_CLASSIFICATION" ? (
-                <TableCell>{activityNameOf(option) ?? "—"}</TableCell>
-              ) : null}
-              <TableCell>
-                <StatusBadge
-                  label={activeLabel(option.active !== false)}
-                  tone={activeTone(option.active !== false)}
-                />
-              </TableCell>
-              <TableCell align="right">
-                <Stack direction="row" justifyContent="flex-end">
-                  <Tooltip title="Editar">
-                    <IconButton
-                      aria-label={`Editar ${option.name}`}
-                      onClick={() => openEdit(option)}
-                    >
-                      <EditRounded fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  <DeleteRecordAction
-                    subject={option.displayName ?? option.name}
-                    title="Eliminar opción de catálogo"
-                    description="Dejará de aparecer en el catálogo. Las fichas existentes y el historial se conservan."
-                    onDelete={() => deleteAdminCatalog(token, selected, option.id)}
-                    queryKeys={[adminKeys.allCatalogs()]}
+                ) : visibleCatalog === "ESTABLISHMENT_CLASSIFICATION" ? (
+                  <TableCell>{activityNameOf(option) ?? "—"}</TableCell>
+                ) : null}
+                <TableCell>
+                  <StatusBadge
+                    label={activeLabel(option.active !== false)}
+                    tone={activeTone(option.active !== false)}
                   />
-                </Stack>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </AdminTable>
+                </TableCell>
+                <TableCell align="right">
+                  <Stack direction="row" justifyContent="flex-end" alignItems="center">
+                    {visibleCatalog === "ESTABLISHMENT_CLASSIFICATION" ? (
+                      <Button
+                        size="small"
+                        endIcon={<ArrowForwardRounded />}
+                        aria-label={`Ver categorías de ${option.name}`}
+                        onClick={() => selectType(String(option.id))}
+                        sx={{ whiteSpace: "nowrap" }}
+                      >
+                        Ver categorías
+                      </Button>
+                    ) : null}
+                    <Tooltip title="Editar">
+                      <IconButton
+                        aria-label={`Editar ${option.name}`}
+                        onClick={() => openEdit(option)}
+                      >
+                        <EditRounded fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <DeleteRecordAction
+                      subject={option.displayName ?? option.name}
+                      title="Eliminar opción de catálogo"
+                      description="Dejará de aparecer en el catálogo. Las fichas existentes y el historial se conservan."
+                      onDelete={() =>
+                        deleteAdminCatalog(token, visibleCatalog, option.id)
+                      }
+                      queryKeys={[adminKeys.allCatalogs()]}
+                    />
+                  </Stack>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </AdminTable>
+      </Stack>
 
       <Dialog
         open={editing !== null || creating}
         onClose={() => !working && resetEditor()}
         fullWidth
         maxWidth="sm"
+        aria-labelledby="catalog-editor-title"
       >
-        <DialogTitle>{creating ? config.createTitle : config.editTitle}</DialogTitle>
+        <DialogTitle id="catalog-editor-title">
+          {creating && editorCatalog === "ESTABLISHMENT_CATEGORY"
+            ? `Agregar categoría para ${findCatalogOption(parentOptions, parentId)?.name ?? "este tipo"}`
+            : creating
+              ? config.createTitle
+              : config.editTitle}
+        </DialogTitle>
         <DialogContent>
           <Stack spacing={webTokens.spacing.control} sx={{ pt: 1 }}>
             <TextField
-              label="Nombre"
+              label={
+                editorCatalog === "ESTABLISHMENT_CATEGORY"
+                  ? "Nombre de categoría"
+                  : editorCatalog === "ESTABLISHMENT_CLASSIFICATION"
+                    ? "Nombre del tipo de establecimiento"
+                    : "Nombre"
+              }
               value={name}
               onChange={(event) => setName(event.target.value)}
               fullWidth
               autoFocus
               disabled={working}
             />
-            {creating && parent ? (
+            {creating && parent && editorCatalog !== "ESTABLISHMENT_CATEGORY" ? (
               <TextField
                 select
                 label={parent.label}
@@ -459,24 +699,28 @@ export const CatalogManagement = forwardRef<
                 required
                 helperText="La opción quedará vinculada a este catálogo superior."
               >
-                {parentOptions.map((option) => (
-                  <MenuItem key={option.id} value={option.id}>
-                    {option.name}
-                  </MenuItem>
-                ))}
+                {parentOptions
+                  .filter((option) => option.active !== false)
+                  .map((option) => (
+                    <MenuItem key={option.id} value={option.id}>
+                      {option.name}
+                    </MenuItem>
+                  ))}
               </TextField>
-            ) : editing && parent ? (
+            ) : parent && editorCatalog ? (
               <TextField
                 label={parent.label}
-                value={
-                  findCatalogOption(parentOptions, parent.idOf(editing))?.name ?? "—"
-                }
+                value={findCatalogOption(parentOptions, parentId)?.name ?? "—"}
                 fullWidth
                 disabled
-                helperText="El catálogo superior no se puede cambiar después de crear la opción."
+                helperText={
+                  creating
+                    ? "La categoría se creará dentro de este tipo de establecimiento."
+                    : "El catálogo superior no se puede cambiar después de crear la opción."
+                }
               />
             ) : null}
-            {selected === "ESTABLISHMENT_CLASSIFICATION" ? (
+            {editorCatalog === "ESTABLISHMENT_CLASSIFICATION" ? (
               <CatalogIconSelect
                 id="catalog-marker-icon"
                 label="Icono del marcador"
@@ -486,11 +730,11 @@ export const CatalogManagement = forwardRef<
                 disabled={working}
               />
             ) : null}
-            {creating && selected === "ESTABLISHMENT_CATEGORY" ? (
+            {creating && editorCatalog === "ESTABLISHMENT_CATEGORY" ? (
               <>
                 <TextField
                   select
-                  label="Sistema de clasificación"
+                  label="Sistema de categoría"
                   value={scheme}
                   onChange={(event) => setScheme(event.target.value)}
                   fullWidth
@@ -523,8 +767,12 @@ export const CatalogManagement = forwardRef<
               }
               label={
                 active
-                  ? "Disponible para nuevas fichas"
-                  : "No disponible para nuevas fichas"
+                  ? editorCatalog?.startsWith("ESTABLISHMENT_")
+                    ? "Disponible para nuevos establecimientos"
+                    : "Disponible para nuevas fichas"
+                  : editorCatalog?.startsWith("ESTABLISHMENT_")
+                    ? "No disponible para nuevos establecimientos"
+                    : "No disponible para nuevas fichas"
               }
             />
           </Stack>
@@ -540,4 +788,4 @@ export const CatalogManagement = forwardRef<
       </Dialog>
     </Stack>
   );
-});
+}

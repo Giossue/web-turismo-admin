@@ -23,7 +23,7 @@ function establishmentDetails(detail: AdminEstablishment): DetailListItem[] {
   return [
     { label: "Razón social", value: detail.razonSocial ?? "—" },
     { label: "Actividad", value: detail.actividad },
-    { label: "Clasificación", value: detail.clasificacion ?? "—" },
+    { label: "Tipo de establecimiento", value: detail.clasificacion ?? "—" },
     { label: "Categoría", value: detail.categoriaEtiqueta ?? detail.categoria ?? "—" },
     { label: "Semántica", value: `${detail.esquemaCategoria ?? "—"}${categoryValue}` },
     { label: "Localidad", value: `${detail.localityName} · ${detail.localityType}` },
