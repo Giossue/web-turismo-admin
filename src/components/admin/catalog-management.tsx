@@ -1,8 +1,6 @@
 "use client";
 
 import AddRounded from "@mui/icons-material/AddRounded";
-import ArrowBackRounded from "@mui/icons-material/ArrowBackRounded";
-import ArrowForwardRounded from "@mui/icons-material/ArrowForwardRounded";
 import EditRounded from "@mui/icons-material/EditRounded";
 import {
   Box,
@@ -14,6 +12,8 @@ import {
   DialogTitle,
   FormControlLabel,
   IconButton,
+  List,
+  ListItem,
   MenuItem,
   Stack,
   Switch,
@@ -28,7 +28,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 
 import {
   AdminTable,
@@ -38,6 +38,7 @@ import {
 import { DeleteRecordAction } from "@/components/admin/delete-record-action";
 import { CatalogIconSelect } from "@/components/ui/catalog-icon-select";
 import { CatalogSelect } from "@/components/ui/catalog-select";
+import { ContentState } from "@/components/ui/content-state";
 import { SearchField } from "@/components/ui/search-field";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
@@ -197,8 +198,6 @@ export function CatalogManagement({
   const [editing, setEditing] = useState<CatalogOption | null>(null);
   const [editorCatalog, setEditorCatalog] = useState<AdminCatalogKey | null>(null);
   const [editorError, setEditorError] = useState<string | null>(null);
-  const headingRef = useRef<HTMLHeadingElement>(null);
-  const focusHeading = useRef(false);
   const [name, setName] = useState("");
   const [active, setActive] = useState(true);
   const [icon, setIcon] = useState(defaultCategoryIcon);
@@ -220,24 +219,18 @@ export function CatalogManagement({
       ),
     [catalogs?.establishmentClassifications, selectedActivity],
   );
-  const selectedType = findCatalogOption(establishmentTypes, typeId);
+  const selectedType = findCatalogOption(catalogs?.establishmentClassifications, typeId);
+  const typeCategories = (catalogs?.establishmentCategories ?? []).filter(
+    (option) => option.classificationId === selectedType?.id,
+  );
   const isEstablishments = selected === "ESTABLISHMENTS";
   const visibleCatalog: AdminCatalogKey = isEstablishments
-    ? selectedType
-      ? "ESTABLISHMENT_CATEGORY"
-      : "ESTABLISHMENT_CLASSIFICATION"
+    ? "ESTABLISHMENT_CLASSIFICATION"
     : selected;
   // El diálogo conserva su catálogo aunque una recarga cambie el nivel visible.
   const config = CATALOG_CONFIG[editorCatalog ?? visibleCatalog];
   const parent = config.parent;
   const creating = editorCatalog !== null && editing === null;
-
-  useEffect(() => {
-    if (focusHeading.current) {
-      headingRef.current?.focus();
-      focusHeading.current = false;
-    }
-  }, [typeId]);
 
   useEffect(() => {
     if (catalogsQuery.error) {
@@ -249,11 +242,7 @@ export function CatalogManagement({
     const source =
       visibleCatalog === "ESTABLISHMENT_CLASSIFICATION"
         ? establishmentTypes
-        : visibleCatalog === "ESTABLISHMENT_CATEGORY"
-          ? (catalogs?.establishmentCategories ?? []).filter(
-              (option) => option.classificationId === selectedType?.id,
-            )
-          : (catalogs?.[CATALOG_CONFIG[visibleCatalog].source] ?? []);
+        : (catalogs?.[CATALOG_CONFIG[visibleCatalog].source] ?? []);
     return deferredSearch
       ? source.filter((item) =>
           [
@@ -264,7 +253,7 @@ export function CatalogManagement({
           ].some((value) => value?.toLocaleLowerCase().includes(deferredSearch)),
         )
       : source;
-  }, [catalogs, visibleCatalog, establishmentTypes, selectedType, deferredSearch]);
+  }, [catalogs, visibleCatalog, establishmentTypes, deferredSearch]);
   const lastPage = Math.max(Math.ceil(options.length / ADMIN_TABLE_PAGE_SIZE) - 1, 0);
   const visiblePage = Math.min(page, lastPage);
   const visibleOptions = options.slice(
@@ -277,15 +266,6 @@ export function CatalogManagement({
   const activityNameOf = (option: CatalogOption) =>
     option.activityName ??
     findCatalogOption(establishmentActivities, option.activityId)?.name;
-
-  function selectType(value: string, focusAfterChange = false) {
-    const option = findCatalogOption(catalogs?.establishmentClassifications, value);
-    focusHeading.current = focusAfterChange;
-    setTypeId(value);
-    if (option?.activityId) setActivityId(String(option.activityId));
-    setSearch("");
-    setPage(0);
-  }
 
   function resetEditor() {
     setEditing(null);
@@ -374,7 +354,7 @@ export function CatalogManagement({
         });
       }
       await queryClient.invalidateQueries({ queryKey: adminKeys.allCatalogs() });
-      if (creating) {
+      if (creating && editorCatalog !== "ESTABLISHMENT_CATEGORY") {
         setSearch("");
         setPage(0);
         if (editorCatalog === "ESTABLISHMENT_CLASSIFICATION") {
@@ -400,6 +380,7 @@ export function CatalogManagement({
         onChange={(_, value: CatalogTabKey) => {
           setSelected(value);
           setSearch("");
+          setTypeId("");
           setPage(0);
         }}
         variant="scrollable"
@@ -423,209 +404,89 @@ export function CatalogManagement({
         aria-labelledby={`catalog-tab-${selected}`}
         spacing={webTokens.spacing.control}
       >
-        {isEstablishments ? (
-          <>
-            <Typography variant="body2" color="text.secondary">
-              El tipo identifica el negocio, como Hotel o Restaurante. Cada tipo tiene sus
-              propias categorías, como 3 Estrellas o 3 Tenedores.
-            </Typography>
-            <Stack
-              direction={{ xs: "column", sm: "row" }}
-              gap={webTokens.spacing.control}
-            >
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <CatalogSelect
-                  id="catalog-establishment-activity"
-                  label="Actividad del catastro"
-                  value={activityId}
-                  options={(establishmentActivities ?? []).map((option) => ({
-                    ...option,
-                    displayName:
-                      option.active === false ? `${option.name} (inactiva)` : option.name,
-                  }))}
-                  emptyLabel="Todas las actividades"
-                  displayEmpty
-                  disabled={catalogsQuery.isLoading || Boolean(catalogsQuery.error)}
-                  onChange={(value) => {
-                    setActivityId(value);
-                    setTypeId("");
-                    setSearch("");
-                    setPage(0);
-                  }}
-                />
-              </Box>
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <CatalogSelect
-                  id="catalog-establishment-type"
-                  label="Tipo de establecimiento"
-                  value={typeId}
-                  options={establishmentTypes.map((option) => ({
-                    ...option,
-                    displayName: [
-                      option.name,
-                      !selectedActivity ? activityNameOf(option) : undefined,
-                      option.active === false ? "inactivo" : undefined,
-                    ]
-                      .filter(Boolean)
-                      .join(" · "),
-                  }))}
-                  emptyLabel="Ver tipos de establecimiento"
-                  displayEmpty
-                  disabled={catalogsQuery.isLoading || Boolean(catalogsQuery.error)}
-                  onChange={selectType}
-                />
-              </Box>
-            </Stack>
-            <Stack
-              direction={{ xs: "column", sm: "row" }}
-              alignItems={{ sm: "center" }}
-              gap={webTokens.spacing.inline}
-            >
-              {selectedType ? (
-                <Button
-                  startIcon={<ArrowBackRounded />}
-                  onClick={() => selectType("", true)}
-                  sx={{ alignSelf: "flex-start" }}
-                >
-                  Ver tipos
-                </Button>
-              ) : null}
-              <Typography
-                variant="h6"
-                component="h2"
-                ref={headingRef}
-                tabIndex={-1}
-                sx={{ overflowWrap: "anywhere" }}
-              >
-                {selectedType
-                  ? `Categorías de ${selectedType.name}`
-                  : "Tipos de establecimiento"}
-              </Typography>
-              {selectedType ? (
-                <Tooltip title="Editar tipo de establecimiento">
-                  <IconButton
-                    aria-label={`Editar tipo de establecimiento ${selectedType.name}`}
-                    onClick={() => openEdit(selectedType, "ESTABLISHMENT_CLASSIFICATION")}
-                    sx={{ alignSelf: "flex-start" }}
-                  >
-                    <EditRounded fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              ) : null}
-            </Stack>
-            {selectedType?.active === false ? (
-              <Typography variant="body2" color="text.secondary">
-                Este tipo está inactivo. Puedes editar sus categorías existentes; activa
-                el tipo para agregar nuevas categorías.
-              </Typography>
-            ) : null}
-          </>
-        ) : selected === "ACTIVITY" ? (
+        {selected === "ACTIVITY" ? (
           <Typography variant="body2" color="text.secondary">
-            Actividades que se realizan en centros y atractivos turísticos. Las
-            actividades del catastro se consultan en Tipos y categorías.
+            Actividades que se realizan en centros y atractivos turísticos.
           </Typography>
         ) : null}
 
         <AdminTableToolbar
           actions={
-            <Stack direction={{ xs: "column", sm: "row" }} gap={webTokens.spacing.inline}>
-              {isEstablishments && selectedType ? (
-                <Button
-                  variant="outlined"
-                  startIcon={<AddRounded />}
-                  onClick={() => openCreate("ESTABLISHMENT_CLASSIFICATION")}
-                  disabled={
-                    catalogsQuery.isLoading ||
-                    Boolean(catalogsQuery.error) ||
-                    !establishmentActivities?.some((option) => option.active !== false)
-                  }
-                >
-                  Agregar tipo
-                </Button>
-              ) : null}
-              <Button
-                variant="contained"
-                startIcon={<AddRounded />}
-                onClick={() => openCreate()}
-                disabled={
-                  catalogsQuery.isLoading ||
-                  Boolean(catalogsQuery.error) ||
-                  (visibleCatalog === "ESTABLISHMENT_CATEGORY" &&
-                    selectedType?.active === false) ||
-                  (visibleCatalog === "ESTABLISHMENT_CLASSIFICATION" &&
-                    !establishmentActivities?.some((option) => option.active !== false))
-                }
-              >
-                {isEstablishments
-                  ? selectedType
-                    ? `Agregar categoría para ${selectedType.name}`
-                    : "Agregar tipo de establecimiento"
-                  : "Agregar opción"}
-              </Button>
-            </Stack>
+            <Button
+              variant="contained"
+              startIcon={<AddRounded />}
+              onClick={() => openCreate()}
+              disabled={
+                catalogsQuery.isLoading ||
+                Boolean(catalogsQuery.error) ||
+                (isEstablishments &&
+                  !establishmentActivities?.some((option) => option.active !== false))
+              }
+            >
+              {isEstablishments ? "Agregar tipo" : "Agregar opción"}
+            </Button>
           }
         >
-          <SearchField
-            label={
-              isEstablishments
-                ? selectedType
-                  ? "Buscar categoría"
-                  : "Buscar tipo de establecimiento"
-                : "Buscar opción"
-            }
-            value={search}
-            onChange={(event) => {
-              setSearch(event.target.value);
-              setPage(0);
-            }}
-            sx={{ width: { xs: "100%", sm: 360 } }}
-          />
+          {isEstablishments ? (
+            <Box sx={{ width: { xs: "100%", sm: 360 } }}>
+              <CatalogSelect
+                id="catalog-establishment-activity"
+                label="Actividad"
+                value={activityId}
+                options={(establishmentActivities ?? []).map((option) => ({
+                  ...option,
+                  displayName:
+                    option.active === false ? `${option.name} (inactiva)` : option.name,
+                }))}
+                emptyLabel="Todas las actividades"
+                displayEmpty
+                disabled={catalogsQuery.isLoading || Boolean(catalogsQuery.error)}
+                onChange={(value) => {
+                  setActivityId(value);
+                  setSearch("");
+                  setPage(0);
+                }}
+              />
+            </Box>
+          ) : (
+            <SearchField
+              label="Buscar opción"
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setPage(0);
+              }}
+              sx={{ width: { xs: "100%", sm: 360 } }}
+            />
+          )}
         </AdminTableToolbar>
 
         <AdminTable
-          key={
-            isEstablishments
-              ? `${visibleCatalog}:${selectedActivity?.id ?? "all"}:${selectedType?.id ?? "types"}`
-              : visibleCatalog
-          }
+          key={isEstablishments ? `${visibleCatalog}:${activityId}` : visibleCatalog}
           ariaLabel={
-            isEstablishments
-              ? selectedType
-                ? `Categorías de ${selectedType.name}`
-                : "Tipos de establecimiento"
-              : "Opciones del catálogo"
+            isEstablishments ? "Tipos de establecimiento" : "Opciones del catálogo"
           }
-          minWidth={560}
+          minWidth={isEstablishments ? 420 : 560}
           loading={catalogsQuery.isLoading}
           error={catalogsQuery.error ? "No se pudieron cargar los catálogos." : null}
           empty={options.length === 0}
           emptyMessage={
             deferredSearch
               ? "No hay opciones que coincidan con la búsqueda."
-              : selectedType && isEstablishments
-                ? "Este tipo de establecimiento aún no tiene categorías."
-                : isEstablishments
-                  ? "No hay tipos de establecimiento para esta actividad."
-                  : "No hay opciones en este catálogo."
+              : isEstablishments
+                ? "No hay tipos de establecimiento para esta actividad."
+                : "No hay opciones en este catálogo."
           }
-          pagination={{ page: visiblePage, total: options.length, onPageChange: setPage }}
+          pagination={
+            isEstablishments && options.length <= ADMIN_TABLE_PAGE_SIZE
+              ? undefined
+              : { page: visiblePage, total: options.length, onPageChange: setPage }
+          }
         >
           <TableHead>
             <TableRow>
-              <TableCell>
-                {visibleCatalog === "ESTABLISHMENT_CATEGORY"
-                  ? "Categoría"
-                  : visibleCatalog === "ESTABLISHMENT_CLASSIFICATION"
-                    ? "Tipo de establecimiento"
-                    : "Nombre"}
-              </TableCell>
-              {visibleCatalog === "ESTABLISHMENT_CATEGORY" ? (
-                <TableCell>Sistema de categoría</TableCell>
-              ) : visibleCatalog === "ESTABLISHMENT_CLASSIFICATION" ? (
-                <TableCell>Actividad</TableCell>
-              ) : null}
-              <TableCell>Estado</TableCell>
+              <TableCell>{isEstablishments ? "Tipo" : "Nombre"}</TableCell>
+              <TableCell>{isEstablishments ? "Categorías" : "Estado"}</TableCell>
               <TableCell align="right">Acciones</TableCell>
             </TableRow>
           </TableHead>
@@ -633,34 +494,47 @@ export function CatalogManagement({
             {visibleOptions.map((option) => (
               <TableRow key={`${visibleCatalog}:${option.id}`} hover>
                 <TableCell component="th" scope="row">
-                  {isEstablishments ? option.name : (option.displayName ?? option.name)}
+                  {isEstablishments ? (
+                    <Stack spacing={0.5} alignItems="flex-start">
+                      <Typography variant="body2">{option.name}</Typography>
+                      {!selectedActivity ? (
+                        <Typography variant="caption" color="text.secondary">
+                          {activityNameOf(option) ?? "—"}
+                        </Typography>
+                      ) : null}
+                      {option.active === false ? (
+                        <StatusBadge label="Inactivo" tone={activeTone(false)} />
+                      ) : null}
+                    </Stack>
+                  ) : (
+                    (option.displayName ?? option.name)
+                  )}
                 </TableCell>
-                {visibleCatalog === "ESTABLISHMENT_CATEGORY" ? (
-                  <TableCell>
-                    {categorySchemeLabels[option.scheme ?? ""] ?? option.scheme ?? "—"}
-                  </TableCell>
-                ) : visibleCatalog === "ESTABLISHMENT_CLASSIFICATION" ? (
-                  <TableCell>{activityNameOf(option) ?? "—"}</TableCell>
-                ) : null}
                 <TableCell>
-                  <StatusBadge
-                    label={activeLabel(option.active !== false)}
-                    tone={activeTone(option.active !== false)}
-                  />
+                  {isEstablishments ? (
+                    <Button
+                      size="small"
+                      aria-label={`Ver categorías de ${option.name}`}
+                      onClick={() => setTypeId(String(option.id))}
+                      sx={{ whiteSpace: "nowrap" }}
+                    >
+                      Ver (
+                      {
+                        (catalogs?.establishmentCategories ?? []).filter(
+                          (category) => category.classificationId === option.id,
+                        ).length
+                      }
+                      )
+                    </Button>
+                  ) : (
+                    <StatusBadge
+                      label={activeLabel(option.active !== false)}
+                      tone={activeTone(option.active !== false)}
+                    />
+                  )}
                 </TableCell>
                 <TableCell align="right">
                   <Stack direction="row" justifyContent="flex-end" alignItems="center">
-                    {visibleCatalog === "ESTABLISHMENT_CLASSIFICATION" ? (
-                      <Button
-                        size="small"
-                        endIcon={<ArrowForwardRounded />}
-                        aria-label={`Ver categorías de ${option.name}`}
-                        onClick={() => selectType(String(option.id), true)}
-                        sx={{ whiteSpace: "nowrap" }}
-                      >
-                        Ver categorías
-                      </Button>
-                    ) : null}
                     <Tooltip title="Editar">
                       <IconButton
                         aria-label={`Editar ${option.name}`}
@@ -687,6 +561,94 @@ export function CatalogManagement({
       </Stack>
 
       <Dialog
+        open={isEstablishments && Boolean(selectedType)}
+        onClose={() => !editorCatalog && setTypeId("")}
+        fullWidth
+        maxWidth="sm"
+        aria-labelledby="catalog-categories-title"
+      >
+        <DialogTitle id="catalog-categories-title">
+          Categorías de {selectedType?.name}
+        </DialogTitle>
+        <DialogContent>
+          {catalogsQuery.error ? (
+            <ContentState
+              status="error"
+              message="No se pudieron cargar las categorías."
+            />
+          ) : typeCategories.length === 0 ? (
+            <Typography variant="body2" color="text.secondary">
+              Este tipo aún no tiene categorías.
+            </Typography>
+          ) : (
+            <List disablePadding aria-label={`Categorías de ${selectedType?.name}`}>
+              {typeCategories.map((option, index) => (
+                <ListItem
+                  key={`ESTABLISHMENT_CATEGORY:${option.id}`}
+                  disableGutters
+                  divider={index < typeCategories.length - 1}
+                  sx={{ gap: webTokens.spacing.inline, py: 1.5 }}
+                >
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="body2" sx={{ overflowWrap: "anywhere" }}>
+                      {option.name}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {categorySchemeLabels[option.scheme ?? ""] ?? option.scheme ?? ""}
+                    </Typography>
+                    {option.active === false ? (
+                      <Box sx={{ mt: 0.5 }}>
+                        <StatusBadge label="Inactiva" tone={activeTone(false)} />
+                      </Box>
+                    ) : null}
+                  </Box>
+                  <Stack direction="row" alignItems="center" sx={{ flexShrink: 0 }}>
+                    <Tooltip title="Editar categoría">
+                      <IconButton
+                        aria-label={`Editar categoría ${option.name}`}
+                        onClick={() => openEdit(option, "ESTABLISHMENT_CATEGORY")}
+                      >
+                        <EditRounded fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <DeleteRecordAction
+                      subject={option.displayName ?? option.name}
+                      title="Eliminar categoría"
+                      description="Dejará de estar disponible para nuevos establecimientos. El historial se conserva."
+                      onDelete={() =>
+                        deleteAdminCatalog(token, "ESTABLISHMENT_CATEGORY", option.id)
+                      }
+                      queryKeys={[adminKeys.allCatalogs()]}
+                    />
+                  </Stack>
+                </ListItem>
+              ))}
+            </List>
+          )}
+          {selectedType?.active === false ? (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+              Este tipo está inactivo. Actívalo desde Editar para agregar categorías.
+            </Typography>
+          ) : null}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setTypeId("")}>Cerrar</Button>
+          <Button
+            variant="contained"
+            startIcon={<AddRounded />}
+            onClick={() => openCreate("ESTABLISHMENT_CATEGORY")}
+            disabled={
+              catalogsQuery.isLoading ||
+              Boolean(catalogsQuery.error) ||
+              selectedType?.active === false
+            }
+          >
+            Agregar categoría
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
         open={editing !== null || creating}
         onClose={() => !working && resetEditor()}
         fullWidth
@@ -694,8 +656,8 @@ export function CatalogManagement({
         aria-labelledby="catalog-editor-title"
       >
         <DialogTitle id="catalog-editor-title">
-          {creating && editorCatalog === "ESTABLISHMENT_CATEGORY"
-            ? `Agregar categoría para ${findCatalogOption(parentOptions, parentId)?.name ?? "este tipo"}`
+          {editorCatalog === "ESTABLISHMENT_CATEGORY"
+            ? `${creating ? "Agregar" : "Editar"} categoría para ${findCatalogOption(parentOptions, parentId)?.name ?? "este tipo"}`
             : creating
               ? config.createTitle
               : config.editTitle}
@@ -736,7 +698,7 @@ export function CatalogManagement({
                     </MenuItem>
                   ))}
               </TextField>
-            ) : parent && editorCatalog ? (
+            ) : parent && editorCatalog && editorCatalog !== "ESTABLISHMENT_CATEGORY" ? (
               <TextField
                 label={parent.label}
                 value={findCatalogOption(parentOptions, parentId)?.name ?? "—"}
