@@ -25,6 +25,7 @@ export function CatalogSelect({
   required = false,
   helperText,
   emptyLabel,
+  displayEmpty = false,
   name,
   inputRef,
   onBlur,
@@ -40,6 +41,8 @@ export function CatalogSelect({
   helperText?: string;
   /** Añade una opción vacía (valor `""`) con este texto, por ejemplo "Todas". */
   emptyLabel?: string;
+  /** Muestra la opción vacía en el control cerrado y mantiene la etiqueta flotante. */
+  displayEmpty?: boolean;
   name?: string;
   inputRef?: React.Ref<unknown>;
   onBlur?: () => void;
@@ -57,13 +60,16 @@ export function CatalogSelect({
       error={Boolean(helperText)}
       disabled={disabled}
     >
-      <InputLabel id={labelId}>{label}</InputLabel>
+      <InputLabel id={labelId} shrink={displayEmpty ? true : undefined}>
+        {label}
+      </InputLabel>
       <Select
         id={id}
         labelId={labelId}
         label={label}
         name={name}
         value={displayValue}
+        displayEmpty={displayEmpty}
         inputRef={inputRef}
         onBlur={onBlur}
         onChange={handleChange}

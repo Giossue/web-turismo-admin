@@ -444,6 +444,7 @@ export function CatalogManagement({
                       option.active === false ? `${option.name} (inactiva)` : option.name,
                   }))}
                   emptyLabel="Todas las actividades"
+                  displayEmpty
                   disabled={catalogsQuery.isLoading || Boolean(catalogsQuery.error)}
                   onChange={(value) => {
                     setActivityId(value);
@@ -469,6 +470,7 @@ export function CatalogManagement({
                       .join(" · "),
                   }))}
                   emptyLabel="Ver tipos de establecimiento"
+                  displayEmpty
                   disabled={catalogsQuery.isLoading || Boolean(catalogsQuery.error)}
                   onChange={selectType}
                 />
@@ -582,6 +584,11 @@ export function CatalogManagement({
         </AdminTableToolbar>
 
         <AdminTable
+          key={
+            isEstablishments
+              ? `${visibleCatalog}:${selectedActivity?.id ?? "all"}:${selectedType?.id ?? "types"}`
+              : visibleCatalog
+          }
           ariaLabel={
             isEstablishments
               ? selectedType
@@ -715,7 +722,7 @@ export function CatalogManagement({
                 select
                 label={parent.label}
                 value={parentId}
-                onChange={(event) => setParentId(event.target.value)}
+                onChange={(event) => setParentId(String(event.target.value))}
                 fullWidth
                 disabled={working}
                 required
@@ -724,7 +731,7 @@ export function CatalogManagement({
                 {parentOptions
                   .filter((option) => option.active !== false)
                   .map((option) => (
-                    <MenuItem key={option.id} value={option.id}>
+                    <MenuItem key={option.id} value={String(option.id)}>
                       {option.name}
                     </MenuItem>
                   ))}

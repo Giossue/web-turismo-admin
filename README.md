@@ -109,12 +109,17 @@ Referencia: [filtrado de MUI X v8](https://v8.mui.com/x/react-data-grid/filterin
 
 ### Catálogos de tipos y categorías
 
-La pestaña **Tipos y categorías** reúne los catálogos del catastro en un flujo dependiente:
-actividad de catastro → selección de tipo de establecimiento → categorías del tipo.
-Por ejemplo, Alojamiento → Hotel → 3 Estrellas. El tipo define el servicio y su pin; la
+La pestaña **Tipos y categorías** muestra inicialmente todos los tipos de establecimiento.
+**Actividad del catastro** es un filtro opcional. Seleccionar un tipo muestra sus categorías
+y su actividad; **Ver tipos** regresa al listado conservando el filtro de actividad.
+La relación es actividad de catastro → tipo de establecimiento → categorías del tipo,
+por ejemplo, Alojamiento → Hotel → 3 Estrellas. El tipo define el servicio y su pin; la
 categoría conserva el sistema registrado, como estrellas, tenedores, tazas o categoría única.
-Las acciones de gestión se aplican al nivel visible, y las categorías se crean para el
-tipo seleccionado.
+
+Las categorías se crean para el tipo seleccionado, con ese padre fijo. Desde sus categorías
+también se puede editar el tipo o agregar otro; al crear un tipo, el listado vuelve a la
+actividad elegida en el formulario. Los tipos inactivos conservan la gestión de sus categorías
+existentes y deben activarse antes de agregar nuevas categorías.
 
 La pestaña **Actividades de fichas** administra las actividades de centros y atractivos
 turísticos. Es un catálogo distinto de las actividades de catastro, como Alojamiento o
