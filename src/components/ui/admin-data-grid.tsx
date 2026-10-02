@@ -209,6 +209,7 @@ export function AdminDataGrid<R extends GridValidRowModel>({
                 width: 32,
                 height: 32,
                 p: 0,
+                border: 0,
                 backgroundColor: "transparent",
                 "&:hover, &.Mui-disabled": { backgroundColor: "transparent" },
                 "& .MuiSvgIcon-root": { fontSize: 20 },

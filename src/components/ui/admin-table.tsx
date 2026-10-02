@@ -121,6 +121,7 @@ function AdminTableFooter({
         alignSelf={{ xs: "flex-end", sm: "auto" }}
         sx={{
           "& .MuiIconButton-root": {
+            border: 0,
             backgroundColor: "transparent",
             "&:hover, &.Mui-disabled": { backgroundColor: "transparent" },
           },
