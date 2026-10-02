@@ -6,6 +6,7 @@ import ArrowForwardRounded from "@mui/icons-material/ArrowForwardRounded";
 import EditRounded from "@mui/icons-material/EditRounded";
 import {
   Box,
+  Alert,
   Button,
   Dialog,
   DialogActions,
@@ -27,7 +28,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   AdminTable,
@@ -195,6 +196,9 @@ export function CatalogManagement({
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<CatalogOption | null>(null);
   const [editorCatalog, setEditorCatalog] = useState<AdminCatalogKey | null>(null);
+  const [editorError, setEditorError] = useState<string | null>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const focusHeading = useRef(false);
   const [name, setName] = useState("");
   const [active, setActive] = useState(true);
   const [icon, setIcon] = useState(defaultCategoryIcon);
@@ -227,6 +231,13 @@ export function CatalogManagement({
   const config = CATALOG_CONFIG[editorCatalog ?? visibleCatalog];
   const parent = config.parent;
   const creating = editorCatalog !== null && editing === null;
+
+  useEffect(() => {
+    if (focusHeading.current) {
+      headingRef.current?.focus();
+      focusHeading.current = false;
+    }
+  }, [typeId]);
 
   useEffect(() => {
     if (catalogsQuery.error) {
@@ -267,8 +278,9 @@ export function CatalogManagement({
     option.activityName ??
     findCatalogOption(establishmentActivities, option.activityId)?.name;
 
-  function selectType(value: string) {
+  function selectType(value: string, focusAfterChange = false) {
     const option = findCatalogOption(catalogs?.establishmentClassifications, value);
+    focusHeading.current = focusAfterChange;
     setTypeId(value);
     if (option?.activityId) setActivityId(String(option.activityId));
     setSearch("");
@@ -278,6 +290,7 @@ export function CatalogManagement({
   function resetEditor() {
     setEditing(null);
     setEditorCatalog(null);
+    setEditorError(null);
     setName("");
     setActive(true);
     setIcon(defaultCategoryIcon);
@@ -302,6 +315,7 @@ export function CatalogManagement({
   function openEdit(option: CatalogOption, catalog: AdminCatalogKey = visibleCatalog) {
     setEditorCatalog(catalog);
     setEditing(option);
+    setEditorError(null);
     setName(option.name);
     setActive(option.active !== false);
     setIcon(normalizeCategoryIcon(option.icon));
@@ -314,11 +328,11 @@ export function CatalogManagement({
   async function save() {
     if (working || !editorCatalog) return;
     if (name.trim().length < 2) {
-      onError("El nombre debe tener al menos 2 caracteres.");
+      setEditorError("El nombre debe tener al menos 2 caracteres.");
       return;
     }
     if (creating && parent && !parentId) {
-      onError(`Selecciona ${parent.label.toLocaleLowerCase()}.`);
+      setEditorError(`Selecciona ${parent.label.toLocaleLowerCase()}.`);
       return;
     }
     const parsedNumericValue = numericValue.trim() ? Number(numericValue) : undefined;
@@ -330,10 +344,11 @@ export function CatalogManagement({
         parsedNumericValue < 1 ||
         parsedNumericValue > 99)
     ) {
-      onError("El valor numérico debe ser un entero entre 1 y 99.");
+      setEditorError("El valor numérico debe ser un entero entre 1 y 99.");
       return;
     }
     setWorking(true);
+    setEditorError(null);
     onError(null);
     try {
       if (creating) {
@@ -372,7 +387,7 @@ export function CatalogManagement({
         creating ? "Opción creada y auditada." : "Catálogo actualizado y auditado.",
       );
     } catch (cause) {
-      onError(errorMessage(cause, "No se pudo actualizar el catálogo."));
+      setEditorError(errorMessage(cause, "No se pudo actualizar el catálogo."));
     } finally {
       setWorking(false);
     }
@@ -467,13 +482,19 @@ export function CatalogManagement({
               {selectedType ? (
                 <Button
                   startIcon={<ArrowBackRounded />}
-                  onClick={() => selectType("")}
+                  onClick={() => selectType("", true)}
                   sx={{ alignSelf: "flex-start" }}
                 >
                   Ver tipos
                 </Button>
               ) : null}
-              <Typography variant="h6" component="h2" sx={{ overflowWrap: "anywhere" }}>
+              <Typography
+                variant="h6"
+                component="h2"
+                ref={headingRef}
+                tabIndex={-1}
+                sx={{ overflowWrap: "anywhere" }}
+              >
                 {selectedType
                   ? `Categorías de ${selectedType.name}`
                   : "Tipos de establecimiento"}
@@ -603,7 +624,7 @@ export function CatalogManagement({
           </TableHead>
           <TableBody>
             {visibleOptions.map((option) => (
-              <TableRow key={option.id} hover>
+              <TableRow key={`${visibleCatalog}:${option.id}`} hover>
                 <TableCell component="th" scope="row">
                   {isEstablishments ? option.name : (option.displayName ?? option.name)}
                 </TableCell>
@@ -627,7 +648,7 @@ export function CatalogManagement({
                         size="small"
                         endIcon={<ArrowForwardRounded />}
                         aria-label={`Ver categorías de ${option.name}`}
-                        onClick={() => selectType(String(option.id))}
+                        onClick={() => selectType(String(option.id), true)}
                         sx={{ whiteSpace: "nowrap" }}
                       >
                         Ver categorías
@@ -674,6 +695,7 @@ export function CatalogManagement({
         </DialogTitle>
         <DialogContent>
           <Stack spacing={webTokens.spacing.control} sx={{ pt: 1 }}>
+            {editorError ? <Alert severity="error">{editorError}</Alert> : null}
             <TextField
               label={
                 editorCatalog === "ESTABLISHMENT_CATEGORY"
