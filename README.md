@@ -1,6 +1,6 @@
 # web-turismo-admin
 
-Landing institucional y futuro panel administrativo de Turismo Vinculación. La app móvil
+Portal administrativo de Turismo Vinculación con acceso directo al login. La app móvil
 es el único cliente para turistas; este repositorio no contiene una versión web turística.
 
 ## Arranque local
@@ -49,9 +49,10 @@ bun install
 bun run dev
 ```
 
-Abre `http://localhost:3002` para la landing. El panel operativo está en
-`http://localhost:3002/admin`; inicia sesión con una cuenta institucional creada en la
-API. El navegador solo recibe un access token en memoria y mantiene el refresh token en
+Abre `http://localhost:3002`: la ruta principal redirige a `/admin` y muestra el login
+institucional. Si ya tienes una sesión válida, se abre directamente el panel. Inicia sesión
+con una cuenta institucional creada en la API. El portal queda excluido del rastreo de
+buscadores. El navegador solo recibe un access token en memoria y mantiene el refresh token en
 una cookie HttpOnly. Al recargar, el panel llama a `/auth/refresh` para reconstruir la
 sesión sin usar `localStorage`.
 El panel usa los `colorSchemes` de MUI y permite alternar entre tema claro y oscuro desde

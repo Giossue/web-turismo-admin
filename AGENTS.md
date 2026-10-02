@@ -1,14 +1,14 @@
 # Web Turismo Admin
 
-Portal separado para la landing institucional y la operación administrativa de Turismo
-Vinculación.
+Portal separado para la operación administrativa de Turismo Vinculación. La ruta principal
+`/` redirige a `/admin`, que muestra el login institucional o el panel si existe una sesión.
 
 ## Límites
 
 - La aplicación móvil es el único producto para turistas.
 - Este repositorio no se conecta directamente a PostgreSQL, PostGIS, Redis ni MinIO.
 - La API NestJS existente es la fuente de datos y la frontera de autorización.
-- `/admin` está fuera de la navegación pública y de robots, pero esa ocultación no es
+- El portal está excluido del rastreo de robots, pero esa ocultación no es
   autenticación. Antes de habilitar mutaciones se debe integrar sesión institucional,
   autorización por rol y auditoría en la API.
 
@@ -16,7 +16,7 @@ Vinculación.
 
 - Next.js App Router, React y TypeScript.
 - Material UI (MUI) v7 con `AppRouterCacheProvider` para SSR.
-- Server Components para la landing y consultas públicas; Client Components solo para
+- Server Components para las rutas y metadatos; Client Components solo para
   interacción del panel.
 
 ## Comandos
