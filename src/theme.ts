@@ -87,10 +87,9 @@ const theme = createTheme({
               style: {
                 color: "var(--mui-palette-primary-contrastText)",
                 backgroundColor: "var(--mui-palette-primary-main)",
-                backgroundImage:
-                  "linear-gradient(to bottom, var(--mui-palette-primary-main), var(--mui-palette-primary-dark))",
-                border: "1px solid var(--mui-palette-primary-dark)",
-                boxShadow: `inset 0 1px 0 ${alpha(webTokens.colors.light.primary.light, 0.4)}, inset 0 -1px 0 1px ${webTokens.colors.light.primary.dark}`,
+                backgroundImage: "none",
+                border: "1px solid transparent",
+                boxShadow: "none",
                 "&:hover": {
                   backgroundColor: "var(--mui-palette-primary-dark)",
                   backgroundImage: "none",
@@ -106,10 +105,6 @@ const theme = createTheme({
                 ...theme.applyStyles("dark", {
                   color: "var(--mui-palette-primary-contrastText)",
                   backgroundColor: "var(--mui-palette-primary-main)",
-                  backgroundImage:
-                    "linear-gradient(to bottom, var(--mui-palette-primary-light), var(--mui-palette-primary-main))",
-                  borderColor: "var(--mui-palette-primary-main)",
-                  boxShadow: `inset 0 -1px 0 ${webTokens.colors.dark.primary.dark}`,
                   "&:hover": {
                     backgroundColor: "var(--mui-palette-primary-light)",
                     backgroundImage: "none",
