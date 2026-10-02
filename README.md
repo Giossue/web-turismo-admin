@@ -91,6 +91,14 @@ la versión anterior sigue visible en la app hasta publicar los cambios o desact
 La activación y desactivación se controla dentro de **Editar**, con un interruptor cuyo
 cambio se aplica al pulsar **Guardar**. En Catastro, este control es exclusivo del administrador.
 
+En **Nuevo establecimiento** y **Editar establecimiento**, Localidad permite escribir para
+buscar por nombre, cantón o provincia, sin distinguir mayúsculas ni tildes. Las opciones
+muestran su cantón y provincia para distinguir nombres repetidos; se debe seleccionar una
+opción del catálogo antes de guardar. El catálogo nacional de cabeceras cantonales y
+localidades rurales procede del INEC 2026 y se carga en la API mediante la migración
+`20261002_national_localities.sql` del monorepo. Las localidades nuevas no reciben
+coordenadas aproximadas: la ubicación del establecimiento se captura en su formulario.
+
 Las tablas de Centros turísticos, Catastro, Opiniones y Catálogos ofrecen **Eliminar**
 al administrador, con confirmación del registro. La eliminación retira el registro del
 panel y de la aplicación, conserva sus relaciones e historial y es distinta de la
