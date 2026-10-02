@@ -85,6 +85,14 @@ de la página actual ni ofrece operadores u ordenaciones que la API no admite.
 La activación y desactivación se controla dentro de **Editar**, con un interruptor cuyo
 cambio se aplica al pulsar **Guardar**. En Catastro, este control es exclusivo del administrador.
 
+Las tablas de Centros turísticos, Catastro, Opiniones y Catálogos ofrecen **Eliminar**
+al administrador, con confirmación del registro. La eliminación retira el registro del
+panel y de la aplicación, conserva sus relaciones e historial y es distinta de la
+desactivación reversible. Eliminar una opinión retira todas sus versiones y su aportación
+a las calificaciones. Un tipo de establecimiento con categorías debe eliminar sus
+categorías primero. Requiere la migración `20261002_admin_logical_deletion.sql` y la API
+actualizada del monorepo, desplegadas antes de esta web.
+
 La edición Community tiene licencia MIT y admite un criterio en su modelo nativo;
 el filtrado combinado nativo pertenece a Pro. Los filtros combinados de Catastro usan
 el estado de dominio y las consultas existentes de la API, con un panel personalizado.
