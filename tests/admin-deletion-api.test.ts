@@ -55,7 +55,7 @@ const cases = [
 describe("eliminación administrativa mediante la API", () => {
   for (const item of cases) {
     test(`${item.label}: envía DELETE autenticado sin cuerpo y devuelve el sobre de éxito`, async () => {
-      const data = { deleted: true };
+      const data = { deleted: true } as const;
       const fetchMock = mockApi(200, { data });
 
       expect(await item.remove()).toEqual(data);

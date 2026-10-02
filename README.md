@@ -93,6 +93,9 @@ a las calificaciones. Un tipo de establecimiento con categorías debe eliminar s
 categorías primero. Requiere la migración `20261002_admin_logical_deletion.sql` y la API
 actualizada del monorepo, desplegadas antes de esta web.
 
+Las fichas que ya usan un catálogo retirado lo muestran como «ya no disponible» y pueden
+conservarlo al editar otros campos; no se ofrece para nuevas asignaciones.
+
 La edición Community tiene licencia MIT y admite un criterio en su modelo nativo;
 el filtrado combinado nativo pertenece a Pro. Los filtros combinados de Catastro usan
 el estado de dominio y las consultas existentes de la API, con un panel personalizado.

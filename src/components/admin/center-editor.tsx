@@ -24,6 +24,7 @@ import { EditableContext } from "@/components/ui/form/editable-context";
 import { PageHeader } from "@/components/ui/page-header";
 import { getAdminCenter, type AdminCenterDetail } from "@/lib/admin-api";
 import { adminKeys, catalogsQueryOptions } from "@/lib/admin-queries";
+import { centerEditorCatalogs } from "@/lib/center-editor-catalogs";
 import {
   CENTER_CREATE_FIELDS,
   CENTER_STEP_FIELDS,
@@ -66,10 +67,14 @@ export function CenterEditor({
     queryFn: () => getAdminCenter(token, code as string),
     enabled: token.length > 0 && code !== null,
   });
-  const catalogs = catalogsQuery.data ?? null;
   const detail = useMemo(
     () => (centerQuery.data ? withEditorDraft(centerQuery.data) : null),
     [centerQuery.data],
+  );
+  const catalogs = useMemo(
+    () =>
+      centerEditorCatalogs(catalogsQuery.data ?? null, detail?.retainedCatalogOptions),
+    [catalogsQuery.data, detail?.retainedCatalogOptions],
   );
   // La ficha vive solo en la caché de TanStack; el formulario se sincroniza con
   // ella y conserva los cambios que la persona aún no guardó.
@@ -97,8 +102,12 @@ export function CenterEditor({
 
   /** Reemplaza el formulario por la ficha del servidor (sin cambios locales). */
   const adoptServerDetail = (saved: AdminCenterDetail) => {
-    if (catalogs)
-      form.reset(toFormValues(editorDraftOf(withEditorDraft(saved)), catalogs));
+    const savedCatalogs = centerEditorCatalogs(
+      catalogsQuery.data ?? null,
+      saved.retainedCatalogOptions,
+    );
+    if (savedCatalogs)
+      form.reset(toFormValues(editorDraftOf(withEditorDraft(saved)), savedCatalogs));
   };
   const centerSave = useCenterSave({
     token,

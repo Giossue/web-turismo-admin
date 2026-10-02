@@ -12,6 +12,7 @@ export type CatalogSelectOption = {
   name: string;
   displayName?: string;
   active?: boolean;
+  disabled?: boolean;
 };
 
 export function CatalogSelect({
@@ -69,7 +70,7 @@ export function CatalogSelect({
       >
         {emptyLabel !== undefined ? <MenuItem value="">{emptyLabel}</MenuItem> : null}
         {options.map((option) => (
-          <MenuItem key={option.id} value={String(option.id)}>
+          <MenuItem key={option.id} value={String(option.id)} disabled={option.disabled}>
             {option.displayName ?? option.name}
           </MenuItem>
         ))}

@@ -51,12 +51,14 @@ export function OptionGrid({
                   name={field.name}
                   value={id}
                   checked={checked}
-                  disabled={disabled || !editable}
+                  disabled={
+                    disabled || !editable || (option.active === false && !checked)
+                  }
                   onBlur={field.onBlur}
                   onChange={(event) => toggle(id, event.target.checked)}
                 />
               }
-              label={option.name}
+              label={option.displayName ?? option.name}
             />
             {checked && renderSelected ? renderSelected(option) : null}
           </Grid>

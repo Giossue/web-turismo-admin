@@ -62,6 +62,7 @@ import {
 } from "@/lib/admin-labels";
 import { adminKeys, catalogsQueryOptions } from "@/lib/admin-queries";
 import { errorMessage } from "@/lib/errors";
+import { withRetainedCatalogOption } from "@/lib/retained-catalog-options";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { findCatalogIdByName, findCatalogOption } from "@/lib/values";
 import { webTokens } from "@/theme/tokens";
@@ -211,23 +212,45 @@ export const EstablishmentManagement = forwardRef<
 
   const data = establishmentsQuery.data;
   const catalogs = catalogsQuery.data;
-  const establishmentActivities = catalogs?.establishmentActivities ?? [];
+  const establishmentActivities = withRetainedCatalogOption(
+    catalogs?.establishmentActivities,
+    editing?.activityId ? { id: editing.activityId, name: editing.actividad } : null,
+  );
   const establishmentClassifications = useMemo(
     () =>
-      (catalogs?.establishmentClassifications ?? []).filter(
+      withRetainedCatalogOption(
+        catalogs?.establishmentClassifications,
+        editing?.classificationId
+          ? {
+              id: editing.classificationId,
+              name: editing.clasificacion ?? "Clasificación anterior",
+              activityId: editing.activityId ?? undefined,
+            }
+          : null,
+      ).filter(
         (option) =>
           !formActivityId || String(option.activityId) === String(formActivityId),
       ),
-    [catalogs?.establishmentClassifications, formActivityId],
+    [catalogs?.establishmentClassifications, editing, formActivityId],
   );
   const establishmentCategories = useMemo(
     () =>
-      (catalogs?.establishmentCategories ?? []).filter(
+      withRetainedCatalogOption(
+        catalogs?.establishmentCategories,
+        editing?.categoryId
+          ? {
+              id: editing.categoryId,
+              name: editing.categoria ?? "Categoría anterior",
+              displayName: editing.categoriaEtiqueta ?? undefined,
+              classificationId: editing.classificationId ?? undefined,
+            }
+          : null,
+      ).filter(
         (option) =>
           !formClassificationId ||
           String(option.classificationId) === String(formClassificationId),
       ),
-    [catalogs?.establishmentCategories, formClassificationId],
+    [catalogs?.establishmentCategories, editing, formClassificationId],
   );
   const openCreate = useCallback(() => {
     setEditing(null);

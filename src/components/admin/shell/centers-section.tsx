@@ -71,6 +71,7 @@ export function CentersSection({
       offset: page * pageSize,
     }),
   );
+  const itemsOnPage = centersQuery.data?.items.length ?? 0;
   const columns = useMemo<GridColDef<AdminCenter>[]>(
     () => [
       {
@@ -158,18 +159,14 @@ export function CentersSection({
                   adminKeys.center(row.code),
                   adminKeys.media(row.code),
                 ]}
-                onDeleted={() =>
-                  onPageChange(
-                    pageAfterRemoval(page, centersQuery.data?.items.length ?? 0),
-                  )
-                }
+                onDeleted={() => onPageChange(pageAfterRemoval(page, itemsOnPage))}
               />
             ) : null}
           </Stack>
         ),
       },
     ],
-    [onOpen, canDelete, token, page, onPageChange, centersQuery.data?.items.length],
+    [onOpen, canDelete, token, page, onPageChange, itemsOnPage],
   );
 
   return (

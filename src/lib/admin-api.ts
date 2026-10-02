@@ -124,6 +124,12 @@ export type AdminCenterDetail = {
   version: number;
   published: CenterDraft;
   draft: CenterDraft | null;
+  retainedCatalogOptions?: Partial<
+    Pick<
+      AdminCatalogs,
+      "activities" | "accessibilityTypes" | "accessibilityCriteria" | "facilities"
+    >
+  >;
   review: {
     status: { code: string; name: string };
     observation: string | null;
