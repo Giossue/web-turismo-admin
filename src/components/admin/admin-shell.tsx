@@ -165,6 +165,7 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
               direction="row"
               alignItems="flex-start"
               spacing={webTokens.spacing.control}
+              useFlexGap
             >
               <Tooltip title="Abrir menú">
                 <IconButton
