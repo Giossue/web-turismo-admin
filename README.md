@@ -68,6 +68,24 @@ los estilos se sirven desde la propia web.
 La atribución del código adaptado está en
 [`docs/third-party-notices/mui-templates.md`](docs/third-party-notices/mui-templates.md).
 
+### Filtros del panel
+
+Centros turísticos y Catastro usan MUI X DataGrid Community v8, compatible con MUI v7.
+La barra conserva el buscador y agrupa los criterios detrás de **Filtros**, con un contador
+de criterios activos. Los controles y la paginación se presentan en español.
+
+Centros utiliza el filtro nativo de Estado; la búsqueda, el estado y la página conservan
+su estado en la URL. Catastro personaliza el slot del panel con filas de columna, operador
+y valor para los siete criterios admitidos por la API. Cambiar un criterio reinicia la
+página y conserva las dependencias entre ubicación, actividad, clasificación y categoría.
+Los filtros y la paginación se ejecutan en la API; el grid no filtra únicamente las filas
+de la página actual ni ofrece operadores u ordenaciones que la API no admite.
+
+La edición Community tiene licencia MIT y admite un criterio en su modelo nativo;
+el filtrado combinado nativo pertenece a Pro. Los filtros combinados de Catastro usan
+el estado de dominio y las consultas existentes de la API, con un panel personalizado.
+Referencia: [filtrado de MUI X v8](https://v8.mui.com/x/react-data-grid/filtering/).
+
 ## Integración
 
 El portal consume la API NestJS mediante `TURISMO_API_URL` (servidor) o

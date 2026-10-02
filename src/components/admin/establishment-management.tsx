@@ -13,13 +13,10 @@ import {
   Grid,
   IconButton,
   Stack,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
   Tooltip,
   Typography,
 } from "@mui/material";
+import type { GridColDef } from "@mui/x-data-grid";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   forwardRef,
@@ -27,22 +24,25 @@ import {
   useEffect,
   useImperativeHandle,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { useForm, useWatch } from "react-hook-form";
 
-import {
-  AdminTable,
-  AdminTableToolbar,
-  ADMIN_TABLE_PAGE_SIZE,
-} from "@/components/ui/admin-table";
-import { CatalogSelect } from "@/components/ui/catalog-select";
+import { AdminDataGrid } from "@/components/ui/admin-data-grid";
+import { ADMIN_TABLE_PAGE_SIZE } from "@/components/ui/admin-table";
 import { CoordinateFieldset } from "@/components/admin/coordinate-fieldset";
+import {
+  changeEstablishmentFilter,
+  emptyEstablishmentFilters,
+  establishmentFiltersToQuery,
+  type EstablishmentFilterField,
+  type EstablishmentFilterRow,
+} from "@/components/admin/establishment-grid-filter-state";
+import { EstablishmentGridFilters } from "@/components/admin/establishment-grid-filters";
 import { RhfCatalogSelect } from "@/components/ui/form/rhf-select";
 import { RhfTextField } from "@/components/ui/form/rhf-text-field";
 import { maxLen, required } from "@/components/ui/form/rules";
-import { SelectField } from "@/components/ui/form/select-field";
-import { SearchField } from "@/components/ui/search-field";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
   createAdminEstablishment,
@@ -103,20 +103,10 @@ const emptyValues: EstablishmentFormValues = {
 
 const pageSize = ADMIN_TABLE_PAGE_SIZE;
 
-const ACTIVE_FILTER_OPTIONS = [
-  { value: "ALL", label: "Todos" },
-  { value: "true", label: "Activos" },
-  { value: "false", label: "Inactivos" },
-];
-
 const RUC_RULES = {
   validate: (value: string) =>
     !value.trim() || /^\d{13}$/.test(value.trim()) || "El RUC debe contener 13 dígitos.",
 };
-
-function toFilterOption(option: { id: number; name: string }) {
-  return { value: String(option.id), label: option.name };
-}
 
 export type EstablishmentManagementRef = {
   openCreate: () => void;
@@ -133,13 +123,11 @@ export const EstablishmentManagement = forwardRef<
 >(function EstablishmentManagement({ token, onNotice, onError, canManageStatus }, ref) {
   const queryClient = useQueryClient();
   const [queryDraft, setQueryDraft] = useState("");
-  const [provinceId, setProvinceId] = useState("");
-  const [cantonId, setCantonId] = useState("");
-  const [localityId, setLocalityId] = useState("");
-  const [activity, setActivity] = useState("");
-  const [classification, setClassification] = useState("");
-  const [category, setCategory] = useState("");
-  const [active, setActive] = useState("ALL");
+  const [filters, setFilters] = useState(emptyEstablishmentFilters);
+  const [filterRows, setFilterRows] = useState<EstablishmentFilterRow[]>([
+    { id: 1, field: "provinceId" },
+  ]);
+  const nextFilterRowId = useRef(2);
   const [page, setPage] = useState(0);
   const [editing, setEditing] = useState<AdminEstablishment | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -153,14 +141,8 @@ export const EstablishmentManagement = forwardRef<
 
   const catalogsQuery = useQuery(catalogsQueryOptions(token));
   const establishmentFilters: AdminEstablishmentsOptions = {
+    ...establishmentFiltersToQuery(filters),
     q: debouncedQuery || undefined,
-    activity: activity || undefined,
-    classification: classification || undefined,
-    category: category || undefined,
-    provinceId: provinceId ? Number(provinceId) : undefined,
-    cantonId: cantonId ? Number(cantonId) : undefined,
-    localityId: localityId ? Number(localityId) : undefined,
-    active: active === "ALL" ? undefined : active === "true",
     limit: pageSize,
     offset: page * pageSize,
   };
@@ -205,7 +187,7 @@ export const EstablishmentManagement = forwardRef<
       onError(errorMessage(cause, "No se pudo guardar el establecimiento.")),
   });
 
-  const submitReviewMutation = useMutation({
+  const { mutate: submitReview, isPending: isSubmittingReview } = useMutation({
     mutationFn: (id: number) => submitAdminEstablishmentReview(token, id),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: adminKeys.allEstablishments() });
@@ -215,7 +197,7 @@ export const EstablishmentManagement = forwardRef<
       onError(errorMessage(cause, "No se pudo enviar el catastro a revisión.")),
   });
 
-  const activeMutation = useMutation({
+  const { mutate: setActive, isPending: isSettingActive } = useMutation({
     mutationFn: ({ id, next }: { id: number; next: boolean }) =>
       setAdminEstablishmentActive(token, id, next),
     onSuccess: async (_, variables) => {
@@ -249,41 +231,6 @@ export const EstablishmentManagement = forwardRef<
       ),
     [catalogs?.establishmentCategories, formClassificationId],
   );
-  const filterActivityId = establishmentActivities.find(
-    (option) => option.name === activity,
-  )?.id;
-  const filterClassifications = useMemo(
-    () =>
-      (catalogs?.establishmentClassifications ?? []).filter(
-        (option) =>
-          !filterActivityId || String(option.activityId) === String(filterActivityId),
-      ),
-    [catalogs?.establishmentClassifications, filterActivityId],
-  );
-  const filterClassificationId = filterClassifications.find(
-    (option) => option.name === classification,
-  )?.id;
-  const filterCategories = useMemo(
-    () =>
-      (catalogs?.establishmentCategories ?? []).filter(
-        (option) =>
-          !filterClassificationId ||
-          String(option.classificationId) === String(filterClassificationId),
-      ),
-    [catalogs?.establishmentCategories, filterClassificationId],
-  );
-  const filterCategoryId = filterCategories.find(
-    (option) => option.name === category,
-  )?.id;
-  const provinces = catalogs?.provinces ?? [];
-  const cantons = (catalogs?.cantons ?? []).filter(
-    (option) => !provinceId || String(option.provinceId) === provinceId,
-  );
-  const localities = (catalogs?.localities ?? []).filter(
-    (option) =>
-      (!provinceId || String(option.provinceId) === provinceId) &&
-      (!cantonId || String(option.cantonId) === cantonId),
-  );
   const openCreate = useCallback(() => {
     setEditing(null);
     reset(emptyValues);
@@ -292,11 +239,161 @@ export const EstablishmentManagement = forwardRef<
 
   useImperativeHandle(ref, () => ({ openCreate }), [openCreate]);
 
-  function openEdit(item: AdminEstablishment) {
-    setEditing(item);
-    reset(toFormValues(item, catalogs));
-    setDialogOpen(true);
+  const openEdit = useCallback(
+    (item: AdminEstablishment) => {
+      setEditing(item);
+      reset(toFormValues(item, catalogs));
+      setDialogOpen(true);
+    },
+    [catalogs, reset],
+  );
+
+  function changeFilter(field: EstablishmentFilterField, value: string) {
+    setFilters((current) => changeEstablishmentFilter(current, field, value));
+    setPage(0);
   }
+
+  function changeFilterField(id: number, field: EstablishmentFilterField) {
+    const previous = filterRows.find((row) => row.id === id);
+    if (!previous || previous.field === field) return;
+    changeFilter(previous.field, "");
+    setFilterRows((current) =>
+      current.map((row) => (row.id === id ? { ...row, field } : row)),
+    );
+  }
+
+  function removeFilter(id: number) {
+    const row = filterRows.find((item) => item.id === id);
+    if (row) changeFilter(row.field, "");
+    setFilterRows((current) => current.filter((item) => item.id !== id));
+  }
+
+  const columns = useMemo<GridColDef<AdminEstablishment>[]>(
+    () => [
+      {
+        field: "nombreComercial",
+        headerName: "Establecimiento",
+        minWidth: 240,
+        flex: 1.5,
+        filterable: false,
+        renderCell: ({ row }) => (
+          <Stack sx={{ justifyContent: "center", height: "100%", minWidth: 0 }}>
+            <Typography variant="body2" fontWeight={600} noWrap>
+              {row.nombreComercial}
+            </Typography>
+            {row.categoria ? (
+              <Typography variant="caption" color="text.secondary" noWrap>
+                {row.categoriaEtiqueta ?? row.categoria}
+              </Typography>
+            ) : null}
+          </Stack>
+        ),
+      },
+      {
+        field: "localityName",
+        headerName: "Localidad",
+        minWidth: 150,
+        flex: 1,
+        filterable: false,
+      },
+      {
+        field: "actividad",
+        headerName: "Actividad",
+        minWidth: 160,
+        flex: 1,
+        filterable: false,
+      },
+      {
+        field: "numeroRegistro",
+        headerName: "Registro",
+        minWidth: 135,
+        flex: 0.7,
+        filterable: false,
+        valueFormatter: (value: string | null) => value ?? "—",
+      },
+      {
+        field: "reviewStatus",
+        headerName: "Estado",
+        minWidth: 160,
+        filterable: false,
+        renderCell: ({ row }) => (
+          <StatusBadge
+            label={establishmentReviewStatusLabel(row.reviewStatus)}
+            tone={establishmentReviewStatusTone(row.reviewStatus)}
+          />
+        ),
+      },
+      {
+        field: "actions",
+        headerName: "Acciones",
+        width: 145,
+        align: "right",
+        headerAlign: "right",
+        filterable: false,
+        disableColumnMenu: true,
+        renderCell: ({ row: item, hasFocus }) => (
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="flex-end"
+            sx={{ height: "100%" }}
+          >
+            <Tooltip title="Editar establecimiento">
+              <span>
+                <IconButton
+                  aria-label={`Editar ${item.nombreComercial}`}
+                  tabIndex={hasFocus ? 0 : -1}
+                  onClick={() => openEdit(item)}
+                  disabled={
+                    !canManageStatus &&
+                    !["BORRADOR", "RECHAZADO"].includes(item.reviewStatus)
+                  }
+                >
+                  <EditRounded />
+                </IconButton>
+              </span>
+            </Tooltip>
+            {!canManageStatus && ["BORRADOR", "RECHAZADO"].includes(item.reviewStatus) ? (
+              <Tooltip title="Enviar a revisión">
+                <span>
+                  <IconButton
+                    aria-label={`Enviar a revisión ${item.nombreComercial}`}
+                    tabIndex={hasFocus ? 0 : -1}
+                    onClick={() => submitReview(item.id)}
+                    disabled={isSubmittingReview}
+                  >
+                    <SendRounded />
+                  </IconButton>
+                </span>
+              </Tooltip>
+            ) : null}
+            {canManageStatus ? (
+              <Tooltip title={item.active ? "Desactivar" : "Reactivar"}>
+                <span>
+                  <IconButton
+                    aria-label={`${item.active ? "Desactivar" : "Reactivar"} ${item.nombreComercial}`}
+                    tabIndex={hasFocus ? 0 : -1}
+                    onClick={() => setActive({ id: item.id, next: !item.active })}
+                    disabled={isSettingActive}
+                  >
+                    <PowerSettingsNewRounded />
+                  </IconButton>
+                </span>
+              </Tooltip>
+            ) : null}
+          </Stack>
+        ),
+      },
+    ],
+    [
+      isSettingActive,
+      setActive,
+      canManageStatus,
+      openEdit,
+      isSubmittingReview,
+      submitReview,
+    ],
+  );
 
   /** Las reglas de los campos ya validan coordenadas, RUC y obligatorios. */
   function submitForm(values: EstablishmentFormValues) {
@@ -329,214 +426,43 @@ export const EstablishmentManagement = forwardRef<
 
   return (
     <Stack spacing={webTokens.spacing.section}>
-      <AdminTableToolbar>
-        <Grid container spacing={webTokens.spacing.control}>
-          <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
-            <SearchField
-              label="Buscar por nombre, actividad o registro"
-              value={queryDraft}
-              onChange={(event) => {
-                setQueryDraft(event.target.value);
-                setPage(0);
-              }}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, lg: 2 }}>
-            <SelectField
-              id="establishment-province-filter"
-              label="Provincia"
-              value={provinceId}
-              emptyLabel="Todas"
-              options={provinces.map(toFilterOption)}
-              onChange={(value) => {
-                setProvinceId(value);
-                setCantonId("");
-                setLocalityId("");
-                setPage(0);
-              }}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, lg: 2 }}>
-            <SelectField
-              id="establishment-canton-filter"
-              label="Cantón"
-              value={cantonId}
-              emptyLabel="Todos"
-              options={cantons.map(toFilterOption)}
-              disabled={!provinceId}
-              onChange={(value) => {
-                setCantonId(value);
-                setLocalityId("");
-                setPage(0);
-              }}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, lg: 2 }}>
-            <SelectField
-              id="establishment-locality-filter"
-              label="Localidad"
-              value={localityId}
-              emptyLabel="Todas"
-              options={localities.map(toFilterOption)}
-              onChange={(value) => {
-                setLocalityId(value);
-                setPage(0);
-              }}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, lg: 2 }}>
-            <CatalogSelect
-              id="establishment-activity-filter"
-              label="Actividad"
-              value={filterActivityId ? String(filterActivityId) : ""}
-              options={establishmentActivities}
-              onChange={(value) => {
-                const option = establishmentActivities.find(
-                  (candidate) => String(candidate.id) === value,
-                );
-                setActivity(option?.name ?? "");
-                setClassification("");
-                setCategory("");
-                setPage(0);
-              }}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, lg: 2 }}>
-            <CatalogSelect
-              id="establishment-classification-filter"
-              label="Clasificación"
-              value={filterClassificationId ? String(filterClassificationId) : ""}
-              options={filterClassifications}
-              disabled={!activity}
-              onChange={(value) => {
-                const option = filterClassifications.find(
-                  (candidate) => String(candidate.id) === value,
-                );
-                setClassification(option?.name ?? "");
-                setCategory("");
-                setPage(0);
-              }}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, lg: 2 }}>
-            <CatalogSelect
-              id="establishment-category-filter"
-              label="Categoría"
-              value={filterCategoryId ? String(filterCategoryId) : ""}
-              options={filterCategories}
-              disabled={!classification}
-              onChange={(value) => {
-                const option = filterCategories.find(
-                  (candidate) => String(candidate.id) === value,
-                );
-                setCategory(option?.name ?? "");
-                setPage(0);
-              }}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, lg: 2 }}>
-            <SelectField
-              id="establishment-status-filter"
-              label="Estado"
-              value={active}
-              options={ACTIVE_FILTER_OPTIONS}
-              onChange={(value) => {
-                setActive(value || "ALL");
-                setPage(0);
-              }}
-            />
-          </Grid>
-        </Grid>
-      </AdminTableToolbar>
-
-      <AdminTable
+      <AdminDataGrid
         ariaLabel="Catastro de establecimientos"
-        minWidth={760}
+        rows={data?.items ?? []}
+        columns={columns}
         loading={establishmentsQuery.isLoading}
         error={establishmentsQuery.error ? "No se pudo cargar el catastro." : null}
-        empty={!data?.items.length}
         emptyMessage="No hay establecimientos para los filtros seleccionados."
         pagination={{ page, total: data?.total ?? 0, pageSize, onPageChange: setPage }}
-      >
-        <TableHead>
-          <TableRow>
-            <TableCell>Establecimiento</TableCell>
-            <TableCell>Localidad</TableCell>
-            <TableCell>Actividad</TableCell>
-            <TableCell>Registro</TableCell>
-            <TableCell>Estado</TableCell>
-            <TableCell align="right">Acciones</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {(data?.items ?? []).map((item) => (
-            <TableRow key={item.id} hover>
-              <TableCell component="th" scope="row">
-                <Typography fontWeight={600}>{item.nombreComercial}</Typography>
-                {item.categoria ? (
-                  <Typography variant="caption" color="text.secondary">
-                    {item.categoriaEtiqueta ?? item.categoria}
-                  </Typography>
-                ) : null}
-              </TableCell>
-              <TableCell>{item.localityName}</TableCell>
-              <TableCell>{item.actividad}</TableCell>
-              <TableCell>{item.numeroRegistro ?? "—"}</TableCell>
-              <TableCell>
-                <StatusBadge
-                  label={establishmentReviewStatusLabel(item.reviewStatus)}
-                  tone={establishmentReviewStatusTone(item.reviewStatus)}
-                />
-              </TableCell>
-              <TableCell align="right">
-                <Tooltip title="Editar establecimiento">
-                  <span>
-                    <IconButton
-                      aria-label={`Editar ${item.nombreComercial}`}
-                      onClick={() => openEdit(item)}
-                      disabled={
-                        !canManageStatus &&
-                        !["BORRADOR", "RECHAZADO"].includes(item.reviewStatus)
-                      }
-                    >
-                      <EditRounded />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-                {!canManageStatus &&
-                ["BORRADOR", "RECHAZADO"].includes(item.reviewStatus) ? (
-                  <Tooltip title="Enviar a revisión">
-                    <span>
-                      <IconButton
-                        aria-label={`Enviar a revisión ${item.nombreComercial}`}
-                        onClick={() => submitReviewMutation.mutate(item.id)}
-                        disabled={submitReviewMutation.isPending}
-                      >
-                        <SendRounded />
-                      </IconButton>
-                    </span>
-                  </Tooltip>
-                ) : null}
-                {canManageStatus ? (
-                  <Tooltip title={item.active ? "Desactivar" : "Reactivar"}>
-                    <span>
-                      <IconButton
-                        aria-label={`${item.active ? "Desactivar" : "Reactivar"} ${item.nombreComercial}`}
-                        onClick={() =>
-                          activeMutation.mutate({ id: item.id, next: !item.active })
-                        }
-                        disabled={activeMutation.isPending}
-                      >
-                        <PowerSettingsNewRounded />
-                      </IconButton>
-                    </span>
-                  </Tooltip>
-                ) : null}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </AdminTable>
+        search={{
+          label: "Buscar por nombre, actividad o registro",
+          value: queryDraft,
+          onChange: (value) => {
+            setQueryDraft(value);
+            setPage(0);
+          },
+        }}
+        filterCount={Object.values(filters).filter(Boolean).length}
+        filterPanel={
+          <EstablishmentGridFilters
+            rows={filterRows}
+            values={filters}
+            catalogs={catalogs}
+            onChange={changeFilter}
+            onFieldChange={changeFilterField}
+            onAdd={(field) => {
+              const id = nextFilterRowId.current++;
+              setFilterRows((current) => [...current, { id, field }]);
+            }}
+            onRemove={removeFilter}
+            onClear={() => {
+              setFilters({ ...emptyEstablishmentFilters });
+              setFilterRows([{ id: nextFilterRowId.current++, field: "provinceId" }]);
+              setPage(0);
+            }}
+          />
+        }
+      />
 
       <Dialog
         open={dialogOpen}
