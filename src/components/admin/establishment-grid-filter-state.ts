@@ -83,35 +83,34 @@ export function establishmentFilterOptions(
     ];
   }
 
-  const activityId = catalogs?.establishmentActivities.find(
-    (option) => option.name === filters.activity,
-  )?.id;
-  const classificationId = catalogs?.establishmentClassifications.find(
+  const activities = catalogs?.establishmentActivities ?? [];
+  const classifications = catalogs?.establishmentClassifications ?? [];
+  const categories = catalogs?.establishmentCategories ?? [];
+  const activityId = activities.find((option) => option.name === filters.activity)?.id;
+  const classificationId = classifications.find(
     (option) =>
       option.name === filters.classification &&
       (!activityId || option.activityId === activityId),
   )?.id;
   const options =
     field === "provinceId"
-      ? catalogs?.provinces
+      ? (catalogs?.provinces ?? [])
       : field === "cantonId"
-        ? catalogs?.cantons.filter(
+        ? (catalogs?.cantons ?? []).filter(
             (option) => String(option.provinceId) === filters.provinceId,
           )
         : field === "localityId"
-          ? catalogs?.localities.filter(
+          ? (catalogs?.localities ?? []).filter(
               (option) =>
                 (!filters.provinceId ||
                   String(option.provinceId) === filters.provinceId) &&
                 (!filters.cantonId || String(option.cantonId) === filters.cantonId),
             )
           : field === "activity"
-            ? catalogs?.establishmentActivities
+            ? activities
             : field === "classification"
-              ? catalogs?.establishmentClassifications.filter(
-                  (option) => option.activityId === activityId,
-                )
-              : catalogs?.establishmentCategories.filter(
+              ? classifications.filter((option) => option.activityId === activityId)
+              : categories.filter(
                   (option) => option.classificationId === classificationId,
                 );
 

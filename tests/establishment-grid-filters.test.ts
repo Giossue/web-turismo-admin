@@ -112,6 +112,9 @@ describe("filtros del Data Grid de catastro", () => {
       { value: "3 estrellas", label: "3 estrellas" },
     ]);
     expect(establishmentFilterOptions("activity", filters, undefined)).toEqual([]);
+    expect(
+      establishmentFilterOptions("classification", filters, {} as AdminCatalogs),
+    ).toEqual([]);
   });
 
   test("cantón, clasificación y categoría requieren sus filtros padres", () => {
