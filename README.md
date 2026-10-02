@@ -74,9 +74,10 @@ Centros turísticos y Catastro usan MUI X DataGrid Community v8, compatible con 
 La barra conserva el buscador y agrupa los criterios detrás de **Filtros**, con un contador
 de criterios activos. Los controles y la paginación se presentan en español.
 
-Centros utiliza el filtro nativo de Estado; la búsqueda, el estado y la página conservan
-su estado en la URL. Catastro personaliza el slot del panel con filas de columna, operador
-y valor para los siete criterios admitidos por la API. Cambiar un criterio reinicia la
+Centros muestra un selector de Estado; la búsqueda, el estado y la página conservan
+su estado en la URL. Catastro agrupa los siete criterios admitidos por la API en campos
+con nombres de uso diario: ubicación, tipo de establecimiento y estado. Ambos paneles
+incluyen Limpiar filtros y Ver resultados. Cambiar un criterio reinicia la
 página y conserva las dependencias entre ubicación, actividad, clasificación y categoría.
 Los filtros y la paginación se ejecutan en la API; el grid no filtra únicamente las filas
 de la página actual ni ofrece operadores u ordenaciones que la API no admite.

@@ -1,19 +1,18 @@
 import type { AdminCatalogs, AdminEstablishmentsOptions } from "@/lib/admin-api";
 
 export const establishmentFilterFields = [
-  { value: "provinceId", label: "Provincia", operator: "es" },
-  { value: "cantonId", label: "Cantón", operator: "es" },
-  { value: "localityId", label: "Localidad", operator: "es" },
-  { value: "activity", label: "Actividad", operator: "contiene" },
-  { value: "classification", label: "Clasificación", operator: "contiene" },
-  { value: "category", label: "Categoría", operator: "contiene" },
-  { value: "active", label: "Estado", operator: "es" },
+  { value: "provinceId", label: "Provincia" },
+  { value: "cantonId", label: "Cantón" },
+  { value: "localityId", label: "Localidad" },
+  { value: "activity", label: "Actividad" },
+  { value: "classification", label: "Clasificación" },
+  { value: "category", label: "Categoría" },
+  { value: "active", label: "Estado" },
 ] as const;
 
 export type EstablishmentFilterField =
   (typeof establishmentFilterFields)[number]["value"];
 export type EstablishmentFilterValues = Record<EstablishmentFilterField, string>;
-export type EstablishmentFilterRow = { id: number; field: EstablishmentFilterField };
 
 export const emptyEstablishmentFilters: EstablishmentFilterValues = {
   provinceId: "",

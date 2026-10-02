@@ -24,7 +24,6 @@ import {
   useEffect,
   useImperativeHandle,
   useMemo,
-  useRef,
   useState,
 } from "react";
 import { useForm, useWatch } from "react-hook-form";
@@ -37,7 +36,6 @@ import {
   emptyEstablishmentFilters,
   establishmentFiltersToQuery,
   type EstablishmentFilterField,
-  type EstablishmentFilterRow,
 } from "@/components/admin/establishment-grid-filter-state";
 import { EstablishmentGridFilters } from "@/components/admin/establishment-grid-filters";
 import { RhfCatalogSelect } from "@/components/ui/form/rhf-select";
@@ -124,10 +122,6 @@ export const EstablishmentManagement = forwardRef<
   const queryClient = useQueryClient();
   const [queryDraft, setQueryDraft] = useState("");
   const [filters, setFilters] = useState(emptyEstablishmentFilters);
-  const [filterRows, setFilterRows] = useState<EstablishmentFilterRow[]>([
-    { id: 1, field: "provinceId" },
-  ]);
-  const nextFilterRowId = useRef(2);
   const [page, setPage] = useState(0);
   const [editing, setEditing] = useState<AdminEstablishment | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -253,21 +247,6 @@ export const EstablishmentManagement = forwardRef<
     setPage(0);
   }
 
-  function changeFilterField(id: number, field: EstablishmentFilterField) {
-    const previous = filterRows.find((row) => row.id === id);
-    if (!previous || previous.field === field) return;
-    changeFilter(previous.field, "");
-    setFilterRows((current) =>
-      current.map((row) => (row.id === id ? { ...row, field } : row)),
-    );
-  }
-
-  function removeFilter(id: number) {
-    const row = filterRows.find((item) => item.id === id);
-    if (row) changeFilter(row.field, "");
-    setFilterRows((current) => current.filter((item) => item.id !== id));
-  }
-
   const columns = useMemo<GridColDef<AdminEstablishment>[]>(
     () => [
       {
@@ -338,7 +317,7 @@ export const EstablishmentManagement = forwardRef<
             justifyContent="flex-end"
             sx={{ height: "100%" }}
           >
-            <Tooltip title="Editar establecimiento">
+            <Tooltip title="Editar establecimiento" disableInteractive>
               <span>
                 <IconButton
                   aria-label={`Editar ${item.nombreComercial}`}
@@ -354,7 +333,7 @@ export const EstablishmentManagement = forwardRef<
               </span>
             </Tooltip>
             {!canManageStatus && ["BORRADOR", "RECHAZADO"].includes(item.reviewStatus) ? (
-              <Tooltip title="Enviar a revisión">
+              <Tooltip title="Enviar a revisión" disableInteractive>
                 <span>
                   <IconButton
                     aria-label={`Enviar a revisión ${item.nombreComercial}`}
@@ -368,7 +347,10 @@ export const EstablishmentManagement = forwardRef<
               </Tooltip>
             ) : null}
             {canManageStatus ? (
-              <Tooltip title={item.active ? "Desactivar" : "Reactivar"}>
+              <Tooltip
+                title={item.active ? "Desactivar" : "Reactivar"}
+                disableInteractive
+              >
                 <span>
                   <IconButton
                     aria-label={`${item.active ? "Desactivar" : "Reactivar"} ${item.nombreComercial}`}
@@ -445,19 +427,11 @@ export const EstablishmentManagement = forwardRef<
         filterCount={Object.values(filters).filter(Boolean).length}
         filterPanel={
           <EstablishmentGridFilters
-            rows={filterRows}
             values={filters}
             catalogs={catalogs}
             onChange={changeFilter}
-            onFieldChange={changeFilterField}
-            onAdd={(field) => {
-              const id = nextFilterRowId.current++;
-              setFilterRows((current) => [...current, { id, field }]);
-            }}
-            onRemove={removeFilter}
             onClear={() => {
               setFilters({ ...emptyEstablishmentFilters });
-              setFilterRows([{ id: nextFilterRowId.current++, field: "provinceId" }]);
               setPage(0);
             }}
           />

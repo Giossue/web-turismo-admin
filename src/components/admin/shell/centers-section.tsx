@@ -13,19 +13,17 @@ import {
   Typography,
 } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
-import {
-  getGridSingleSelectOperators,
-  type GridColDef,
-  type GridFilterModel,
-} from "@mui/x-data-grid";
-import { useCallback, useMemo } from "react";
+import type { GridColDef } from "@mui/x-data-grid";
+import { useMemo } from "react";
 
 import { AdminDataGrid } from "@/components/ui/admin-data-grid";
+import { AdminGridFilterPanel } from "@/components/ui/admin-grid-filter-panel";
 import {
   AdminTable,
   ADMIN_TABLE_PAGE_SIZE,
   type AdminTablePagination,
 } from "@/components/ui/admin-table";
+import { SelectField } from "@/components/ui/form/select-field";
 import { StatusBadge } from "@/components/ui/status-badge";
 import type { AdminCenter, ReviewAction } from "@/lib/admin-api";
 import { activeLabel, centerStatusTone } from "@/lib/admin-labels";
@@ -36,12 +34,6 @@ import { webTokens } from "@/theme/tokens";
 import { CENTER_STATUS_FILTER_OPTIONS, type CenterStatusFilter } from "./admin-nav-state";
 
 const pageSize = ADMIN_TABLE_PAGE_SIZE;
-const statusOptions = CENTER_STATUS_FILTER_OPTIONS.filter(
-  (option) => option.value !== "ALL",
-);
-const statusFilterOperators = getGridSingleSelectOperators().filter(
-  (operator) => operator.value === "is",
-);
 const getCenterRowId = (center: AdminCenter) => center.code;
 
 export function CentersSection({
@@ -97,11 +89,9 @@ export function CentersSection({
       {
         field: "status",
         headerName: "Estado",
-        type: "singleSelect",
         width: 160,
+        filterable: false,
         valueGetter: (_value, row) => row.status.code,
-        valueOptions: statusOptions,
-        filterOperators: statusFilterOperators,
         renderCell: ({ row }) => (
           <StatusBadge label={row.status.name} tone={centerStatusTone(row.status.code)} />
         ),
@@ -136,7 +126,7 @@ export function CentersSection({
         headerAlign: "right",
         filterable: false,
         renderCell: ({ row, tabIndex }) => (
-          <Tooltip title="Editar">
+          <Tooltip title="Editar" disableInteractive>
             <IconButton
               aria-label={`Editar ${row.name}`}
               tabIndex={tabIndex}
@@ -149,24 +139,6 @@ export function CentersSection({
       },
     ],
     [onOpen],
-  );
-  const filterModel = useMemo<GridFilterModel>(
-    () => ({
-      items:
-        status === "ALL"
-          ? []
-          : [{ id: "center-status", field: "status", operator: "is", value: status }],
-    }),
-    [status],
-  );
-  const handleFilterModelChange = useCallback(
-    (model: GridFilterModel) => {
-      const item = model.items.find((filter) => filter.field === "status");
-      const option = statusOptions.find((candidate) => candidate.value === item?.value);
-      const nextStatus = option?.value ?? "ALL";
-      if (nextStatus !== status) onStatusChange(nextStatus);
-    },
-    [onStatusChange, status],
   );
 
   return (
@@ -188,9 +160,22 @@ export function CentersSection({
         value: query,
         onChange: onQueryChange,
       }}
-      filterModel={filterModel}
-      onFilterModelChange={handleFilterModelChange}
       filterCount={status === "ALL" ? 0 : 1}
+      filterPanel={
+        <AdminGridFilterPanel
+          width={360}
+          activeCount={status === "ALL" ? 0 : 1}
+          onClear={() => onStatusChange("ALL")}
+        >
+          <SelectField
+            id="center-status"
+            label="Estado"
+            value={status}
+            options={CENTER_STATUS_FILTER_OPTIONS}
+            onChange={(value) => onStatusChange(value || "ALL")}
+          />
+        </AdminGridFilterPanel>
+      }
     />
   );
 }

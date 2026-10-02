@@ -7,7 +7,6 @@ import { styled } from "@mui/material/styles";
 import {
   DataGrid,
   FilterPanelTrigger,
-  GridFilterPanel,
   GridPanel,
   Toolbar,
   ToolbarButton,
@@ -29,7 +28,7 @@ type GridSearch = {
 
 type AdminDataGridProps<R extends GridValidRowModel> = Pick<
   DataGridProps<R>,
-  "rows" | "columns" | "getRowId" | "loading" | "filterModel" | "onFilterModelChange"
+  "rows" | "columns" | "getRowId" | "loading"
 > & {
   ariaLabel: string;
   error: string | null;
@@ -130,11 +129,9 @@ export function AdminDataGrid<R extends GridValidRowModel>({
   emptyMessage,
   pagination,
   search,
-  filtering = true,
-  filterModel,
-  onFilterModelChange,
   filterCount,
   filterPanel,
+  filtering = Boolean(filterPanel),
 }: AdminDataGridProps<R>) {
   const pageSize = pagination.pageSize ?? ADMIN_TABLE_PAGE_SIZE;
   // Una consulta de otra página no debe reiniciar el grid mientras llega su total.
@@ -173,6 +170,7 @@ export function AdminDataGrid<R extends GridValidRowModel>({
             disableRowSelectionOnClick
             disableColumnSorting
             disableColumnSelector
+            disableColumnMenu
             paginationMode="server"
             rowCount={rowCount}
             paginationModel={{ page: pagination.page, pageSize }}
@@ -181,32 +179,15 @@ export function AdminDataGrid<R extends GridValidRowModel>({
             }}
             pageSizeOptions={[pageSize]}
             filterMode="server"
-            filterModel={filterModel}
-            onFilterModelChange={onFilterModelChange}
             showToolbar={Boolean(search || filtering)}
             slots={{
               toolbar: AdminGridToolbar,
               panel: AdminGridPanel,
-              filterPanel: filterPanel ? AdminFilterPanel : GridFilterPanel,
+              filterPanel: AdminFilterPanel,
               noRowsOverlay: AdminNoRowsOverlay,
             }}
             slotProps={{
               loadingOverlay: { variant: "linear-progress", noRowsVariant: "skeleton" },
-              filterPanel: {
-                sx: {
-                  maxWidth: "calc(100vw - 32px)",
-                  "& .MuiDataGrid-filterForm": {
-                    flexWrap: { xs: "wrap", sm: "nowrap" },
-                    gap: 1,
-                    p: 2,
-                  },
-                  "& .MuiDataGrid-filterFormColumnInput": {
-                    width: { xs: "calc(100% - 44px)", sm: 150 },
-                  },
-                  "& .MuiDataGrid-filterFormOperatorInput": { width: 100 },
-                  "& .MuiDataGrid-filterFormValueInput": { width: 180, minWidth: 0 },
-                },
-              },
             }}
             localeText={{
               ...esES.components.MuiDataGrid.defaultProps.localeText,
