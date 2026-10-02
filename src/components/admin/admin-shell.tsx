@@ -5,12 +5,14 @@ import MenuRounded from "@mui/icons-material/MenuRounded";
 import {
   AppBar,
   Box,
+  Breadcrumbs,
   Button,
   CircularProgress,
   IconButton,
   Stack,
   Toolbar,
   Tooltip,
+  Typography,
 } from "@mui/material";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef, useState } from "react";
@@ -145,7 +147,7 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
     ) : undefined;
 
   return (
-    <Box sx={{ display: "flex", minHeight: "100vh" }}>
+    <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: "background.default" }}>
       <AppBar
         component="header"
         position="fixed"
@@ -156,10 +158,13 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
             ? "100%"
             : { xs: "100%", md: `calc(100% - ${drawerWidth}px)` },
           ml: editorMode ? 0 : { md: `${drawerWidth}px` },
-          borderBottom: 0,
+          borderBottom: "1px solid",
+          borderColor: "divider",
+          boxShadow: "none",
+          borderRadius: 0,
         }}
       >
-        <Toolbar sx={{ gap: webTokens.spacing.inline }}>
+        <Toolbar sx={{ gap: webTokens.spacing.inline, px: { xs: 2, md: 3 } }}>
           {!editorMode ? (
             <Tooltip title="Abrir menú">
               <IconButton
@@ -172,13 +177,33 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
               </IconButton>
             </Tooltip>
           ) : null}
-          <Box sx={{ flexGrow: 1 }} />
+          <Breadcrumbs
+            aria-label="Ubicación actual"
+            separator="/"
+            sx={{
+              flexGrow: 1,
+              minWidth: 0,
+              "& .MuiBreadcrumbs-ol": { flexWrap: "nowrap" },
+            }}
+          >
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ display: { xs: "none", sm: "block" } }}
+            >
+              Panel institucional
+            </Typography>
+            <Typography variant="body2" fontWeight={500} color="text.primary" noWrap>
+              {meta.title}
+            </Typography>
+          </Breadcrumbs>
           <ColorModeButton />
         </Toolbar>
       </AppBar>
 
       {!editorMode ? (
         <AdminNavigation
+          user={user}
           items={navigationItems(isAdmin)}
           selected={section}
           onSelect={navigate}
@@ -193,6 +218,8 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
         sx={{
           flexGrow: 1,
           p: webTokens.spacing.page,
+          pb: 5,
+          bgcolor: "background.default",
           mt: webTokens.layout.headerOffset,
           ml: editorMode ? 0 : { md: `${drawerWidth}px` },
           minWidth: 0,
