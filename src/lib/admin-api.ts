@@ -1,6 +1,7 @@
 import type { CenterSectionCode, SectionProgress } from "./center-sections/definitions";
 import type { mapearFichaAFormulario } from "./ficha/mapear-formulario";
 import type { SugerenciasSecciones } from "./ficha/sugerencias-secciones";
+import { errorMessage } from "./errors";
 import { ApiError, apiEndpoint, sendApiRequest, toApiError, toQueryString } from "./http";
 
 /** Página de resultados de un listado administrativo. */
@@ -569,8 +570,23 @@ export async function saveAdminEstablishment(
   token: string,
   id: number,
   input: Partial<SaveEstablishmentInput>,
+  active?: boolean,
 ) {
-  return patch<AdminEstablishment>(`/admin/establishments/${id}`, token, input);
+  const saved = await patch<AdminEstablishment>(
+    `/admin/establishments/${id}`,
+    token,
+    input,
+  );
+  if (active === undefined || saved.active === active) return saved;
+
+  try {
+    return await setAdminEstablishmentActive(token, id, active);
+  } catch (cause) {
+    throw new Error(
+      `Los datos del establecimiento se guardaron, pero no se pudo cambiar el estado. ${errorMessage(cause, "Intenta guardar de nuevo.")}`,
+      { cause },
+    );
+  }
 }
 
 export async function setAdminEstablishmentActive(

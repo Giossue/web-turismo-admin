@@ -82,6 +82,9 @@ página y conserva las dependencias entre ubicación, actividad, clasificación 
 Los filtros y la paginación se ejecutan en la API; el grid no filtra únicamente las filas
 de la página actual ni ofrece operadores u ordenaciones que la API no admite.
 
+La activación y desactivación se controla dentro de **Editar**, con un interruptor cuyo
+cambio se aplica al pulsar **Guardar**. En Catastro, este control es exclusivo del administrador.
+
 La edición Community tiene licencia MIT y admite un criterio en su modelo nativo;
 el filtrado combinado nativo pertenece a Pro. Los filtros combinados de Catastro usan
 el estado de dominio y las consultas existentes de la API, con un panel personalizado.

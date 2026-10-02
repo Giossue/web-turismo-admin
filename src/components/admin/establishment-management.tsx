@@ -1,7 +1,6 @@
 "use client";
 
 import EditRounded from "@mui/icons-material/EditRounded";
-import PowerSettingsNewRounded from "@mui/icons-material/PowerSettingsNewRounded";
 import SendRounded from "@mui/icons-material/SendRounded";
 import {
   Button,
@@ -10,9 +9,11 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControlLabel,
   Grid,
   IconButton,
   Stack,
+  Switch,
   Tooltip,
   Typography,
 } from "@mui/material";
@@ -26,7 +27,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import { useForm, useWatch } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 
 import { AdminDataGrid } from "@/components/ui/admin-data-grid";
 import { ADMIN_TABLE_PAGE_SIZE } from "@/components/ui/admin-table";
@@ -46,7 +47,6 @@ import {
   createAdminEstablishment,
   getAdminEstablishments,
   saveAdminEstablishment,
-  setAdminEstablishmentActive,
   submitAdminEstablishmentReview,
   type AdminCatalogs,
   type AdminEstablishment,
@@ -79,6 +79,7 @@ type EstablishmentFormValues = {
   telefono: string;
   latitude: string;
   longitude: string;
+  active: boolean;
 };
 
 const emptyValues: EstablishmentFormValues = {
@@ -97,6 +98,7 @@ const emptyValues: EstablishmentFormValues = {
   telefono: "",
   latitude: "",
   longitude: "",
+  active: true,
 };
 
 const pageSize = ADMIN_TABLE_PAGE_SIZE;
@@ -159,9 +161,20 @@ export const EstablishmentManagement = forwardRef<
   }, [establishmentsQuery.error, onError]);
 
   const saveMutation = useMutation({
-    mutationFn: async (input: SaveEstablishmentInput) =>
+    mutationFn: async ({
+      input,
+      active,
+    }: {
+      input: SaveEstablishmentInput;
+      active: boolean;
+    }) =>
       editing
-        ? saveAdminEstablishment(token, editing.id, input)
+        ? saveAdminEstablishment(
+            token,
+            editing.id,
+            input,
+            canManageStatus ? active : undefined,
+          )
         : createAdminEstablishment(token, input),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: adminKeys.allEstablishments() });
@@ -177,8 +190,10 @@ export const EstablishmentManagement = forwardRef<
             : "El catastro fue creado como borrador.",
       );
     },
-    onError: (cause) =>
-      onError(errorMessage(cause, "No se pudo guardar el establecimiento.")),
+    onError: async (cause) => {
+      await queryClient.invalidateQueries({ queryKey: adminKeys.allEstablishments() });
+      onError(errorMessage(cause, "No se pudo guardar el establecimiento."));
+    },
   });
 
   const { mutate: submitReview, isPending: isSubmittingReview } = useMutation({
@@ -189,20 +204,6 @@ export const EstablishmentManagement = forwardRef<
     },
     onError: (cause) =>
       onError(errorMessage(cause, "No se pudo enviar el catastro a revisión.")),
-  });
-
-  const { mutate: setActive, isPending: isSettingActive } = useMutation({
-    mutationFn: ({ id, next }: { id: number; next: boolean }) =>
-      setAdminEstablishmentActive(token, id, next),
-    onSuccess: async (_, variables) => {
-      await queryClient.invalidateQueries({ queryKey: adminKeys.allEstablishments() });
-      onNotice(
-        variables.next
-          ? "El establecimiento fue reactivado."
-          : "El establecimiento fue desactivado.",
-      );
-    },
-    onError: (cause) => onError(errorMessage(cause, "No se pudo cambiar el estado.")),
   });
 
   const data = establishmentsQuery.data;
@@ -305,7 +306,7 @@ export const EstablishmentManagement = forwardRef<
       {
         field: "actions",
         headerName: "Acciones",
-        width: 145,
+        width: canManageStatus ? 100 : 145,
         align: "right",
         headerAlign: "right",
         filterable: false,
@@ -346,39 +347,16 @@ export const EstablishmentManagement = forwardRef<
                 </span>
               </Tooltip>
             ) : null}
-            {canManageStatus ? (
-              <Tooltip
-                title={item.active ? "Desactivar" : "Reactivar"}
-                disableInteractive
-              >
-                <span>
-                  <IconButton
-                    aria-label={`${item.active ? "Desactivar" : "Reactivar"} ${item.nombreComercial}`}
-                    tabIndex={hasFocus ? 0 : -1}
-                    onClick={() => setActive({ id: item.id, next: !item.active })}
-                    disabled={isSettingActive}
-                  >
-                    <PowerSettingsNewRounded />
-                  </IconButton>
-                </span>
-              </Tooltip>
-            ) : null}
           </Stack>
         ),
       },
     ],
-    [
-      isSettingActive,
-      setActive,
-      canManageStatus,
-      openEdit,
-      isSubmittingReview,
-      submitReview,
-    ],
+    [canManageStatus, openEdit, isSubmittingReview, submitReview],
   );
 
   /** Las reglas de los campos ya validan coordenadas, RUC y obligatorios. */
   function submitForm(values: EstablishmentFormValues) {
+    if (saveMutation.isPending) return;
     onError(null);
     const activityOption = findCatalogOption(establishmentActivities, values.activityId);
     const classificationOption = findCatalogOption(
@@ -387,22 +365,25 @@ export const EstablishmentManagement = forwardRef<
     );
     const categoryOption = findCatalogOption(establishmentCategories, values.categoryId);
     saveMutation.mutate({
-      localityId: Number(values.localityId),
-      numeroRegistro: values.numeroRegistro.trim() || undefined,
-      ruc: values.ruc.trim() || undefined,
-      nombreComercial: values.nombreComercial.trim(),
-      razonSocial: values.razonSocial.trim() || undefined,
-      activityId: activityOption?.id,
-      classificationId: classificationOption?.id,
-      categoryId: categoryOption?.id,
-      actividad: activityOption?.name ?? values.actividad.trim(),
-      clasificacion:
-        classificationOption?.name ?? (values.clasificacion.trim() || undefined),
-      categoria: categoryOption?.name ?? (values.categoria.trim() || undefined),
-      direccion: values.direccion.trim() || undefined,
-      telefono: values.telefono.trim() || undefined,
-      latitude: Number(values.latitude),
-      longitude: Number(values.longitude),
+      active: values.active,
+      input: {
+        localityId: Number(values.localityId),
+        numeroRegistro: values.numeroRegistro.trim() || undefined,
+        ruc: values.ruc.trim() || undefined,
+        nombreComercial: values.nombreComercial.trim(),
+        razonSocial: values.razonSocial.trim() || undefined,
+        activityId: activityOption?.id,
+        classificationId: classificationOption?.id,
+        categoryId: categoryOption?.id,
+        actividad: activityOption?.name ?? values.actividad.trim(),
+        clasificacion:
+          classificationOption?.name ?? (values.clasificacion.trim() || undefined),
+        categoria: categoryOption?.name ?? (values.categoria.trim() || undefined),
+        direccion: values.direccion.trim() || undefined,
+        telefono: values.telefono.trim() || undefined,
+        latitude: Number(values.latitude),
+        longitude: Number(values.longitude),
+      },
     });
   }
 
@@ -564,6 +545,27 @@ export const EstablishmentManagement = forwardRef<
                 onPicked={() => onNotice("Coordenadas seleccionadas en el mapa.")}
               />
             </Grid>
+            {editing && canManageStatus ? (
+              <Controller
+                control={control}
+                name="active"
+                render={({ field }) => (
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        name={field.name}
+                        checked={field.value}
+                        onChange={(_, checked) => field.onChange(checked)}
+                        onBlur={field.onBlur}
+                        inputRef={field.ref}
+                        disabled={saveMutation.isPending}
+                      />
+                    }
+                    label="Establecimiento activo"
+                  />
+                )}
+              />
+            ) : null}
           </Stack>
         </DialogContent>
         <DialogActions>
@@ -628,5 +630,6 @@ function toFormValues(
     telefono: item.telefono ?? "",
     latitude: item.latitude == null ? "" : String(item.latitude),
     longitude: item.longitude == null ? "" : String(item.longitude),
+    active: item.active,
   };
 }
