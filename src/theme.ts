@@ -233,6 +233,7 @@ const theme = createTheme({
     MuiFormLabel: {
       styleOverrides: {
         root: { fontWeight: 500, fontSize: "0.875rem" },
+        asterisk: { color: "var(--mui-palette-error-main)" },
       },
     },
     MuiDivider: {
