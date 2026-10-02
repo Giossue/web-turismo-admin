@@ -36,11 +36,13 @@ import {
   AdminTableToolbar,
   ADMIN_TABLE_PAGE_SIZE,
 } from "@/components/ui/admin-table";
+import { DeleteRecordAction } from "@/components/admin/delete-record-action";
 import { CatalogIconSelect } from "@/components/ui/catalog-icon-select";
 import { SearchField } from "@/components/ui/search-field";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
   createAdminCatalog,
+  deleteAdminCatalog,
   updateAdminCatalog,
   type AdminCatalogKey,
   type AdminCatalogs,
@@ -379,7 +381,7 @@ export const CatalogManagement = forwardRef<
               <TableCell>Actividad</TableCell>
             ) : null}
             <TableCell>Estado</TableCell>
-            <TableCell align="right">Acción</TableCell>
+            <TableCell align="right">Acciones</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -406,14 +408,23 @@ export const CatalogManagement = forwardRef<
                 />
               </TableCell>
               <TableCell align="right">
-                <Tooltip title="Editar">
-                  <IconButton
-                    aria-label={`Editar ${option.name}`}
-                    onClick={() => openEdit(option)}
-                  >
-                    <EditRounded fontSize="small" />
-                  </IconButton>
-                </Tooltip>
+                <Stack direction="row" justifyContent="flex-end">
+                  <Tooltip title="Editar">
+                    <IconButton
+                      aria-label={`Editar ${option.name}`}
+                      onClick={() => openEdit(option)}
+                    >
+                      <EditRounded fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  <DeleteRecordAction
+                    subject={option.displayName ?? option.name}
+                    title="Eliminar opción de catálogo"
+                    description="Dejará de aparecer en el catálogo. Las fichas existentes y el historial se conservan."
+                    onDelete={() => deleteAdminCatalog(token, selected, option.id)}
+                    queryKeys={[adminKeys.allCatalogs()]}
+                  />
+                </Stack>
               </TableCell>
             </TableRow>
           ))}

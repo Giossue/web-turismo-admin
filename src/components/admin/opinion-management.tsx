@@ -21,6 +21,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { useAdminFeedback } from "@/components/admin/admin-feedback";
+import { DeleteRecordAction } from "@/components/admin/delete-record-action";
 import {
   ReviewDecisionDialog,
   useReviewIntent,
@@ -31,6 +32,7 @@ import { ContentState } from "@/components/ui/content-state";
 import { FlatSurface } from "@/components/ui/flat-surface";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
+  deleteAdminOpinion,
   reviewAdminOpinion,
   type AdminOpinion,
   type AdminOpinionHistory,
@@ -169,19 +171,38 @@ export function OpinionManagement({ token }: { token: string }) {
                 <OpinionVersionSummary version={opinion.proposed} />
               </TableCell>
               <TableCell align="right">
-                <Button
-                  size="small"
-                  variant="text"
-                  startIcon={<HistoryRounded />}
-                  onClick={() => openHistory(opinion)}
-                  aria-label={`Ver historial de la opinión sobre ${opinion.target.name}`}
-                  sx={{
-                    backgroundColor: "transparent",
-                    "&:hover": { backgroundColor: "action.hover" },
-                  }}
-                >
-                  Ver historial
-                </Button>
+                <Stack direction="row" justifyContent="flex-end" alignItems="center">
+                  <Button
+                    size="small"
+                    variant="text"
+                    startIcon={<HistoryRounded />}
+                    onClick={() => openHistory(opinion)}
+                    aria-label={`Ver historial de la opinión sobre ${opinion.target.name}`}
+                    sx={{
+                      backgroundColor: "transparent",
+                      "&:hover": { backgroundColor: "action.hover" },
+                    }}
+                  >
+                    Ver historial
+                  </Button>
+                  <DeleteRecordAction
+                    subject={`opinión de ${opinion.authorName} sobre ${opinion.target.name}`}
+                    title="Eliminar opinión"
+                    description="Se retirarán todas sus versiones de la aplicación y dejará de contar en las calificaciones. El historial se conserva."
+                    disabled={reviewMutation.isPending}
+                    onDelete={() => deleteAdminOpinion(token, opinion.reviewCode)}
+                    queryKeys={[
+                      adminKeys.allOpinions(),
+                      adminKeys.opinionHistory(opinion.reviewCode),
+                      adminKeys.summary(),
+                    ]}
+                    onDeleted={() => {
+                      if (historyOpinion?.reviewCode === opinion.reviewCode)
+                        setHistoryOpen(false);
+                      setPage(pageAfterRemoval(page, items.length));
+                    }}
+                  />
+                </Stack>
               </TableCell>
             </TableRow>
           ))}
@@ -214,7 +235,9 @@ export function OpinionManagement({ token }: { token: string }) {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setHistoryOpen(false)}>Cerrar</Button>
-          {historyOpinion?.status === "PENDIENTE" ? (
+          {historyOpinion?.status === "PENDIENTE" &&
+          historyQuery.data &&
+          !historyQuery.data.deletedAt ? (
             <>
               <Button
                 color="error"
@@ -298,6 +321,12 @@ function OpinionHistoryDetail({ history }: { history: AdminOpinionHistory }) {
         </Typography>
       </Stack>
       <Divider />
+      {history.deletedAt ? (
+        <Alert severity="info">
+          Opinión eliminada el {formatDateTime(history.deletedAt)}. El historial se
+          conserva.
+        </Alert>
+      ) : null}
       <Stack spacing={webTokens.spacing.control}>
         {history.versions.map((version) => (
           <FlatSurface key={version.reviewCode} padding="compact">
@@ -332,8 +361,12 @@ function OpinionHistoryDetail({ history }: { history: AdminOpinionHistory }) {
                   {version.moderations.map((moderation, index) => (
                     <Stack key={`${version.reviewCode}-${moderation.createdAt}-${index}`}>
                       <Typography variant="body2">
-                        {moderation.action === "APROBAR" ? "Aprobada" : "Rechazada"} por{" "}
-                        <strong>{moderation.moderatorName}</strong>
+                        {moderation.action === "APROBAR"
+                          ? "Aprobada"
+                          : moderation.action === "ELIMINAR"
+                            ? "Eliminada"
+                            : "Rechazada"}{" "}
+                        por <strong>{moderation.moderatorName}</strong>
                       </Typography>
                       <Typography color="text.secondary" variant="caption">
                         {formatDateTime(moderation.createdAt)}

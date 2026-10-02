@@ -32,6 +32,8 @@ import { Controller, useForm, useWatch } from "react-hook-form";
 import { AdminDataGrid } from "@/components/ui/admin-data-grid";
 import { ADMIN_TABLE_PAGE_SIZE } from "@/components/ui/admin-table";
 import { CoordinateFieldset } from "@/components/admin/coordinate-fieldset";
+import { DeleteRecordAction } from "@/components/admin/delete-record-action";
+import { pageAfterRemoval } from "@/components/admin/shell/pagination";
 import {
   changeEstablishmentFilter,
   emptyEstablishmentFilters,
@@ -45,6 +47,7 @@ import { maxLen, required } from "@/components/ui/form/rules";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
   createAdminEstablishment,
+  deleteAdminEstablishment,
   getAdminEstablishments,
   saveAdminEstablishment,
   submitAdminEstablishmentReview,
@@ -306,7 +309,7 @@ export const EstablishmentManagement = forwardRef<
       {
         field: "actions",
         headerName: "Acciones",
-        width: canManageStatus ? 100 : 145,
+        width: 145,
         align: "right",
         headerAlign: "right",
         filterable: false,
@@ -333,6 +336,21 @@ export const EstablishmentManagement = forwardRef<
                 </IconButton>
               </span>
             </Tooltip>
+            {canManageStatus ? (
+              <DeleteRecordAction
+                subject={item.nombreComercial}
+                title="Eliminar establecimiento"
+                description="Se retirará del Catastro y de la aplicación. Su historial se conserva."
+                tabIndex={hasFocus ? 0 : -1}
+                onDelete={() => deleteAdminEstablishment(token, item.id)}
+                queryKeys={[adminKeys.allEstablishments(), adminKeys.summary()]}
+                onDeleted={() =>
+                  setPage(
+                    pageAfterRemoval(page, establishmentsQuery.data?.items.length ?? 0),
+                  )
+                }
+              />
+            ) : null}
             {!canManageStatus && ["BORRADOR", "RECHAZADO"].includes(item.reviewStatus) ? (
               <Tooltip title="Enviar a revisión" disableInteractive>
                 <span>
@@ -351,7 +369,15 @@ export const EstablishmentManagement = forwardRef<
         ),
       },
     ],
-    [canManageStatus, openEdit, isSubmittingReview, submitReview],
+    [
+      canManageStatus,
+      openEdit,
+      isSubmittingReview,
+      submitReview,
+      token,
+      page,
+      establishmentsQuery.data?.items.length,
+    ],
   );
 
   /** Las reglas de los campos ya validan coordenadas, RUC y obligatorios. */

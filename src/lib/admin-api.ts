@@ -354,6 +354,7 @@ export type AdminOpinion = {
 
 export type AdminOpinionHistory = {
   reviewCode: string;
+  deletedAt: string | null;
   authorName: string;
   target: AdminOpinion["target"];
   versions: Array<{
@@ -365,7 +366,7 @@ export type AdminOpinionHistory = {
     submittedAt: string;
     reviewedAt: string | null;
     moderations: Array<{
-      action: "APROBAR" | "RECHAZAR";
+      action: "APROBAR" | "RECHAZAR" | "ELIMINAR";
       moderatorName: string;
       reason: string | null;
       createdAt: string;
@@ -477,6 +478,25 @@ function del<T>(path: string, token: string): Promise<T> {
 function centerPath(code: string, suffix?: string): string {
   const base = `/admin/centers/${encodeURIComponent(code)}`;
   return suffix ? `${base}/${suffix}` : base;
+}
+
+export function deleteAdminCenter(token: string, code: string) {
+  return del<{ deleted: true }>(centerPath(code), token);
+}
+
+export function deleteAdminEstablishment(token: string, id: number) {
+  return del<{ deleted: true }>(`/admin/establishments/${id}`, token);
+}
+
+export function deleteAdminOpinion(token: string, reviewCode: string) {
+  return del<{ deleted: true }>(
+    `/admin/opinions/${encodeURIComponent(reviewCode)}`,
+    token,
+  );
+}
+
+export function deleteAdminCatalog(token: string, catalog: AdminCatalogKey, id: number) {
+  return del<{ deleted: true }>(`/admin/catalogs/${catalog}/${id}`, token);
 }
 
 export async function getAdminCenters(token: string, options: AdminCentersOptions = {}) {

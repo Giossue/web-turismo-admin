@@ -15,6 +15,8 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import type { GridColDef } from "@mui/x-data-grid";
 import { useMemo } from "react";
+import { DeleteRecordAction } from "@/components/admin/delete-record-action";
+import { pageAfterRemoval } from "./pagination";
 
 import { AdminDataGrid } from "@/components/ui/admin-data-grid";
 import { AdminGridFilterPanel } from "@/components/ui/admin-grid-filter-panel";
@@ -25,9 +27,9 @@ import {
 } from "@/components/ui/admin-table";
 import { SelectField } from "@/components/ui/form/select-field";
 import { StatusBadge } from "@/components/ui/status-badge";
-import type { AdminCenter, ReviewAction } from "@/lib/admin-api";
+import { deleteAdminCenter, type AdminCenter, type ReviewAction } from "@/lib/admin-api";
 import { activeLabel, centerStatusTone } from "@/lib/admin-labels";
-import { centersPageQueryOptions } from "@/lib/admin-queries";
+import { adminKeys, centersPageQueryOptions } from "@/lib/admin-queries";
 import { errorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
 import { webTokens } from "@/theme/tokens";
@@ -46,6 +48,7 @@ export function CentersSection({
   onStatusChange,
   onPageChange,
   onOpen,
+  canDelete,
 }: {
   token: string;
   status: CenterStatusFilter;
@@ -58,6 +61,7 @@ export function CentersSection({
   onStatusChange: (value: CenterStatusFilter) => void;
   onPageChange: (page: number) => void;
   onOpen: (code: string) => void;
+  canDelete: boolean;
 }) {
   const centersQuery = useQuery(
     centersPageQueryOptions(token, {
@@ -121,24 +125,51 @@ export function CentersSection({
       {
         field: "actions",
         headerName: "Acciones",
-        width: 95,
+        width: canDelete ? 145 : 95,
         align: "right",
         headerAlign: "right",
         filterable: false,
         renderCell: ({ row, tabIndex }) => (
-          <Tooltip title="Editar" disableInteractive>
-            <IconButton
-              aria-label={`Editar ${row.name}`}
-              tabIndex={tabIndex}
-              onClick={() => onOpen(row.code)}
-            >
-              <EditRounded fontSize="small" />
-            </IconButton>
-          </Tooltip>
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="flex-end"
+            sx={{ height: "100%" }}
+          >
+            <Tooltip title="Editar" disableInteractive>
+              <IconButton
+                aria-label={`Editar ${row.name}`}
+                tabIndex={tabIndex}
+                onClick={() => onOpen(row.code)}
+              >
+                <EditRounded fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            {canDelete ? (
+              <DeleteRecordAction
+                subject={row.name}
+                title="Eliminar centro turístico"
+                description="Se retirará del panel y de la aplicación. La ficha, sus archivos y el historial se conservan."
+                tabIndex={tabIndex}
+                onDelete={() => deleteAdminCenter(token, row.code)}
+                queryKeys={[
+                  adminKeys.allCenters(),
+                  adminKeys.summary(),
+                  adminKeys.center(row.code),
+                  adminKeys.media(row.code),
+                ]}
+                onDeleted={() =>
+                  onPageChange(
+                    pageAfterRemoval(page, centersQuery.data?.items.length ?? 0),
+                  )
+                }
+              />
+            ) : null}
+          </Stack>
         ),
       },
     ],
-    [onOpen],
+    [onOpen, canDelete, token, page, onPageChange, centersQuery.data?.items.length],
   );
 
   return (
