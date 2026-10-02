@@ -11,6 +11,7 @@ import {
 } from "react-hook-form";
 
 import { CatalogSelect, type CatalogSelectOption } from "@/components/ui/catalog-select";
+import { CatalogAutocomplete } from "@/components/ui/catalog-autocomplete";
 import {
   SECTION_RESPONSE_OPTIONS,
   type SectionResponse,
@@ -139,6 +140,8 @@ type RhfCatalogSelectProps<
 > = Omit<RhfControlProps<TFieldValues, TName>, "helperText"> & {
   options: readonly CatalogSelectOption[];
   emptyLabel?: string;
+  searchable?: boolean;
+  loading?: boolean;
   onValueChange?: (value: string) => void;
 };
 
@@ -156,6 +159,8 @@ export function RhfCatalogSelect<
   id,
   options,
   emptyLabel,
+  searchable = false,
+  loading = false,
   onValueChange,
 }: RhfCatalogSelectProps<TFieldValues, TName>) {
   const editable = useEditable();
@@ -165,6 +170,28 @@ export function RhfCatalogSelect<
     control,
     rules: withRequiredRule(rules, required),
   });
+
+  if (searchable) {
+    return (
+      <CatalogAutocomplete
+        id={id ?? `catalog-${generatedId}`}
+        label={label}
+        name={field.name}
+        value={field.value == null ? "" : String(field.value)}
+        options={options}
+        required={required}
+        disabled={disabled || !editable}
+        loading={loading}
+        helperText={fieldState.error?.message}
+        inputRef={field.ref}
+        onBlur={field.onBlur}
+        onChange={(value) => {
+          field.onChange(value);
+          onValueChange?.(value);
+        }}
+      />
+    );
+  }
 
   return (
     <CatalogSelect

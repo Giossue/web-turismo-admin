@@ -62,6 +62,7 @@ import {
 } from "@/lib/admin-labels";
 import { adminKeys, catalogsQueryOptions } from "@/lib/admin-queries";
 import { errorMessage } from "@/lib/errors";
+import { localityOptions } from "@/lib/locality-options";
 import { withRetainedCatalogOption } from "@/lib/retained-catalog-options";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { findCatalogIdByName, findCatalogOption } from "@/lib/values";
@@ -212,6 +213,7 @@ export const EstablishmentManagement = forwardRef<
 
   const data = establishmentsQuery.data;
   const catalogs = catalogsQuery.data;
+  const localities = useMemo(() => localityOptions(catalogs), [catalogs]);
   const establishmentActivities = withRetainedCatalogOption(
     catalogs?.establishmentActivities,
     editing?.activityId ? { id: editing.activityId, name: editing.actividad } : null,
@@ -492,7 +494,11 @@ export const EstablishmentManagement = forwardRef<
                   control={control}
                   name="localityId"
                   label="Localidad"
-                  options={catalogs?.localities ?? []}
+                  options={localities}
+                  searchable
+                  required
+                  loading={catalogsQuery.isPending}
+                  disabled={saveMutation.isPending}
                   rules={{ required: required("Selecciona una localidad.") }}
                 />
               </Grid>
