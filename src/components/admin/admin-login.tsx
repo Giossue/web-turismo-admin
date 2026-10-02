@@ -1,6 +1,5 @@
 "use client";
 
-import ExploreRounded from "@mui/icons-material/ExploreRounded";
 import {
   Alert,
   Box,
@@ -76,12 +75,6 @@ export function AdminLogin() {
           }),
         })}
       >
-        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-          <ExploreRounded sx={{ color: "primary.main", fontSize: 28 }} />
-          <Typography variant="body2" sx={{ fontWeight: 700 }}>
-            Turismo Vinculación
-          </Typography>
-        </Stack>
         <Typography
           variant="h4"
           component="h1"
