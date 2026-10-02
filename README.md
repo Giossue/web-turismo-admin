@@ -60,8 +60,10 @@ El diseño adapta las plantillas oficiales de MUI
 [Dashboard](https://mui.com/material-ui/getting-started/templates/dashboard/) para el panel,
 con tipografía Inter, la paleta verde original, superficies con bordes y botones de alto contraste.
 El portal usa los `colorSchemes` de MUI, abre en tema claro por defecto y permite alternar
-entre claro y oscuro tanto en el login como en el encabezado del panel; la preferencia
-visual se conserva en el navegador. La fuente y los estilos se sirven desde la propia web.
+entre claro y oscuro tanto en el login como en el popover del perfil, al pulsar la cuenta
+en el pie del menú lateral. El panel no tiene barra superior; en móvil, el botón junto al
+título abre la navegación. La preferencia visual se conserva en el navegador. La fuente y
+los estilos se sirven desde la propia web.
 La atribución del código adaptado está en
 [`docs/third-party-notices/mui-templates.md`](docs/third-party-notices/mui-templates.md).
 

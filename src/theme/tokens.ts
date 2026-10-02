@@ -129,7 +129,6 @@ export const webTokens = {
   },
   layout: {
     drawerWidth: 240,
-    headerOffset: 8,
     contentMaxWidth: "lg",
   },
   form: {

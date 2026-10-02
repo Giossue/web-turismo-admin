@@ -1,24 +1,21 @@
 "use client";
 
-import LogoutRounded from "@mui/icons-material/LogoutRounded";
 import LandscapeRounded from "@mui/icons-material/LandscapeRounded";
 import {
-  Avatar,
   Box,
   Divider,
   Drawer,
-  IconButton,
   List,
   ListItemButton,
   ListItemIcon,
   ListItemText,
   Stack,
-  Tooltip,
   Typography,
 } from "@mui/material";
 
 import type { AdminUser } from "@/lib/auth";
 import { webTokens } from "@/theme/tokens";
+import { AdminProfilePopover } from "./admin-profile-popover";
 import type { AdminNavigationItem, AdminSection } from "./sections";
 
 export const drawerWidth = webTokens.layout.drawerWidth;
@@ -159,39 +156,7 @@ function NavigationContent({
       <Box sx={{ flex: 1 }} />
       <List sx={{ p: 1.5 }}>{settingsItems.map(renderItem)}</List>
       <Divider />
-      <Stack direction="row" spacing={1} sx={{ p: 2, alignItems: "center" }}>
-        <Avatar
-          alt={user.name}
-          sx={{
-            width: 32,
-            height: 32,
-            fontSize: "0.875rem",
-            bgcolor: "background.subtle",
-            color: "text.primary",
-          }}
-        >
-          {user.name.trim().charAt(0).toLocaleUpperCase("es")}
-        </Avatar>
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography variant="body2" fontWeight={500} noWrap title={user.name}>
-            {user.name}
-          </Typography>
-          <Typography
-            variant="caption"
-            color="text.secondary"
-            component="p"
-            noWrap
-            title={user.email}
-          >
-            {user.email}
-          </Typography>
-        </Box>
-        <Tooltip title="Salir">
-          <IconButton size="small" onClick={onLogout} aria-label="Salir">
-            <LogoutRounded fontSize="small" />
-          </IconButton>
-        </Tooltip>
-      </Stack>
+      <AdminProfilePopover user={user} onLogout={onLogout} />
     </Box>
   );
 }

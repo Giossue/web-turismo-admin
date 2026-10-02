@@ -2,16 +2,7 @@
 
 import AddRounded from "@mui/icons-material/AddRounded";
 import MenuRounded from "@mui/icons-material/MenuRounded";
-import {
-  AppBar,
-  Box,
-  Button,
-  CircularProgress,
-  IconButton,
-  Stack,
-  Toolbar,
-  Tooltip,
-} from "@mui/material";
+import { Box, Button, CircularProgress, IconButton, Stack, Tooltip } from "@mui/material";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef, useState } from "react";
 
@@ -30,7 +21,6 @@ import {
   type EstablishmentManagementRef,
 } from "@/components/admin/establishment-management";
 import { OpinionManagement } from "@/components/admin/opinion-management";
-import { ColorModeButton } from "@/components/ui/color-mode-button";
 import { PageHeader } from "@/components/ui/page-header";
 import type { AdminCenterDetail } from "@/lib/admin-api";
 import { adminKeys } from "@/lib/admin-queries";
@@ -146,40 +136,6 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
 
   return (
     <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: "background.default" }}>
-      <AppBar
-        component="header"
-        position="fixed"
-        color="inherit"
-        sx={{
-          bgcolor: "background.default",
-          width: editorMode
-            ? "100%"
-            : { xs: "100%", md: `calc(100% - ${drawerWidth}px)` },
-          ml: editorMode ? 0 : { md: `${drawerWidth}px` },
-          borderBottom: "1px solid",
-          borderColor: "divider",
-          boxShadow: "none",
-          borderRadius: 0,
-        }}
-      >
-        <Toolbar sx={{ gap: webTokens.spacing.inline, px: { xs: 2, md: 3 } }}>
-          {!editorMode ? (
-            <Tooltip title="Abrir menú">
-              <IconButton
-                edge="start"
-                onClick={() => setDrawerOpen(true)}
-                aria-label="Abrir menú"
-                sx={{ display: { xs: "inline-flex", md: "none" } }}
-              >
-                <MenuRounded />
-              </IconButton>
-            </Tooltip>
-          ) : null}
-          <Box sx={{ flexGrow: 1 }} />
-          <ColorModeButton />
-        </Toolbar>
-      </AppBar>
-
       {!editorMode ? (
         <AdminNavigation
           user={user}
@@ -199,18 +155,34 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
           p: webTokens.spacing.page,
           pb: 5,
           bgcolor: "background.default",
-          mt: webTokens.layout.headerOffset,
           ml: editorMode ? 0 : { md: `${drawerWidth}px` },
           minWidth: 0,
         }}
       >
         <Stack spacing={webTokens.spacing.section}>
           {!editorMode ? (
-            <PageHeader
-              title={meta.title}
-              description={meta.description}
-              actions={headerAction}
-            />
+            <Stack
+              direction="row"
+              alignItems="flex-start"
+              spacing={webTokens.spacing.control}
+            >
+              <Tooltip title="Abrir menú">
+                <IconButton
+                  onClick={() => setDrawerOpen(true)}
+                  aria-label="Abrir menú"
+                  sx={{ display: { xs: "inline-flex", md: "none" }, flexShrink: 0 }}
+                >
+                  <MenuRounded />
+                </IconButton>
+              </Tooltip>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <PageHeader
+                  title={meta.title}
+                  description={meta.description}
+                  actions={headerAction}
+                />
+              </Box>
+            </Stack>
           ) : null}
           {section === "summary" ? <SummarySection token={token} /> : null}
           {section === "review" ? (

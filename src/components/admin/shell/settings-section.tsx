@@ -2,10 +2,8 @@
 
 import AccountCircleRounded from "@mui/icons-material/AccountCircleRounded";
 import LogoutRounded from "@mui/icons-material/LogoutRounded";
-import SettingsRounded from "@mui/icons-material/SettingsRounded";
-import { Box, Button, Chip, Stack } from "@mui/material";
+import { Button, Chip, Stack } from "@mui/material";
 
-import { ColorModeButton } from "@/components/ui/color-mode-button";
 import { DetailList } from "@/components/ui/detail-list";
 import { FlatSurface } from "@/components/ui/flat-surface";
 import { SectionHeader } from "@/components/ui/section-header";
@@ -60,18 +58,6 @@ export function SettingsSection({
           >
             Cerrar sesión
           </Button>
-        </Stack>
-      </FlatSurface>
-      <FlatSurface padding="default">
-        <Stack spacing={webTokens.spacing.inline}>
-          <SectionHeader
-            icon={<SettingsRounded />}
-            title="Preferencias"
-            description="Elige el tema con el botón de la barra superior. MUI conserva esta preferencia localmente sin guardar credenciales."
-          />
-          <Box>
-            <ColorModeButton />
-          </Box>
         </Stack>
       </FlatSurface>
     </Stack>
