@@ -1,17 +1,10 @@
 "use client";
 
 import EditRounded from "@mui/icons-material/EditRounded";
-import {
-  Button,
-  IconButton,
-  Stack,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  Tooltip,
-  Typography,
-} from "@mui/material";
+import CheckRounded from "@mui/icons-material/CheckRounded";
+import CloseRounded from "@mui/icons-material/CloseRounded";
+import VisibilityRounded from "@mui/icons-material/VisibilityRounded";
+import { IconButton, Stack, Tooltip, Typography } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import type { GridColDef } from "@mui/x-data-grid";
 import { useMemo } from "react";
@@ -21,7 +14,6 @@ import { pageAfterRemoval } from "./pagination";
 import { AdminDataGrid } from "@/components/ui/admin-data-grid";
 import { AdminGridFilterPanel } from "@/components/ui/admin-grid-filter-panel";
 import {
-  AdminTable,
   ADMIN_TABLE_PAGE_SIZE,
   type AdminTablePagination,
 } from "@/components/ui/admin-table";
@@ -32,7 +24,6 @@ import { centerStatusTone } from "@/lib/admin-labels";
 import { adminKeys, centersPageQueryOptions } from "@/lib/admin-queries";
 import { errorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
-import { webTokens } from "@/theme/tokens";
 import { CENTER_STATUS_FILTER_OPTIONS, type CenterStatusFilter } from "./admin-nav-state";
 
 const pageSize = ADMIN_TABLE_PAGE_SIZE;
@@ -82,7 +73,7 @@ export function CentersSection({
         filterable: false,
         renderCell: ({ row }) => (
           <Stack justifyContent="center" sx={{ height: "100%", minWidth: 0 }}>
-            <Typography variant="body2" fontWeight={700} noWrap title={row.name}>
+            <Typography variant="body2" fontWeight={600} noWrap title={row.name}>
               {row.name}
             </Typography>
             <Typography variant="caption" color="text.secondary">
@@ -221,88 +212,129 @@ export function CenterTable({
   onOpen: (code: string) => void;
   pagination: AdminTablePagination;
 }) {
+  const hasReview = Boolean(review);
+  const reviewPending = review?.pending ?? false;
+  const onReview = review?.onReview;
+  const columns = useMemo<GridColDef<AdminCenter>[]>(
+    () => [
+      {
+        field: "name",
+        headerName: "Ficha",
+        minWidth: 230,
+        flex: 1,
+        filterable: false,
+        renderCell: ({ row }) => (
+          <Stack justifyContent="center" sx={{ height: "100%", minWidth: 0 }}>
+            <Typography variant="body2" fontWeight={600} noWrap title={row.name}>
+              {row.name}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {row.code}
+            </Typography>
+          </Stack>
+        ),
+      },
+      {
+        field: "status",
+        headerName: "Estado de la ficha",
+        width: 180,
+        filterable: false,
+        valueGetter: (_value, row) => row.status.code,
+        renderCell: ({ row }) => (
+          <StatusBadge label={row.status.name} tone={centerStatusTone(row.status.code)} />
+        ),
+      },
+      {
+        field: "requestedBy",
+        headerName: "Solicitó",
+        minWidth: 140,
+        flex: 0.5,
+        filterable: false,
+        valueFormatter: (value: string | null) => value ?? "—",
+      },
+      {
+        field: "updatedAt",
+        headerName: "Actualizada",
+        width: 150,
+        filterable: false,
+        valueFormatter: (value: string) => formatDate(value),
+      },
+      {
+        field: "actions",
+        headerName: "Acciones",
+        width: hasReview ? 155 : 95,
+        align: "right",
+        headerAlign: "right",
+        filterable: false,
+        renderCell: ({ row, hasFocus }) =>
+          !hasReview ? (
+            <Tooltip title="Editar" disableInteractive>
+              <IconButton
+                aria-label={`Editar ${row.name}`}
+                tabIndex={hasFocus ? 0 : -1}
+                onClick={() => onOpen(row.code)}
+              >
+                <EditRounded fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          ) : row.status.code === "EN_REVISION" ? (
+            <Stack direction="row" alignItems="center" justifyContent="flex-end">
+              <Tooltip title="Ver ficha" disableInteractive>
+                <IconButton
+                  aria-label={`Ver ficha ${row.name}`}
+                  tabIndex={hasFocus ? 0 : -1}
+                  onClick={() => onOpen(row.code)}
+                >
+                  <VisibilityRounded fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Aprobar" disableInteractive>
+                <span>
+                  <IconButton
+                    color="success"
+                    aria-label={`Aprobar ficha ${row.name}`}
+                    tabIndex={hasFocus ? 0 : -1}
+                    disabled={reviewPending}
+                    onClick={() => onReview?.(row, "APPROVE")}
+                  >
+                    <CheckRounded fontSize="small" />
+                  </IconButton>
+                </span>
+              </Tooltip>
+              <Tooltip title="Rechazar" disableInteractive>
+                <span>
+                  <IconButton
+                    color="error"
+                    aria-label={`Rechazar ficha ${row.name}`}
+                    tabIndex={hasFocus ? 0 : -1}
+                    disabled={reviewPending}
+                    onClick={() => onReview?.(row, "REJECT")}
+                  >
+                    <CloseRounded fontSize="small" />
+                  </IconButton>
+                </span>
+              </Tooltip>
+            </Stack>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              Aprobada
+            </Typography>
+          ),
+      },
+    ],
+    [hasReview, onOpen, onReview, reviewPending],
+  );
+
   return (
-    <AdminTable
+    <AdminDataGrid
       ariaLabel="Centros turísticos"
-      minWidth={review ? 720 : 620}
+      rows={centers}
+      columns={columns}
+      getRowId={getCenterRowId}
       loading={loading}
       error={error}
-      empty={centers.length === 0}
       emptyMessage="No hay fichas para mostrar."
       pagination={pagination}
-    >
-      <TableHead>
-        <TableRow>
-          <TableCell>Ficha</TableCell>
-          <TableCell>Estado de la ficha</TableCell>
-          <TableCell>Solicitó</TableCell>
-          <TableCell>Actualizada</TableCell>
-          <TableCell align="right">Acciones</TableCell>
-        </TableRow>
-      </TableHead>
-      <TableBody>
-        {centers.map((center) => (
-          <TableRow key={center.code} hover>
-            <TableCell component="th" scope="row">
-              <Typography fontWeight={700}>{center.name}</Typography>
-              <Typography variant="caption" color="text.secondary">
-                {center.code}
-              </Typography>
-            </TableCell>
-            <TableCell>
-              <StatusBadge
-                label={center.status.name}
-                tone={centerStatusTone(center.status.code)}
-              />
-            </TableCell>
-            <TableCell>{center.requestedBy ?? "—"}</TableCell>
-            <TableCell>{formatDate(center.updatedAt)}</TableCell>
-            <TableCell align="right">
-              {!review ? (
-                <Tooltip title="Editar">
-                  <IconButton
-                    aria-label={`Editar ${center.name}`}
-                    onClick={() => onOpen(center.code)}
-                  >
-                    <EditRounded fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              ) : center.status.code === "EN_REVISION" ? (
-                <Stack
-                  direction={{ xs: "column", sm: "row" }}
-                  spacing={webTokens.spacing.inline}
-                  justifyContent="flex-end"
-                >
-                  <Button size="small" variant="text" onClick={() => onOpen(center.code)}>
-                    Ver ficha
-                  </Button>
-                  <Button
-                    size="small"
-                    variant="contained"
-                    disabled={review.pending}
-                    onClick={() => review.onReview(center, "APPROVE")}
-                  >
-                    Aprobar
-                  </Button>
-                  <Button
-                    size="small"
-                    color="error"
-                    variant="text"
-                    disabled={review.pending}
-                    onClick={() => review.onReview(center, "REJECT")}
-                  >
-                    Rechazar
-                  </Button>
-                </Stack>
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  Aprobada
-                </Typography>
-              )}
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </AdminTable>
+    />
   );
 }

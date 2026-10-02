@@ -10,15 +10,14 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
+  IconButton,
   Stack,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
+  Tooltip,
   Typography,
 } from "@mui/material";
+import type { GridColDef } from "@mui/x-data-grid";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { useAdminFeedback } from "@/components/admin/admin-feedback";
 import { DeleteRecordAction } from "@/components/admin/delete-record-action";
@@ -27,7 +26,8 @@ import {
   useReviewIntent,
 } from "@/components/admin/review-decision-dialog";
 import { pageAfterRemoval } from "@/components/admin/shell/pagination";
-import { AdminTable, ADMIN_TABLE_PAGE_SIZE } from "@/components/ui/admin-table";
+import { AdminDataGrid } from "@/components/ui/admin-data-grid";
+import { ADMIN_TABLE_PAGE_SIZE } from "@/components/ui/admin-table";
 import { ContentState } from "@/components/ui/content-state";
 import { FlatSurface } from "@/components/ui/flat-surface";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -55,6 +55,7 @@ import { webTokens } from "@/theme/tokens";
 const pageSize = ADMIN_TABLE_PAGE_SIZE;
 const MAX_RATING = 5;
 const REASON_MAX_LENGTH = 1000;
+const opinionRowId = (opinion: AdminOpinion) => opinion.reviewCode;
 
 type ReviewVariables = { item: AdminOpinion; action: ReviewAction; reason?: string };
 
@@ -106,11 +107,14 @@ export function OpinionManagement({ token }: { token: string }) {
     onError: (cause) => showError(errorMessage(cause, "No se pudo revisar la opinión.")),
   });
 
-  function openHistory(opinion: AdminOpinion) {
-    showError(null);
-    setHistoryOpinion(opinion);
-    setHistoryOpen(true);
-  }
+  const openHistory = useCallback(
+    (opinion: AdminOpinion) => {
+      showError(null);
+      setHistoryOpinion(opinion);
+      setHistoryOpen(true);
+    },
+    [showError],
+  );
 
   function openReview(opinion: AdminOpinion, action: ReviewAction) {
     setHistoryOpen(false);
@@ -118,12 +122,115 @@ export function OpinionManagement({ token }: { token: string }) {
   }
 
   const intent = review.intent;
+  const columns = useMemo<GridColDef<AdminOpinion>[]>(
+    () => [
+      {
+        field: "target",
+        headerName: "Lugar",
+        minWidth: 220,
+        flex: 1.3,
+        filterable: false,
+        renderCell: ({ row }) => (
+          <Stack sx={{ justifyContent: "center", height: "100%", minWidth: 0 }}>
+            <Typography variant="body2" fontWeight={600} noWrap>
+              {row.target.name}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" noWrap>
+              {opinionTargetTypeLabel(row.target.type)}
+              {row.target.code ? ` · ${row.target.code}` : ""}
+            </Typography>
+          </Stack>
+        ),
+      },
+      {
+        field: "authorName",
+        headerName: "Usuario",
+        minWidth: 150,
+        flex: 0.8,
+        filterable: false,
+      },
+      {
+        field: "status",
+        headerName: "Estado",
+        minWidth: 145,
+        filterable: false,
+        renderCell: ({ row }) => (
+          <StatusBadge
+            label={opinionStatusLabel(row.status)}
+            tone={opinionStatusTone(row.status)}
+          />
+        ),
+      },
+      {
+        field: "proposed",
+        headerName: "Calificación",
+        minWidth: 220,
+        flex: 1,
+        filterable: false,
+        renderCell: ({ row }) => <OpinionVersionSummary version={row.proposed} />,
+      },
+      {
+        field: "actions",
+        headerName: "Acciones",
+        width: 145,
+        align: "right",
+        headerAlign: "right",
+        filterable: false,
+        renderCell: ({ row: opinion, hasFocus }) => (
+          <Stack
+            direction="row"
+            justifyContent="flex-end"
+            alignItems="center"
+            sx={{ height: "100%" }}
+          >
+            <Tooltip title="Ver historial" disableInteractive>
+              <IconButton
+                tabIndex={hasFocus ? 0 : -1}
+                onClick={() => openHistory(opinion)}
+                aria-label={`Ver historial de la opinión sobre ${opinion.target.name}`}
+              >
+                <HistoryRounded fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <DeleteRecordAction
+              subject={`opinión de ${opinion.authorName} sobre ${opinion.target.name}`}
+              title="Eliminar opinión"
+              description="Se retirarán todas sus versiones de la aplicación y dejará de contar en las calificaciones. El historial se conserva."
+              tabIndex={hasFocus ? 0 : -1}
+              disabled={reviewMutation.isPending}
+              onDelete={() => deleteAdminOpinion(token, opinion.reviewCode)}
+              queryKeys={[
+                adminKeys.allOpinions(),
+                adminKeys.opinionHistory(opinion.reviewCode),
+                adminKeys.summary(),
+              ]}
+              onDeleted={() => {
+                if (historyOpinion?.reviewCode === opinion.reviewCode)
+                  setHistoryOpen(false);
+                setPage(pageAfterRemoval(page, items.length));
+              }}
+            />
+          </Stack>
+        ),
+      },
+    ],
+    [
+      openHistory,
+      reviewMutation.isPending,
+      token,
+      historyOpinion?.reviewCode,
+      page,
+      items.length,
+    ],
+  );
 
   return (
     <Stack spacing={webTokens.spacing.control}>
-      <AdminTable
+      <AdminDataGrid
         ariaLabel="Opiniones de visitantes"
-        minWidth={760}
+        rows={items}
+        columns={columns}
+        getRowId={opinionRowId}
         loading={opinionsQuery.isLoading}
         error={
           opinionsQuery.error
@@ -133,81 +240,14 @@ export function OpinionManagement({ token }: { token: string }) {
               )
             : null
         }
-        empty={items.length === 0}
         emptyMessage="No hay opiniones pendientes ni publicadas."
         pagination={{
           page,
           total: opinionsQuery.data?.total ?? 0,
+          pageSize,
           onPageChange: setPage,
         }}
-      >
-        <TableHead>
-          <TableRow>
-            <TableCell>Lugar</TableCell>
-            <TableCell>Usuario</TableCell>
-            <TableCell>Estado</TableCell>
-            <TableCell>Calificación</TableCell>
-            <TableCell align="right">Acciones</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {items.map((opinion) => (
-            <TableRow hover key={opinion.reviewCode}>
-              <TableCell component="th" scope="row">
-                <Typography fontWeight={700}>{opinion.target.name}</Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {opinionTargetTypeLabel(opinion.target.type)}
-                  {opinion.target.code ? ` · ${opinion.target.code}` : ""}
-                </Typography>
-              </TableCell>
-              <TableCell>{opinion.authorName}</TableCell>
-              <TableCell>
-                <StatusBadge
-                  label={opinionStatusLabel(opinion.status)}
-                  tone={opinionStatusTone(opinion.status)}
-                />
-              </TableCell>
-              <TableCell>
-                <OpinionVersionSummary version={opinion.proposed} />
-              </TableCell>
-              <TableCell align="right">
-                <Stack direction="row" justifyContent="flex-end" alignItems="center">
-                  <Button
-                    size="small"
-                    variant="text"
-                    startIcon={<HistoryRounded />}
-                    onClick={() => openHistory(opinion)}
-                    aria-label={`Ver historial de la opinión sobre ${opinion.target.name}`}
-                    sx={{
-                      backgroundColor: "transparent",
-                      "&:hover": { backgroundColor: "action.hover" },
-                    }}
-                  >
-                    Ver historial
-                  </Button>
-                  <DeleteRecordAction
-                    subject={`opinión de ${opinion.authorName} sobre ${opinion.target.name}`}
-                    title="Eliminar opinión"
-                    description="Se retirarán todas sus versiones de la aplicación y dejará de contar en las calificaciones. El historial se conserva."
-                    disabled={reviewMutation.isPending}
-                    onDelete={() => deleteAdminOpinion(token, opinion.reviewCode)}
-                    queryKeys={[
-                      adminKeys.allOpinions(),
-                      adminKeys.opinionHistory(opinion.reviewCode),
-                      adminKeys.summary(),
-                    ]}
-                    onDeleted={() => {
-                      if (historyOpinion?.reviewCode === opinion.reviewCode)
-                        setHistoryOpen(false);
-                      setPage(pageAfterRemoval(page, items.length));
-                    }}
-                  />
-                </Stack>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </AdminTable>
+      />
 
       <Dialog
         open={historyOpen}
@@ -392,7 +432,10 @@ function OpinionVersionSummary({
   version: AdminOpinion["proposed"];
 }) {
   return (
-    <Stack spacing={expanded ? webTokens.spacing.inline : 0} sx={{ maxWidth: 360 }}>
+    <Stack
+      spacing={expanded ? webTokens.spacing.inline : 0}
+      sx={{ minWidth: 0, maxWidth: 360 }}
+    >
       <Stack direction="row" spacing={webTokens.spacing.inline} alignItems="center">
         <OpinionRating rating={version.rating} />
         <Typography variant="body2" fontWeight={700}>

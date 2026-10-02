@@ -39,11 +39,22 @@ type AdminDataGridProps<R extends GridValidRowModel> = Pick<
   filterCount?: number;
   /** Filtros de dominio procesados por la API, independientes del modelo nativo. */
   filterPanel?: ReactNode;
+  /** Controles específicos de la tabla dentro de la barra compartida. */
+  toolbarContent?: ReactNode;
+  toolbarActions?: ReactNode;
+  hideFooter?: boolean;
 };
 
 type GridControls = Pick<
   AdminDataGridProps<GridValidRowModel>,
-  "search" | "filterCount" | "filterPanel" | "emptyMessage" | "filtering" | "error"
+  | "search"
+  | "filterCount"
+  | "filterPanel"
+  | "emptyMessage"
+  | "filtering"
+  | "error"
+  | "toolbarContent"
+  | "toolbarActions"
 >;
 
 const GridControlsContext = createContext<GridControls>({
@@ -62,7 +73,8 @@ const AdminGridPanel = styled(GridPanel)(({ theme }) => ({
 
 // Slots estables: cambiar los filtros no remonta el panel ni interrumpe el foco.
 function AdminGridToolbar() {
-  const { search, filtering, filterCount } = useContext(GridControlsContext);
+  const { search, filtering, filterCount, toolbarContent, toolbarActions } =
+    useContext(GridControlsContext);
   return (
     <Toolbar
       aria-label="Buscar y filtrar"
@@ -90,6 +102,9 @@ function AdminGridToolbar() {
           />
         </Box>
       ) : null}
+      {toolbarContent ? (
+        <Box sx={{ flex: "1 1 220px", minWidth: 0 }}>{toolbarContent}</Box>
+      ) : null}
       {filtering ? (
         <FilterPanelTrigger
           render={(props, state) => (
@@ -104,6 +119,11 @@ function AdminGridToolbar() {
             </ToolbarButton>
           )}
         />
+      ) : null}
+      {toolbarActions ? (
+        <Stack direction="row" gap={1} sx={{ ml: "auto", flexShrink: 0 }}>
+          {toolbarActions}
+        </Stack>
       ) : null}
     </Toolbar>
   );
@@ -132,6 +152,9 @@ export function AdminDataGrid<R extends GridValidRowModel>({
   filterCount,
   filterPanel,
   filtering = Boolean(filterPanel),
+  toolbarContent,
+  toolbarActions,
+  hideFooter = false,
 }: AdminDataGridProps<R>) {
   const pageSize = pagination.pageSize ?? ADMIN_TABLE_PAGE_SIZE;
   // Una consulta de otra página no debe reiniciar el grid mientras llega su total.
@@ -140,8 +163,26 @@ export function AdminDataGrid<R extends GridValidRowModel>({
     setKnownTotal(pagination.total);
   const rowCount = loading || error ? knownTotal : pagination.total;
   const controls = useMemo(
-    () => ({ search, filtering, filterCount, filterPanel, emptyMessage, error }),
-    [search, filtering, filterCount, filterPanel, emptyMessage, error],
+    () => ({
+      search,
+      filtering,
+      filterCount,
+      filterPanel,
+      emptyMessage,
+      error,
+      toolbarContent,
+      toolbarActions,
+    }),
+    [
+      search,
+      filtering,
+      filterCount,
+      filterPanel,
+      emptyMessage,
+      error,
+      toolbarContent,
+      toolbarActions,
+    ],
   );
 
   return (
@@ -179,7 +220,8 @@ export function AdminDataGrid<R extends GridValidRowModel>({
             }}
             pageSizeOptions={[pageSize]}
             filterMode="server"
-            showToolbar={Boolean(search || filtering)}
+            hideFooter={hideFooter}
+            showToolbar={Boolean(search || filtering || toolbarContent || toolbarActions)}
             slots={{
               toolbar: AdminGridToolbar,
               panel: AdminGridPanel,
@@ -199,6 +241,11 @@ export function AdminDataGrid<R extends GridValidRowModel>({
               bgcolor: "background.paper",
               "--DataGrid-containerBackground": "var(--mui-palette-background-subtle)",
               "& .MuiDataGrid-cell": { display: "flex", alignItems: "center" },
+              "& .MuiDataGrid-cell .MuiIconButton-root": {
+                width: 42,
+                height: 42,
+                "& .MuiSvgIcon-root": { fontSize: 24 },
+              },
               "& .MuiDataGrid-columnHeaderTitle": { fontWeight: 600 },
               "& .MuiDataGrid-footerContainer": { minHeight: 56 },
               "& .MuiTablePagination-selectLabel, & .MuiTablePagination-input": {

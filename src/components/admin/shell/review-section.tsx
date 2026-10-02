@@ -1,17 +1,12 @@
 "use client";
 
-import {
-  Box,
-  Button,
-  Stack,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  Typography,
-} from "@mui/material";
+import CheckRounded from "@mui/icons-material/CheckRounded";
+import CloseRounded from "@mui/icons-material/CloseRounded";
+import VisibilityRounded from "@mui/icons-material/VisibilityRounded";
+import { Box, IconButton, Stack, Tooltip, Typography } from "@mui/material";
+import type { GridColDef } from "@mui/x-data-grid";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { useAdminFeedback } from "@/components/admin/admin-feedback";
 import {
@@ -19,10 +14,10 @@ import {
   useReviewIntent,
 } from "@/components/admin/review-decision-dialog";
 import {
-  AdminTable,
   ADMIN_TABLE_PAGE_SIZE,
   type AdminTablePagination,
 } from "@/components/ui/admin-table";
+import { AdminDataGrid } from "@/components/ui/admin-data-grid";
 import { SectionHeader } from "@/components/ui/section-header";
 import {
   reviewAdminCenter,
@@ -254,86 +249,159 @@ function EstablishmentReviewTable({
 }) {
   const [detail, setDetail] = useState<AdminEstablishment | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const columns = useMemo<GridColDef<AdminEstablishment>[]>(
+    () => [
+      {
+        field: "nombreComercial",
+        headerName: "Establecimiento",
+        minWidth: 240,
+        flex: 1.5,
+        filterable: false,
+        renderCell: ({ row }) => (
+          <Stack justifyContent="center" sx={{ height: "100%", minWidth: 0 }}>
+            <Typography
+              variant="body2"
+              fontWeight={600}
+              noWrap
+              title={row.nombreComercial}
+            >
+              {row.nombreComercial}
+            </Typography>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              noWrap
+              title={row.categoriaEtiqueta ?? row.categoria ?? "Sin categoría"}
+            >
+              {row.categoriaEtiqueta ?? row.categoria ?? "Sin categoría"}
+            </Typography>
+          </Stack>
+        ),
+      },
+      {
+        field: "location",
+        headerName: "Ubicación",
+        minWidth: 190,
+        flex: 1,
+        filterable: false,
+        valueGetter: (_value, row) => `${row.localityName}, ${row.cantonName}`,
+      },
+      {
+        field: "actividad",
+        headerName: "Actividad / tipo de establecimiento",
+        minWidth: 280,
+        flex: 1.5,
+        filterable: false,
+        renderCell: ({ row }) => (
+          <Stack justifyContent="center" sx={{ height: "100%", minWidth: 0 }}>
+            <Typography variant="body2" noWrap title={row.actividad}>
+              {row.actividad}
+            </Typography>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              noWrap
+              title={row.clasificacion ?? "Sin tipo de establecimiento"}
+            >
+              {row.clasificacion ?? "Sin tipo de establecimiento"}
+            </Typography>
+          </Stack>
+        ),
+      },
+      {
+        field: "numeroRegistro",
+        headerName: "Registro y RUC",
+        minWidth: 175,
+        flex: 0.7,
+        filterable: false,
+        renderCell: ({ row }) => (
+          <Stack justifyContent="center" sx={{ height: "100%", minWidth: 0 }}>
+            <Typography
+              variant="body2"
+              noWrap
+              title={row.numeroRegistro ?? "Sin registro"}
+            >
+              {row.numeroRegistro ?? "Sin registro"}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" noWrap>
+              RUC: {row.ruc ?? "—"}
+            </Typography>
+          </Stack>
+        ),
+      },
+      {
+        field: "requestedBy",
+        headerName: "Enviado por",
+        minWidth: 140,
+        flex: 0.7,
+        filterable: false,
+        valueFormatter: (value: string | null) => value ?? "—",
+      },
+      {
+        field: "actions",
+        headerName: "Acciones",
+        width: 155,
+        align: "right",
+        headerAlign: "right",
+        filterable: false,
+        renderCell: ({ row, hasFocus }) => (
+          <Stack direction="row" alignItems="center" justifyContent="flex-end">
+            <Tooltip title="Ver detalle" disableInteractive>
+              <IconButton
+                aria-label={`Ver detalle de ${row.nombreComercial}`}
+                tabIndex={hasFocus ? 0 : -1}
+                onClick={() => {
+                  setDetail(row);
+                  setDetailOpen(true);
+                }}
+              >
+                <VisibilityRounded fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Rechazar" disableInteractive>
+              <span>
+                <IconButton
+                  color="error"
+                  aria-label={`Rechazar catastro ${row.nombreComercial}`}
+                  tabIndex={hasFocus ? 0 : -1}
+                  onClick={() => onReview(row, "REJECT")}
+                  disabled={workingId === row.id}
+                >
+                  <CloseRounded fontSize="small" />
+                </IconButton>
+              </span>
+            </Tooltip>
+            <Tooltip title="Aprobar" disableInteractive>
+              <span>
+                <IconButton
+                  color="success"
+                  aria-label={`Aprobar catastro ${row.nombreComercial}`}
+                  tabIndex={hasFocus ? 0 : -1}
+                  onClick={() => onReview(row, "APPROVE")}
+                  disabled={workingId === row.id}
+                >
+                  <CheckRounded fontSize="small" />
+                </IconButton>
+              </span>
+            </Tooltip>
+          </Stack>
+        ),
+      },
+    ],
+    [onReview, workingId],
+  );
 
   return (
     <>
-      <AdminTable
+      <AdminDataGrid
         ariaLabel="Catastros en revisión"
-        minWidth={900}
+        rows={establishments}
+        columns={columns}
         loading={loading}
         error={error}
-        empty={establishments.length === 0}
         emptyMessage="No hay catastros pendientes de revisión."
         pagination={pagination}
-      >
-        <TableHead>
-          <TableRow>
-            <TableCell>Establecimiento</TableCell>
-            <TableCell>Ubicación</TableCell>
-            <TableCell>Actividad / tipo de establecimiento</TableCell>
-            <TableCell>Registro y RUC</TableCell>
-            <TableCell>Enviado por</TableCell>
-            <TableCell align="right">Acciones</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {establishments.map((item) => (
-            <TableRow key={item.id} hover>
-              <TableCell component="th" scope="row">
-                <Typography fontWeight={600}>{item.nombreComercial}</Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {item.categoriaEtiqueta ?? item.categoria ?? "Sin categoría"}
-                </Typography>
-              </TableCell>
-              <TableCell>
-                {item.localityName}, {item.cantonName}
-              </TableCell>
-              <TableCell>
-                {item.actividad}
-                <Typography variant="caption" display="block" color="text.secondary">
-                  {item.clasificacion ?? "Sin tipo de establecimiento"}
-                </Typography>
-              </TableCell>
-              <TableCell>
-                {item.numeroRegistro ?? "Sin registro"}
-                <Typography variant="caption" display="block" color="text.secondary">
-                  RUC: {item.ruc ?? "—"}
-                </Typography>
-              </TableCell>
-              <TableCell>{item.requestedBy ?? "—"}</TableCell>
-              <TableCell align="right">
-                <Button
-                  size="small"
-                  onClick={() => {
-                    setDetail(item);
-                    setDetailOpen(true);
-                  }}
-                >
-                  Ver detalle
-                </Button>
-                <Stack direction="row" justifyContent="flex-end" spacing={0.5}>
-                  <Button
-                    size="small"
-                    color="error"
-                    onClick={() => onReview(item, "REJECT")}
-                    disabled={workingId === item.id}
-                  >
-                    Rechazar
-                  </Button>
-                  <Button
-                    size="small"
-                    variant="contained"
-                    onClick={() => onReview(item, "APPROVE")}
-                    disabled={workingId === item.id}
-                  >
-                    Aprobar
-                  </Button>
-                </Stack>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </AdminTable>
+      />
       <EstablishmentDetailDialog
         establishment={detail}
         open={detailOpen}

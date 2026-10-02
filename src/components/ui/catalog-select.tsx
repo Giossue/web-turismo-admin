@@ -26,6 +26,7 @@ export function CatalogSelect({
   helperText,
   emptyLabel,
   displayEmpty = false,
+  size = "medium",
   name,
   inputRef,
   onBlur,
@@ -43,6 +44,7 @@ export function CatalogSelect({
   emptyLabel?: string;
   /** Muestra la opción vacía en el control cerrado y mantiene la etiqueta flotante. */
   displayEmpty?: boolean;
+  size?: "small" | "medium";
   name?: string;
   inputRef?: React.Ref<unknown>;
   onBlur?: () => void;
@@ -59,6 +61,7 @@ export function CatalogSelect({
       required={required}
       error={Boolean(helperText)}
       disabled={disabled}
+      size={size}
     >
       <InputLabel id={labelId} shrink={displayEmpty ? true : undefined}>
         {label}

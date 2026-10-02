@@ -70,11 +70,18 @@ La atribución del código adaptado está en
 
 ### Filtros del panel
 
-Centros turísticos y Catastro usan MUI X DataGrid Community v8, compatible con MUI v7.
-La barra conserva el buscador y agrupa los criterios detrás de **Filtros**, con un contador
-de criterios activos. Los controles y la paginación se presentan en español.
+Centros turísticos, Catastro, Catálogos, Opiniones y las colas de revisión de fichas y
+catastros usan el componente compartido `AdminDataGrid`, basado en MUI X DataGrid Community
+v8 y compatible con MUI v7. Comparten el estilo de encabezados, filas, acciones y paginación,
+con controles en español. Las acciones de fila incluyen etiquetas accesibles y siguen el
+foco del grid al usar el teclado.
 
-Centros muestra una sola columna y un selector de **Estado de la ficha**. La búsqueda,
+Centros y Catastro conservan el buscador y agrupan los criterios detrás de **Filtros**,
+con un contador de criterios activos. Los catálogos básicos buscan localmente entre las
+opciones cargadas; **Tipos y categorías** ofrece únicamente el selector **Actividad**.
+Los listados de la API conservan su paginación y los controles admitidos por cada consulta.
+
+Centros muestra una columna y un selector de **Estado de la ficha**. La búsqueda,
 el estado y la página se conservan en la URL. Catastro agrupa los siete criterios
 admitidos por la API en campos
 con nombres de uso diario: ubicación, tipo de establecimiento y estado. Ambos paneles
@@ -96,7 +103,7 @@ buscar por nombre, cantón o provincia, sin distinguir mayúsculas ni tildes. La
 muestran su cantón y provincia para distinguir nombres repetidos; se debe seleccionar una
 opción del catálogo antes de guardar. El catálogo nacional de cabeceras cantonales y
 localidades rurales procede del INEC 2026 y se carga en la API mediante la migración
-`20261002_national_localities.sql` del monorepo. Las localidades nuevas no reciben
+`20261002_seed_national_localities.sql` del monorepo. Las localidades nuevas no reciben
 coordenadas aproximadas: la ubicación del establecimiento se captura en su formulario.
 
 Las tablas de Centros turísticos, Catastro, Opiniones y Catálogos ofrecen **Eliminar**
