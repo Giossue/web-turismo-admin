@@ -240,7 +240,7 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           border: webTokens.border,
-          borderRadius: 6,
+          borderRadius: webTokens.shape.pill,
           fontWeight: 500,
         },
       },

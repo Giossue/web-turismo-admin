@@ -116,7 +116,16 @@ function AdminTableFooter({
       <Typography variant="body2" color="text.secondary">
         {total === 0 ? "0 resultados" : `${firstResult}–${lastResult} de ${total}`}
       </Typography>
-      <Stack direction="row" alignSelf={{ xs: "flex-end", sm: "auto" }}>
+      <Stack
+        direction="row"
+        alignSelf={{ xs: "flex-end", sm: "auto" }}
+        sx={{
+          "& .MuiIconButton-root": {
+            backgroundColor: "transparent",
+            "&:hover, &.Mui-disabled": { backgroundColor: "transparent" },
+          },
+        }}
+      >
         <Tooltip title="Página anterior">
           <span>
             <IconButton
