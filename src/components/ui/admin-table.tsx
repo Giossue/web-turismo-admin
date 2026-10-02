@@ -121,10 +121,11 @@ function AdminTableFooter({
           <span>
             <IconButton
               aria-label="Página anterior"
+              size="small"
               onClick={() => onPageChange(page - 1)}
               disabled={page <= 0}
             >
-              <ChevronLeftRounded />
+              <ChevronLeftRounded fontSize="small" />
             </IconButton>
           </span>
         </Tooltip>
@@ -132,10 +133,11 @@ function AdminTableFooter({
           <span>
             <IconButton
               aria-label="Página siguiente"
+              size="small"
               onClick={() => onPageChange(page + 1)}
               disabled={page >= lastPage}
             >
-              <ChevronRightRounded />
+              <ChevronRightRounded fontSize="small" />
             </IconButton>
           </span>
         </Tooltip>

@@ -205,6 +205,12 @@ export function AdminDataGrid<R extends GridValidRowModel>({
                 display: "none",
               },
               "& .MuiTablePagination-toolbar": { px: { xs: 1, sm: 2 } },
+              "& .MuiTablePagination-actions .MuiIconButton-root": {
+                width: 32,
+                height: 32,
+                p: 0,
+                "& .MuiSvgIcon-root": { fontSize: 20 },
+              },
             }}
           />
         </FlatSurface>
