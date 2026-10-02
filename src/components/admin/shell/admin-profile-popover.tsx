@@ -5,6 +5,7 @@ import DarkModeRounded from "@mui/icons-material/DarkModeRounded";
 import KeyboardArrowUpRounded from "@mui/icons-material/KeyboardArrowUpRounded";
 import LightModeRounded from "@mui/icons-material/LightModeRounded";
 import LogoutRounded from "@mui/icons-material/LogoutRounded";
+import SettingsRounded from "@mui/icons-material/SettingsRounded";
 import {
   Avatar,
   Box,
@@ -23,10 +24,15 @@ import type { AdminUser } from "@/lib/auth";
 
 type AdminProfilePopoverProps = {
   user: AdminUser;
+  onOpenSettings: () => void;
   onLogout: () => void;
 };
 
-export function AdminProfilePopover({ user, onLogout }: AdminProfilePopoverProps) {
+export function AdminProfilePopover({
+  user,
+  onOpenSettings,
+  onLogout,
+}: AdminProfilePopoverProps) {
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
   const { mode, systemMode, setMode } = useColorScheme();
   const popoverId = useId();
@@ -151,6 +157,17 @@ export function AdminProfilePopover({ user, onLogout }: AdminProfilePopoverProps
             </ToggleButtonGroup>
           </Stack>
           <Divider />
+          <Button
+            color="inherit"
+            fullWidth
+            startIcon={<SettingsRounded />}
+            onClick={() => {
+              closePopover();
+              onOpenSettings();
+            }}
+          >
+            Configuración
+          </Button>
           <Button
             color="inherit"
             fullWidth

@@ -80,7 +80,6 @@ function NavigationContent({
   onLogout,
 }: Omit<AdminNavigationProps, "mobileOpen" | "onMobileClose">) {
   const primaryItems = items.filter((item) => item.key !== "settings");
-  const settingsItems = items.filter((item) => item.key === "settings");
   const renderItem = ({ key, label, icon: Icon }: AdminNavigationItem) => (
     <ListItemButton
       key={key}
@@ -154,9 +153,12 @@ function NavigationContent({
         {primaryItems.map(renderItem)}
       </List>
       <Box sx={{ flex: 1 }} />
-      <List sx={{ p: 1.5 }}>{settingsItems.map(renderItem)}</List>
       <Divider />
-      <AdminProfilePopover user={user} onLogout={onLogout} />
+      <AdminProfilePopover
+        user={user}
+        onOpenSettings={() => onSelect("settings")}
+        onLogout={onLogout}
+      />
     </Box>
   );
 }

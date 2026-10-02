@@ -61,7 +61,8 @@ El diseño adapta las plantillas oficiales de MUI
 con tipografía Inter, la paleta verde original, superficies con bordes y botones de alto contraste.
 El portal usa los `colorSchemes` de MUI, abre en tema claro por defecto y permite alternar
 entre claro y oscuro tanto en el login como en el popover del perfil, al pulsar la cuenta
-en el pie del menú lateral. El panel no tiene barra superior; en móvil, el botón junto al
+en el pie del menú lateral. Ese popover también contiene Configuración y Cerrar sesión.
+El panel no tiene barra superior; en móvil, el botón junto al
 título abre la navegación. La preferencia visual se conserva en el navegador. La fuente y
 los estilos se sirven desde la propia web.
 La atribución del código adaptado está en
