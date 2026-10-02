@@ -16,6 +16,8 @@ Portal separado para la operación administrativa de Turismo Vinculación. La ru
 
 - Next.js App Router, React y TypeScript.
 - Material UI (MUI) v7 con `AppRouterCacheProvider` para SSR.
+- Tema compartido adaptado de las plantillas oficiales Dashboard y Sign-in, con Inter y
+  modos claro/oscuro. Conservar etiquetas flotantes y estados de los formularios del panel.
 - Server Components para las rutas y metadatos; Client Components solo para
   interacción del panel.
 

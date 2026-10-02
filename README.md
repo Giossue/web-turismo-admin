@@ -55,8 +55,15 @@ con una cuenta institucional creada en la API. El portal queda excluido del rast
 buscadores. El navegador solo recibe un access token en memoria y mantiene el refresh token en
 una cookie HttpOnly. Al recargar, el panel llama a `/auth/refresh` para reconstruir la
 sesión sin usar `localStorage`.
-El panel usa los `colorSchemes` de MUI y permite alternar entre tema claro y oscuro desde
-el encabezado; la preferencia visual se conserva en el navegador.
+El diseño adapta las plantillas oficiales de MUI
+[Sign-in](https://mui.com/material-ui/getting-started/templates/sign-in/) para el login y
+[Dashboard](https://mui.com/material-ui/getting-started/templates/dashboard/) para el panel,
+con tipografía Inter, paleta azul/gris, superficies con bordes y botones de alto contraste.
+El portal usa los `colorSchemes` de MUI, abre en tema claro por defecto y permite alternar
+entre claro y oscuro tanto en el login como en el encabezado del panel; la preferencia
+visual se conserva en el navegador. La fuente y los estilos se sirven desde la propia web.
+La atribución del código adaptado está en
+[`docs/third-party-notices/mui-templates.md`](docs/third-party-notices/mui-templates.md).
 
 ## Integración
 

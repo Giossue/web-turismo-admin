@@ -184,13 +184,16 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
               flexGrow: 1,
               minWidth: 0,
               "& .MuiBreadcrumbs-ol": { flexWrap: "nowrap" },
+              "& .MuiBreadcrumbs-li": { minWidth: 0 },
+              "& .MuiBreadcrumbs-li:first-of-type": {
+                display: { xs: "none", sm: "block" },
+              },
+              "& .MuiBreadcrumbs-separator": {
+                display: { xs: "none", sm: "flex" },
+              },
             }}
           >
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{ display: { xs: "none", sm: "block" } }}
-            >
+            <Typography variant="body2" color="text.secondary" noWrap>
               Panel institucional
             </Typography>
             <Typography variant="body2" fontWeight={500} color="text.primary" noWrap>
