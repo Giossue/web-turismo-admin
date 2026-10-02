@@ -230,9 +230,7 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
               onError={feedback.showError}
             />
           ) : null}
-          {section === "settings" ? (
-            <SettingsSection user={user} onLogout={handleLogout} />
-          ) : null}
+          {section === "settings" ? <SettingsSection user={user} /> : null}
           {section === "catalogs" ? (
             <CatalogManagement
               ref={catalogRef}

@@ -1,8 +1,7 @@
 "use client";
 
 import AccountCircleRounded from "@mui/icons-material/AccountCircleRounded";
-import LogoutRounded from "@mui/icons-material/LogoutRounded";
-import { Button, Chip, Stack } from "@mui/material";
+import { Chip, Stack } from "@mui/material";
 
 import { DetailList } from "@/components/ui/detail-list";
 import { FlatSurface } from "@/components/ui/flat-surface";
@@ -10,13 +9,7 @@ import { SectionHeader } from "@/components/ui/section-header";
 import type { AdminUser } from "@/lib/auth";
 import { webTokens } from "@/theme/tokens";
 
-export function SettingsSection({
-  user,
-  onLogout,
-}: {
-  user: AdminUser;
-  onLogout: () => void;
-}) {
+export function SettingsSection({ user }: { user: AdminUser }) {
   return (
     <Stack spacing={webTokens.spacing.control}>
       <FlatSurface padding="default">
@@ -49,15 +42,6 @@ export function SettingsSection({
               },
             ]}
           />
-          <Button
-            variant="outlined"
-            color="error"
-            startIcon={<LogoutRounded />}
-            onClick={onLogout}
-            sx={{ alignSelf: "flex-start" }}
-          >
-            Cerrar sesión
-          </Button>
         </Stack>
       </FlatSurface>
     </Stack>
