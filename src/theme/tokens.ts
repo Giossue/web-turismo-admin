@@ -1,5 +1,3 @@
-import { brand, gray } from "./primitives";
-
 declare module "@mui/material/styles" {
   interface TypeBackground {
     subtle: string;
@@ -10,31 +8,19 @@ export const webTokens = {
   colors: {
     light: {
       primary: {
-        main: brand[400],
-        dark: brand[700],
-        light: brand[200],
+        main: "#166534",
+        dark: "#14532d",
+        light: "#22c55e",
         contrastText: "#ffffff",
       },
       secondary: {
-        main: brand[500],
-        dark: brand[700],
-        light: brand[300],
+        main: "#4b5563",
         contrastText: "#ffffff",
       },
-      grey: gray,
       background: {
-        default: gray[50],
+        default: "#f5f8f7",
         paper: "#ffffff",
-        subtle: gray[100],
-      },
-      text: {
-        primary: gray[800],
-        secondary: gray[600],
-      },
-      divider: "hsla(220, 20%, 80%, 0.5)",
-      action: {
-        hover: "hsla(220, 20%, 88%, 0.3)",
-        selected: "hsla(220, 20%, 88%, 0.5)",
+        subtle: "#e8f0ee",
       },
       status: {
         error: {
@@ -50,9 +36,9 @@ export const webTokens = {
           contrastText: "#ffffff",
         },
         info: {
-          main: brand[700],
-          dark: brand[800],
-          light: brand[300],
+          main: "#0369a1",
+          dark: "#075985",
+          light: "#0284c7",
           contrastText: "#ffffff",
         },
         success: {
@@ -65,56 +51,49 @@ export const webTokens = {
     },
     dark: {
       primary: {
-        main: brand[400],
-        dark: brand[700],
-        light: brand[300],
-        contrastText: "#ffffff",
+        main: "#22c55e",
+        dark: "#15803d",
+        light: "#4ade80",
+        contrastText: "#06130a",
       },
       secondary: {
-        main: brand[300],
-        dark: brand[500],
-        light: brand[200],
-        contrastText: gray[900],
+        main: "#b8b8b8",
+        contrastText: "#0b0b0b",
       },
-      grey: gray,
       background: {
-        default: gray[900],
-        paper: "hsl(220, 30%, 7%)",
-        subtle: gray[800],
+        default: "#080808",
+        paper: "#151515",
+        subtle: "#202020",
       },
       text: {
-        primary: "#ffffff",
-        secondary: gray[400],
+        primary: "#f5f5f5",
+        secondary: "#b3b3b3",
       },
-      divider: "hsla(220, 20%, 25%, 0.7)",
-      action: {
-        hover: "hsla(220, 20%, 35%, 0.2)",
-        selected: "hsla(220, 20%, 35%, 0.3)",
-      },
+      divider: "rgba(245, 245, 245, 0.12)",
       status: {
         error: {
-          main: "#ef7373",
+          main: "#f44336",
           dark: "#d32f2f",
           light: "#e57373",
-          contrastText: gray[900],
+          contrastText: "#ffffff",
         },
         warning: {
-          main: "#ffb74d",
+          main: "#ffa726",
           dark: "#f57c00",
-          light: "#ffcc80",
-          contrastText: gray[900],
+          light: "#ffb74d",
+          contrastText: "#1f2933",
         },
         info: {
-          main: brand[300],
-          dark: brand[500],
-          light: brand[200],
-          contrastText: gray[900],
+          main: "#29b6f6",
+          dark: "#0288d1",
+          light: "#4fc3f7",
+          contrastText: "#102522",
         },
         success: {
           main: "#4ade80",
           dark: "#16a34a",
           light: "#86efac",
-          contrastText: gray[900],
+          contrastText: "#07130a",
         },
       },
     },

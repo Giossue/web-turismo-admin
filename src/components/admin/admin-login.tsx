@@ -41,19 +41,15 @@ export function AdminLogin() {
   return (
     <Box
       component="main"
-      sx={(theme) => ({
+      sx={{
         minHeight: "100dvh",
         display: "grid",
         placeItems: "center",
         px: { xs: 2, sm: 4 },
         py: { xs: 10, sm: 8 },
         backgroundImage:
-          "radial-gradient(ellipse at 50% 50%, hsl(210, 100%, 97%), hsl(0, 0%, 100%))",
-        ...theme.applyStyles("dark", {
-          backgroundImage:
-            "radial-gradient(ellipse at 50% 50%, hsla(210, 100%, 16%, 0.5), hsl(220, 30%, 5%))",
-        }),
-      })}
+          "radial-gradient(ellipse at 50% 50%, var(--mui-palette-background-subtle), var(--mui-palette-background-default))",
+      }}
     >
       <Box sx={{ position: "fixed", top: 16, right: 16, zIndex: 1 }}>
         <ColorModeButton />
@@ -68,10 +64,10 @@ export function AdminLogin() {
           p: { xs: 3, sm: 4 },
           gap: 2,
           boxShadow:
-            "hsla(220, 30%, 5%, 0.05) 0px 5px 15px 0px, hsla(220, 25%, 10%, 0.05) 0px 15px 35px -5px",
+            "rgba(0, 0, 0, 0.05) 0px 5px 15px 0px, rgba(0, 0, 0, 0.05) 0px 15px 35px -5px",
           ...theme.applyStyles("dark", {
             boxShadow:
-              "hsla(220, 30%, 5%, 0.5) 0px 5px 15px 0px, hsla(220, 25%, 10%, 0.08) 0px 15px 35px -5px",
+              "rgba(0, 0, 0, 0.5) 0px 5px 15px 0px, rgba(0, 0, 0, 0.08) 0px 15px 35px -5px",
           }),
         })}
       >

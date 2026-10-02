@@ -2,7 +2,6 @@
 
 import { alpha, createTheme } from "@mui/material/styles";
 
-import { gray } from "@/theme/primitives";
 import { webTokens } from "@/theme/tokens";
 
 function paletteFor(mode: "light" | "dark") {
@@ -86,13 +85,14 @@ const theme = createTheme({
             {
               props: { variant: "contained", color: "primary" },
               style: {
-                color: "#ffffff",
-                backgroundColor: gray[900],
-                backgroundImage: `linear-gradient(to bottom, ${gray[700]}, ${gray[800]})`,
-                border: `1px solid ${gray[700]}`,
-                boxShadow: `inset 0 1px 0 ${gray[600]}, inset 0 -1px 0 1px ${gray[900]}`,
+                color: "var(--mui-palette-primary-contrastText)",
+                backgroundColor: "var(--mui-palette-primary-main)",
+                backgroundImage:
+                  "linear-gradient(to bottom, var(--mui-palette-primary-main), var(--mui-palette-primary-dark))",
+                border: "1px solid var(--mui-palette-primary-dark)",
+                boxShadow: `inset 0 1px 0 ${alpha(webTokens.colors.light.primary.light, 0.4)}, inset 0 -1px 0 1px ${webTokens.colors.light.primary.dark}`,
                 "&:hover": {
-                  backgroundColor: gray[700],
+                  backgroundColor: "var(--mui-palette-primary-dark)",
                   backgroundImage: "none",
                   boxShadow: "none",
                 },
@@ -104,13 +104,14 @@ const theme = createTheme({
                   boxShadow: "none",
                 },
                 ...theme.applyStyles("dark", {
-                  color: gray[900],
-                  backgroundColor: gray[50],
-                  backgroundImage: `linear-gradient(to bottom, ${gray[100]}, ${gray[50]})`,
-                  borderColor: gray[50],
-                  boxShadow: `inset 0 -1px 0 ${gray[300]}`,
+                  color: "var(--mui-palette-primary-contrastText)",
+                  backgroundColor: "var(--mui-palette-primary-main)",
+                  backgroundImage:
+                    "linear-gradient(to bottom, var(--mui-palette-primary-light), var(--mui-palette-primary-main))",
+                  borderColor: "var(--mui-palette-primary-main)",
+                  boxShadow: `inset 0 -1px 0 ${webTokens.colors.dark.primary.dark}`,
                   "&:hover": {
-                    backgroundColor: gray[300],
+                    backgroundColor: "var(--mui-palette-primary-light)",
                     backgroundImage: "none",
                     boxShadow: "none",
                   },
@@ -306,7 +307,7 @@ const theme = createTheme({
       styleOverrides: {
         paper: {
           border: webTokens.border,
-          boxShadow: "0 16px 48px hsla(220, 30%, 5%, 0.2)",
+          boxShadow: "0 16px 48px rgba(0, 0, 0, 0.2)",
         },
       },
     },

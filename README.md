@@ -58,7 +58,7 @@ sesión sin usar `localStorage`.
 El diseño adapta las plantillas oficiales de MUI
 [Sign-in](https://mui.com/material-ui/getting-started/templates/sign-in/) para el login y
 [Dashboard](https://mui.com/material-ui/getting-started/templates/dashboard/) para el panel,
-con tipografía Inter, paleta azul/gris, superficies con bordes y botones de alto contraste.
+con tipografía Inter, la paleta verde original, superficies con bordes y botones de alto contraste.
 El portal usa los `colorSchemes` de MUI, abre en tema claro por defecto y permite alternar
 entre claro y oscuro tanto en el login como en el encabezado del panel; la preferencia
 visual se conserva en el navegador. La fuente y los estilos se sirven desde la propia web.

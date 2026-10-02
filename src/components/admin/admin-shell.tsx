@@ -5,14 +5,12 @@ import MenuRounded from "@mui/icons-material/MenuRounded";
 import {
   AppBar,
   Box,
-  Breadcrumbs,
   Button,
   CircularProgress,
   IconButton,
   Stack,
   Toolbar,
   Tooltip,
-  Typography,
 } from "@mui/material";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef, useState } from "react";
@@ -177,29 +175,7 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
               </IconButton>
             </Tooltip>
           ) : null}
-          <Breadcrumbs
-            aria-label="Ubicación actual"
-            separator="/"
-            sx={{
-              flexGrow: 1,
-              minWidth: 0,
-              "& .MuiBreadcrumbs-ol": { flexWrap: "nowrap" },
-              "& .MuiBreadcrumbs-li": { minWidth: 0 },
-              "& .MuiBreadcrumbs-li:first-of-type": {
-                display: { xs: "none", sm: "block" },
-              },
-              "& .MuiBreadcrumbs-separator": {
-                display: { xs: "none", sm: "flex" },
-              },
-            }}
-          >
-            <Typography variant="body2" color="text.secondary" noWrap>
-              Panel institucional
-            </Typography>
-            <Typography variant="body2" fontWeight={500} color="text.primary" noWrap>
-              {meta.title}
-            </Typography>
-          </Breadcrumbs>
+          <Box sx={{ flexGrow: 1 }} />
           <ColorModeButton />
         </Toolbar>
       </AppBar>
