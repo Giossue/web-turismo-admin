@@ -106,6 +106,12 @@ localidades rurales procede del INEC 2026 y se carga en la API mediante la migra
 `20261002_seed_national_localities.sql` del monorepo. Las localidades nuevas no reciben
 coordenadas aproximadas: la ubicación del establecimiento se captura en su formulario.
 
+Los formularios de fichas y catastros comparten el selector de ubicación en el mapa.
+Con coordenadas completas y válidas, abre sobre el punto indicado. Si están vacías,
+incompletas o fuera de rango, abre en Guaranda y requiere seleccionar un punto antes
+de confirmar. **Usar esta ubicación** actualiza únicamente latitud y longitud en el
+formulario; **Cancelar** conserva sus valores anteriores.
+
 Las tablas de Centros turísticos, Catastro, Opiniones y Catálogos ofrecen **Eliminar**
 al administrador, con confirmación del registro. La eliminación retira el registro del
 panel y de la aplicación, conserva sus relaciones e historial y es distinta de la

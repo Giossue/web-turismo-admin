@@ -18,6 +18,8 @@ import {
 import * as maplibregl from "maplibre-gl";
 import { useEffect, useState } from "react";
 
+import { readMapCoordinate, type MapCoordinate } from "@/lib/map-coordinates";
+
 const mapStyleUrl =
   process.env.NEXT_PUBLIC_TILESERVER_STYLE_URL ??
   "https://maps.devs-ueb.tech/styles/basic-preview/style.json";
@@ -26,24 +28,6 @@ const defaultCenter: [number, number] = [-79.0016, -1.5923];
 // El bundler no emite el worker de MapLibre v6; se sirve desde `public/maplibre`
 // (ver scripts/copy-maplibre-worker.mjs). Sin él solo se dibuja el fondo.
 maplibregl.setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
-
-type Coordinate = Readonly<{ latitude: number; longitude: number }>;
-
-function parseCoordinate(value: string | number | null | undefined): number | null {
-  const parsed = typeof value === "number" ? value : Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function toCoordinate(
-  latitude: string | number | null | undefined,
-  longitude: string | number | null | undefined,
-): Coordinate | null {
-  const parsedLatitude = parseCoordinate(latitude);
-  const parsedLongitude = parseCoordinate(longitude);
-  return parsedLatitude !== null && parsedLongitude !== null
-    ? { latitude: parsedLatitude, longitude: parsedLongitude }
-    : null;
-}
 
 /**
  * Selector de coordenadas sobre un mapa MapLibre. Debe renderizarse de forma
@@ -59,7 +43,7 @@ export function CoordinatePickerDialog({
   initialLatitude?: string | number | null;
   initialLongitude?: string | number | null;
   onClose: () => void;
-  onConfirm: (coordinate: Coordinate) => void;
+  onConfirm: (coordinate: MapCoordinate) => void;
 }>) {
   // Color concreto (no una variable CSS): MapLibre lo aplica como atributo SVG.
   const markerColor = useTheme().palette.primary.main;
@@ -68,9 +52,9 @@ export function CoordinatePickerDialog({
   // estado, el efecto se ejecuta cuando el contenedor ya existe.
   const [container, setContainer] = useState<HTMLDivElement | null>(null);
   const [initialCoordinate] = useState(() =>
-    toCoordinate(initialLatitude, initialLongitude),
+    readMapCoordinate(initialLatitude, initialLongitude),
   );
-  const [coordinate, setCoordinate] = useState<Coordinate | null>(initialCoordinate);
+  const [coordinate, setCoordinate] = useState<MapCoordinate | null>(initialCoordinate);
   const [mapError, setMapError] = useState<string | null>(null);
 
   useEffect(() => {
