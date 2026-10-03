@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@mui/material";
 import { useMutation, useQueryClient, type QueryKey } from "@tanstack/react-query";
-import { useId, useState, type ReactNode } from "react";
+import { useId, useRef, useState, type ReactNode } from "react";
 
 import { useAdminFeedback } from "@/components/admin/admin-feedback";
 import { errorMessage } from "@/lib/errors";
@@ -39,6 +39,7 @@ export function DeleteRecordAction({
   disabled = false,
 }: DeleteRecordActionProps) {
   const [open, setOpen] = useState(false);
+  const deletingRef = useRef(false);
   const id = useId();
   const queryClient = useQueryClient();
   const { clear, showNotice } = useAdminFeedback();
@@ -52,10 +53,20 @@ export function DeleteRecordAction({
         queryKeys.map((queryKey) => queryClient.invalidateQueries({ queryKey })),
       );
     },
+    onSettled: () => {
+      deletingRef.current = false;
+    },
   });
 
   function close() {
-    if (!deletion.isPending) setOpen(false);
+    if (!deletingRef.current && !deletion.isPending) setOpen(false);
+  }
+
+  function confirmDeletion() {
+    if (deletingRef.current || deletion.isPending) return;
+    // El bloqueo se aplica antes de que React renderice el estado pendiente.
+    deletingRef.current = true;
+    deletion.mutate();
   }
 
   return (
@@ -95,7 +106,7 @@ export function DeleteRecordAction({
             color="error"
             variant="contained"
             disabled={deletion.isPending}
-            onClick={() => !deletion.isPending && deletion.mutate()}
+            onClick={confirmDeletion}
             startIcon={deletion.isPending ? <CircularProgress size={16} /> : undefined}
           >
             {deletion.isPending ? "Eliminando…" : "Eliminar"}
