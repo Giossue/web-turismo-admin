@@ -7,6 +7,20 @@ import { ApiError, apiEndpoint, sendApiRequest, toApiError, toQueryString } from
 /** Página de resultados de un listado administrativo. */
 export type Page<T> = { items: T[]; total: number; limit: number; offset: number };
 
+export const notificationSections = [
+  "review",
+  "opinions",
+  "centers",
+  "establishments",
+  "catalogs",
+] as const;
+
+export type NotificationSection = (typeof notificationSections)[number];
+export type AdminNavigationSummary = Record<
+  NotificationSection,
+  { pending: number; latestChange: string | null }
+>;
+
 export type EditorialAssistance = {
   suggestion: string | null;
   observations: string[];
