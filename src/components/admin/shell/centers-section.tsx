@@ -1,6 +1,7 @@
 "use client";
 
 import EditRounded from "@mui/icons-material/EditRounded";
+import FactCheckRounded from "@mui/icons-material/FactCheckRounded";
 import CheckRounded from "@mui/icons-material/CheckRounded";
 import CloseRounded from "@mui/icons-material/CloseRounded";
 import VisibilityRounded from "@mui/icons-material/VisibilityRounded";
@@ -39,6 +40,7 @@ export function CentersSection({
   onStatusChange,
   onPageChange,
   onOpen,
+  onGoToReview,
   canDelete,
 }: {
   token: string;
@@ -52,6 +54,8 @@ export function CentersSection({
   onStatusChange: (value: CenterStatusFilter) => void;
   onPageChange: (page: number) => void;
   onOpen: (code: string) => void;
+  /** Disponible sólo para cuentas que pueden entrar a la cola de revisión. */
+  onGoToReview?: () => void;
   canDelete: boolean;
 }) {
   const centersQuery = useQuery(
@@ -121,15 +125,31 @@ export function CentersSection({
           <RecordActionsMenu
             subject={row.name}
             tabIndex={hasFocus ? 0 : -1}
-            actions={[
-              {
-                label: "Editar",
-                icon: <EditRounded fontSize="small" />,
-                onClick: () => onOpen(row.code),
-              },
-            ]}
+            actions={
+              row.status.code === "EN_REVISION"
+                ? [
+                    onGoToReview
+                      ? {
+                          label: "Ir a revisión",
+                          icon: <FactCheckRounded fontSize="small" />,
+                          onClick: onGoToReview,
+                        }
+                      : {
+                          label: "Ver ficha",
+                          icon: <VisibilityRounded fontSize="small" />,
+                          onClick: () => onOpen(row.code),
+                        },
+                  ]
+                : [
+                    {
+                      label: "Editar",
+                      icon: <EditRounded fontSize="small" />,
+                      onClick: () => onOpen(row.code),
+                    },
+                  ]
+            }
             deletion={
-              canDelete
+              canDelete && row.status.code !== "EN_REVISION"
                 ? {
                     subject: row.name,
                     title: "Eliminar centro turístico",
@@ -151,7 +171,7 @@ export function CentersSection({
         ),
       },
     ],
-    [onOpen, canDelete, token, page, onPageChange, itemsOnPage],
+    [onOpen, onGoToReview, canDelete, token, page, onPageChange, itemsOnPage],
   );
   const filterCount = Number(status !== "ALL");
 

@@ -95,6 +95,7 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
     [feedback, openEditorWith],
   );
   const closeEditor = useCallback(() => navigate("centers"), [navigate]);
+  const goToReview = useCallback(() => navigate("review"), [navigate]);
   // Estable durante una sesión del editor: el primer guardado de una ficha nueva
   // solo actualiza el código, sin remontar el editor (su key es la sesión).
   const editorSession = state.editorSession;
@@ -204,6 +205,7 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
               onStatusChange={nav.setCenterStatus}
               onPageChange={nav.setCentersPage}
               onOpen={openEditor}
+              onGoToReview={isAdmin ? goToReview : undefined}
             />
           ) : null}
           {section === "establishments" ? (
