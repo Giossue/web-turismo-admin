@@ -87,9 +87,9 @@ describe("señales de la navegación", () => {
       "Bearer test-token",
     );
     expect(adminKeys.navigationSummary(1)).not.toEqual(adminKeys.navigationSummary(2));
-    expect(adminKeys.navigationSummary(1).slice(0, 2)).toEqual(
-      adminKeys.allNavigationSummaries(),
-    );
+    expect(adminKeys.navigationSummary(1).slice(0, 2)).toEqual([
+      ...adminKeys.allNavigationSummaries(),
+    ]);
   });
 });
 

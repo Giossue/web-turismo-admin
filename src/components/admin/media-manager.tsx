@@ -145,7 +145,10 @@ export function MediaManager({
       });
       setDescription("");
       setSourceAuthor("");
-      await queryClient.invalidateQueries({ queryKey: adminKeys.media(code) });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: adminKeys.media(code) }),
+        queryClient.invalidateQueries({ queryKey: adminKeys.allNavigationSummaries() }),
+      ]);
       onNotice("Archivo cargado. Quedará pendiente hasta publicar la ficha.");
     } catch (cause) {
       onError(errorMessage(cause, "No se pudo cargar el archivo multimedia."));
@@ -162,7 +165,10 @@ export function MediaManager({
     onError(null);
     try {
       await deleteAdminCenterMedia(token, code, item.id);
-      await queryClient.invalidateQueries({ queryKey: adminKeys.media(code) });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: adminKeys.media(code) }),
+        queryClient.invalidateQueries({ queryKey: adminKeys.allNavigationSummaries() }),
+      ]);
       onNotice(messages.removed);
     } catch (cause) {
       onError(errorMessage(cause, messages.removeError));
