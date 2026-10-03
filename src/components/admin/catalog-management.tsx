@@ -2,6 +2,7 @@
 
 import AddRounded from "@mui/icons-material/AddRounded";
 import EditRounded from "@mui/icons-material/EditRounded";
+import VisibilityRounded from "@mui/icons-material/VisibilityRounded";
 import {
   Box,
   Alert,
@@ -11,7 +12,6 @@ import {
   DialogContent,
   DialogTitle,
   FormControlLabel,
-  IconButton,
   List,
   ListItem,
   MenuItem,
@@ -20,7 +20,6 @@ import {
   Tab,
   Tabs,
   TextField,
-  Tooltip,
   Typography,
 } from "@mui/material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -29,7 +28,7 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "rea
 
 import { ADMIN_TABLE_PAGE_SIZE } from "@/components/ui/admin-table";
 import { AdminDataGrid } from "@/components/ui/admin-data-grid";
-import { DeleteRecordAction } from "@/components/admin/delete-record-action";
+import { RecordActionsMenu } from "@/components/admin/record-actions-menu";
 import { CatalogIconSelect } from "@/components/ui/catalog-icon-select";
 import { CatalogSelect } from "@/components/ui/catalog-select";
 import { ContentState } from "@/components/ui/content-state";
@@ -369,17 +368,7 @@ export function CatalogManagement({
             headerName: "Categorías",
             width: 145,
             filterable: false,
-            renderCell: ({ row, hasFocus }) => (
-              <Button
-                size="small"
-                aria-label={`Ver categorías de ${row.name}`}
-                tabIndex={hasFocus ? 0 : -1}
-                onClick={() => setTypeId(String(row.id))}
-                sx={{ whiteSpace: "nowrap" }}
-              >
-                Ver ({categoryCounts.get(row.id) ?? 0})
-              </Button>
-            ),
+            valueGetter: (_value, row) => categoryCounts.get(row.id) ?? 0,
           }
         : {
             field: "active",
@@ -396,35 +385,39 @@ export function CatalogManagement({
       {
         field: "actions",
         headerName: "Acciones",
-        width: 145,
+        width: 96,
         align: "right",
         headerAlign: "right",
         filterable: false,
         renderCell: ({ row, hasFocus }) => (
-          <Stack
-            direction="row"
-            justifyContent="flex-end"
-            alignItems="center"
-            sx={{ height: "100%" }}
-          >
-            <Tooltip title="Editar" disableInteractive>
-              <IconButton
-                aria-label={`Editar ${row.name}`}
-                tabIndex={hasFocus ? 0 : -1}
-                onClick={() => openEdit(row)}
-              >
-                <EditRounded fontSize="small" />
-              </IconButton>
-            </Tooltip>
-            <DeleteRecordAction
-              subject={row.displayName ?? row.name}
-              title="Eliminar opción de catálogo"
-              description="Dejará de aparecer en el catálogo. Las fichas existentes y el historial se conservan."
-              tabIndex={hasFocus ? 0 : -1}
-              onDelete={() => deleteAdminCatalog(token, visibleCatalog, row.id)}
-              queryKeys={[adminKeys.allCatalogs()]}
-            />
-          </Stack>
+          <RecordActionsMenu
+            subject={row.displayName ?? row.name}
+            tabIndex={hasFocus ? 0 : -1}
+            actions={[
+              ...(isEstablishments
+                ? [
+                    {
+                      label: "Ver categorías",
+                      icon: <VisibilityRounded fontSize="small" />,
+                      onClick: () => setTypeId(String(row.id)),
+                    },
+                  ]
+                : []),
+              {
+                label: "Editar",
+                icon: <EditRounded fontSize="small" />,
+                onClick: () => openEdit(row),
+              },
+            ]}
+            deletion={{
+              subject: row.displayName ?? row.name,
+              title: "Eliminar opción de catálogo",
+              description:
+                "Dejará de aparecer en el catálogo. Las fichas existentes y el historial se conservan.",
+              onDelete: () => deleteAdminCatalog(token, visibleCatalog, row.id),
+              queryKeys: [adminKeys.allCatalogs()],
+            }}
+          />
         ),
       },
     ],
@@ -659,25 +652,25 @@ export function CatalogManagement({
                       </Box>
                     ) : null}
                   </Box>
-                  <Stack direction="row" alignItems="center" sx={{ flexShrink: 0 }}>
-                    <Tooltip title="Editar categoría">
-                      <IconButton
-                        aria-label={`Editar categoría ${option.name}`}
-                        onClick={() => openEdit(option, "ESTABLISHMENT_CATEGORY")}
-                      >
-                        <EditRounded fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                    <DeleteRecordAction
-                      subject={option.displayName ?? option.name}
-                      title="Eliminar categoría"
-                      description="Dejará de estar disponible para nuevos establecimientos. El historial se conserva."
-                      onDelete={() =>
-                        deleteAdminCatalog(token, "ESTABLISHMENT_CATEGORY", option.id)
-                      }
-                      queryKeys={[adminKeys.allCatalogs()]}
-                    />
-                  </Stack>
+                  <RecordActionsMenu
+                    subject={option.displayName ?? option.name}
+                    actions={[
+                      {
+                        label: "Editar",
+                        icon: <EditRounded fontSize="small" />,
+                        onClick: () => openEdit(option, "ESTABLISHMENT_CATEGORY"),
+                      },
+                    ]}
+                    deletion={{
+                      subject: option.displayName ?? option.name,
+                      title: "Eliminar categoría",
+                      description:
+                        "Dejará de estar disponible para nuevos establecimientos. El historial se conserva.",
+                      onDelete: () =>
+                        deleteAdminCatalog(token, "ESTABLISHMENT_CATEGORY", option.id),
+                      queryKeys: [adminKeys.allCatalogs()],
+                    }}
+                  />
                 </ListItem>
               ))}
             </List>

@@ -4,11 +4,11 @@ import EditRounded from "@mui/icons-material/EditRounded";
 import CheckRounded from "@mui/icons-material/CheckRounded";
 import CloseRounded from "@mui/icons-material/CloseRounded";
 import VisibilityRounded from "@mui/icons-material/VisibilityRounded";
-import { IconButton, Stack, Tooltip, Typography } from "@mui/material";
+import { Stack, Typography } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import type { GridColDef } from "@mui/x-data-grid";
 import { useMemo } from "react";
-import { DeleteRecordAction } from "@/components/admin/delete-record-action";
+import { RecordActionsMenu } from "@/components/admin/record-actions-menu";
 import { pageAfterRemoval } from "./pagination";
 
 import { AdminDataGrid } from "@/components/ui/admin-data-grid";
@@ -113,43 +113,40 @@ export function CentersSection({
       {
         field: "actions",
         headerName: "Acciones",
-        width: canDelete ? 145 : 95,
+        width: 96,
         align: "right",
         headerAlign: "right",
         filterable: false,
-        renderCell: ({ row, tabIndex }) => (
-          <Stack
-            direction="row"
-            alignItems="center"
-            justifyContent="flex-end"
-            sx={{ height: "100%" }}
-          >
-            <Tooltip title="Editar" disableInteractive>
-              <IconButton
-                aria-label={`Editar ${row.name}`}
-                tabIndex={tabIndex}
-                onClick={() => onOpen(row.code)}
-              >
-                <EditRounded fontSize="small" />
-              </IconButton>
-            </Tooltip>
-            {canDelete ? (
-              <DeleteRecordAction
-                subject={row.name}
-                title="Eliminar centro turístico"
-                description="Se retirará del panel y de la aplicación. La ficha, sus archivos y el historial se conservan."
-                tabIndex={tabIndex}
-                onDelete={() => deleteAdminCenter(token, row.code)}
-                queryKeys={[
-                  adminKeys.allCenters(),
-                  adminKeys.summary(),
-                  adminKeys.center(row.code),
-                  adminKeys.media(row.code),
-                ]}
-                onDeleted={() => onPageChange(pageAfterRemoval(page, itemsOnPage))}
-              />
-            ) : null}
-          </Stack>
+        renderCell: ({ row, hasFocus }) => (
+          <RecordActionsMenu
+            subject={row.name}
+            tabIndex={hasFocus ? 0 : -1}
+            actions={[
+              {
+                label: "Editar",
+                icon: <EditRounded fontSize="small" />,
+                onClick: () => onOpen(row.code),
+              },
+            ]}
+            deletion={
+              canDelete
+                ? {
+                    subject: row.name,
+                    title: "Eliminar centro turístico",
+                    description:
+                      "Se retirará del panel y de la aplicación. La ficha, sus archivos y el historial se conservan.",
+                    onDelete: () => deleteAdminCenter(token, row.code),
+                    queryKeys: [
+                      adminKeys.allCenters(),
+                      adminKeys.summary(),
+                      adminKeys.center(row.code),
+                      adminKeys.media(row.code),
+                    ],
+                    onDeleted: () => onPageChange(pageAfterRemoval(page, itemsOnPage)),
+                  }
+                : undefined
+            }
+          />
         ),
       },
     ],
@@ -269,70 +266,51 @@ export function CenterTable({
       {
         field: "actions",
         headerName: "Acciones",
-        width: hasReview ? 155 : 95,
+        width: 96,
         align: "right",
         headerAlign: "right",
         filterable: false,
-        renderCell: ({ row, hasFocus }) =>
-          !hasReview ? (
-            <Tooltip title="Editar" disableInteractive>
-              <IconButton
-                aria-label={`Editar ${row.name}`}
-                tabIndex={hasFocus ? 0 : -1}
-                onClick={() => onOpen(row.code)}
-              >
-                <EditRounded fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          ) : row.status.code === "EN_REVISION" ? (
-            <Stack direction="row" alignItems="center" justifyContent="flex-end">
-              <Tooltip title="Ver ficha" disableInteractive>
-                <IconButton
-                  aria-label={`Ver ficha ${row.name}`}
-                  tabIndex={hasFocus ? 0 : -1}
-                  onClick={() => onOpen(row.code)}
-                >
-                  <VisibilityRounded fontSize="small" />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="Aprobar y publicar" disableInteractive>
-                <span>
-                  <IconButton
-                    color="success"
-                    aria-label={`Aprobar y publicar ficha ${row.name}`}
-                    tabIndex={hasFocus ? 0 : -1}
-                    disabled={reviewPending}
-                    onClick={() => onReview?.(row, "APPROVE")}
-                  >
-                    <CheckRounded fontSize="small" />
-                  </IconButton>
-                </span>
-              </Tooltip>
-              <Tooltip title="Devolver para corregir" disableInteractive>
-                <span>
-                  <IconButton
-                    color="error"
-                    aria-label={`Devolver para corregir ficha ${row.name}`}
-                    tabIndex={hasFocus ? 0 : -1}
-                    disabled={reviewPending}
-                    onClick={() => onReview?.(row, "REJECT")}
-                  >
-                    <CloseRounded fontSize="small" />
-                  </IconButton>
-                </span>
-              </Tooltip>
-            </Stack>
-          ) : (
-            <Tooltip title="Ver ficha" disableInteractive>
-              <IconButton
-                aria-label={`Ver ficha ${row.name}`}
-                tabIndex={hasFocus ? 0 : -1}
-                onClick={() => onOpen(row.code)}
-              >
-                <VisibilityRounded fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          ),
+        renderCell: ({ row, hasFocus }) => (
+          <RecordActionsMenu
+            subject={row.name}
+            tabIndex={hasFocus ? 0 : -1}
+            actions={
+              !hasReview
+                ? [
+                    {
+                      label: "Editar",
+                      icon: <EditRounded fontSize="small" />,
+                      onClick: () => onOpen(row.code),
+                    },
+                  ]
+                : [
+                    {
+                      label: "Ver ficha",
+                      icon: <VisibilityRounded fontSize="small" />,
+                      onClick: () => onOpen(row.code),
+                    },
+                    ...(row.status.code === "EN_REVISION"
+                      ? [
+                          {
+                            label: "Aprobar y publicar",
+                            icon: <CheckRounded fontSize="small" />,
+                            color: "success" as const,
+                            disabled: reviewPending,
+                            onClick: () => onReview?.(row, "APPROVE"),
+                          },
+                          {
+                            label: "Devolver para corregir",
+                            icon: <CloseRounded fontSize="small" />,
+                            color: "error" as const,
+                            disabled: reviewPending,
+                            onClick: () => onReview?.(row, "REJECT"),
+                          },
+                        ]
+                      : []),
+                  ]
+            }
+          />
+        ),
       },
     ],
     [hasReview, onOpen, onReview, reviewPending],

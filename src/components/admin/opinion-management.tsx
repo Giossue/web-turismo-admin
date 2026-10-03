@@ -10,9 +10,7 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
-  IconButton,
   Stack,
-  Tooltip,
   Typography,
 } from "@mui/material";
 import type { GridColDef } from "@mui/x-data-grid";
@@ -20,7 +18,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
 
 import { useAdminFeedback } from "@/components/admin/admin-feedback";
-import { DeleteRecordAction } from "@/components/admin/delete-record-action";
+import { RecordActionsMenu } from "@/components/admin/record-actions-menu";
 import {
   ReviewDecisionDialog,
   useReviewIntent,
@@ -172,45 +170,40 @@ export function OpinionManagement({ token }: { token: string }) {
       {
         field: "actions",
         headerName: "Acciones",
-        width: 145,
+        width: 96,
         align: "right",
         headerAlign: "right",
         filterable: false,
         renderCell: ({ row: opinion, hasFocus }) => (
-          <Stack
-            direction="row"
-            justifyContent="flex-end"
-            alignItems="center"
-            sx={{ height: "100%" }}
-          >
-            <Tooltip title="Ver historial" disableInteractive>
-              <IconButton
-                tabIndex={hasFocus ? 0 : -1}
-                onClick={() => openHistory(opinion)}
-                aria-label={`Ver historial de la opinión sobre ${opinion.target.name}`}
-              >
-                <HistoryRounded fontSize="small" />
-              </IconButton>
-            </Tooltip>
-            <DeleteRecordAction
-              subject={`opinión de ${opinion.authorName} sobre ${opinion.target.name}`}
-              title="Eliminar opinión"
-              description="Se retirarán todas sus versiones de la aplicación y dejará de contar en las calificaciones. El historial se conserva."
-              tabIndex={hasFocus ? 0 : -1}
-              disabled={reviewMutation.isPending}
-              onDelete={() => deleteAdminOpinion(token, opinion.reviewCode)}
-              queryKeys={[
+          <RecordActionsMenu
+            subject={`opinión de ${opinion.authorName} sobre ${opinion.target.name}`}
+            tabIndex={hasFocus ? 0 : -1}
+            actions={[
+              {
+                label: "Ver historial",
+                icon: <HistoryRounded fontSize="small" />,
+                onClick: () => openHistory(opinion),
+              },
+            ]}
+            deletion={{
+              subject: `opinión de ${opinion.authorName} sobre ${opinion.target.name}`,
+              title: "Eliminar opinión",
+              description:
+                "Se retirarán todas sus versiones de la aplicación y dejará de contar en las calificaciones. El historial se conserva.",
+              disabled: reviewMutation.isPending,
+              onDelete: () => deleteAdminOpinion(token, opinion.reviewCode),
+              queryKeys: [
                 adminKeys.allOpinions(),
                 adminKeys.opinionHistory(opinion.reviewCode),
                 adminKeys.summary(),
-              ]}
-              onDeleted={() => {
+              ],
+              onDeleted: () => {
                 if (historyOpinion?.reviewCode === opinion.reviewCode)
                   setHistoryOpen(false);
                 setPage(pageAfterRemoval(page, items.length));
-              }}
-            />
-          </Stack>
+              },
+            }}
+          />
         ),
       },
     ],

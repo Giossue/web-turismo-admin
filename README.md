@@ -73,12 +73,16 @@ La atribución del código adaptado está en
 Centros turísticos, Catastro, Catálogos, Opiniones y las colas de revisión de fichas y
 catastros usan el componente compartido `AdminDataGrid`, basado en MUI X DataGrid Community
 v8 y compatible con MUI v7. Comparten el estilo de encabezados, filas, acciones y paginación,
-con controles en español. Las acciones de fila incluyen etiquetas accesibles y siguen el
-foco del grid al usar el teclado.
+con controles en español. Cada fila presenta un único botón de tres puntos sin borde en
+**Acciones**, que abre un menú con las opciones disponibles según el rol y estado.
+Las opciones incluyen etiquetas accesibles y siguen el foco del grid al usar el teclado;
+**Eliminar** abre la confirmación existente antes de enviar la solicitud.
 
 Centros y Catastro conservan el buscador y agrupan los criterios detrás de **Filtros**,
 con un contador de criterios activos. Los catálogos básicos buscan localmente entre las
 opciones cargadas; **Tipos y categorías** ofrece únicamente el selector **Actividad**.
+El número de categorías se muestra en la tabla y **Ver categorías** se abre desde el menú
+de acciones del tipo. Las categorías también agrupan Editar y Eliminar en tres puntos.
 Los listados de la API conservan su paginación y los controles admitidos por cada consulta.
 
 Centros muestra una columna y un selector de **Estado de la ficha**. La búsqueda,

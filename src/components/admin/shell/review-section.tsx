@@ -3,12 +3,13 @@
 import CheckRounded from "@mui/icons-material/CheckRounded";
 import CloseRounded from "@mui/icons-material/CloseRounded";
 import VisibilityRounded from "@mui/icons-material/VisibilityRounded";
-import { Box, IconButton, Stack, Tooltip, Typography } from "@mui/material";
+import { Box, Stack, Typography } from "@mui/material";
 import type { GridColDef } from "@mui/x-data-grid";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef, useState } from "react";
 
 import { useAdminFeedback } from "@/components/admin/admin-feedback";
+import { RecordActionsMenu } from "@/components/admin/record-actions-menu";
 import {
   ReviewDecisionDialog,
   useReviewIntent,
@@ -362,51 +363,39 @@ function EstablishmentReviewTable({
       {
         field: "actions",
         headerName: "Acciones",
-        width: 155,
+        width: 96,
         align: "right",
         headerAlign: "right",
         filterable: false,
         renderCell: ({ row, hasFocus }) => (
-          <Stack direction="row" alignItems="center" justifyContent="flex-end">
-            <Tooltip title="Ver detalle" disableInteractive>
-              <IconButton
-                aria-label={`Ver detalle de ${row.nombreComercial}`}
-                tabIndex={hasFocus ? 0 : -1}
-                onClick={() => {
+          <RecordActionsMenu
+            subject={row.nombreComercial}
+            tabIndex={hasFocus ? 0 : -1}
+            actions={[
+              {
+                label: "Ver detalle",
+                icon: <VisibilityRounded fontSize="small" />,
+                onClick: () => {
                   setDetail(row);
                   setDetailOpen(true);
-                }}
-              >
-                <VisibilityRounded fontSize="small" />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Rechazar" disableInteractive>
-              <span>
-                <IconButton
-                  color="error"
-                  aria-label={`Rechazar catastro ${row.nombreComercial}`}
-                  tabIndex={hasFocus ? 0 : -1}
-                  onClick={() => onReview(row, "REJECT")}
-                  disabled={workingId === row.id}
-                >
-                  <CloseRounded fontSize="small" />
-                </IconButton>
-              </span>
-            </Tooltip>
-            <Tooltip title="Aprobar" disableInteractive>
-              <span>
-                <IconButton
-                  color="success"
-                  aria-label={`Aprobar catastro ${row.nombreComercial}`}
-                  tabIndex={hasFocus ? 0 : -1}
-                  onClick={() => onReview(row, "APPROVE")}
-                  disabled={workingId === row.id}
-                >
-                  <CheckRounded fontSize="small" />
-                </IconButton>
-              </span>
-            </Tooltip>
-          </Stack>
+                },
+              },
+              {
+                label: "Rechazar",
+                icon: <CloseRounded fontSize="small" />,
+                color: "error",
+                disabled: workingId === row.id,
+                onClick: () => onReview(row, "REJECT"),
+              },
+              {
+                label: "Aprobar",
+                icon: <CheckRounded fontSize="small" />,
+                color: "success",
+                disabled: workingId === row.id,
+                onClick: () => onReview(row, "APPROVE"),
+              },
+            ]}
+          />
         ),
       },
     ],

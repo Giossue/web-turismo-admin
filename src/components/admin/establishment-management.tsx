@@ -11,10 +11,8 @@ import {
   DialogTitle,
   FormControlLabel,
   Grid,
-  IconButton,
   Stack,
   Switch,
-  Tooltip,
   Typography,
 } from "@mui/material";
 import type { GridColDef } from "@mui/x-data-grid";
@@ -32,7 +30,7 @@ import { Controller, useForm, useWatch } from "react-hook-form";
 import { AdminDataGrid } from "@/components/ui/admin-data-grid";
 import { ADMIN_TABLE_PAGE_SIZE } from "@/components/ui/admin-table";
 import { CoordinateFieldset } from "@/components/admin/coordinate-fieldset";
-import { DeleteRecordAction } from "@/components/admin/delete-record-action";
+import { RecordActionsMenu } from "@/components/admin/record-actions-menu";
 import { pageAfterRemoval } from "@/components/admin/shell/pagination";
 import {
   changeEstablishmentFilter,
@@ -334,63 +332,56 @@ export const EstablishmentManagement = forwardRef<
       {
         field: "actions",
         headerName: "Acciones",
-        width: 145,
+        width: 96,
         align: "right",
         headerAlign: "right",
         filterable: false,
         disableColumnMenu: true,
         renderCell: ({ row: item, hasFocus }) => (
-          <Stack
-            direction="row"
-            alignItems="center"
-            justifyContent="flex-end"
-            sx={{ height: "100%" }}
-          >
-            <Tooltip title="Editar establecimiento" disableInteractive>
-              <span>
-                <IconButton
-                  aria-label={`Editar ${item.nombreComercial}`}
-                  tabIndex={hasFocus ? 0 : -1}
-                  onClick={() => openEdit(item)}
-                  disabled={
-                    !canManageStatus &&
-                    !["BORRADOR", "RECHAZADO"].includes(item.reviewStatus)
+          <RecordActionsMenu
+            subject={item.nombreComercial}
+            tabIndex={hasFocus ? 0 : -1}
+            actions={[
+              {
+                label: "Editar",
+                icon: <EditRounded />,
+                onClick: () => openEdit(item),
+                disabled:
+                  !canManageStatus &&
+                  !["BORRADOR", "RECHAZADO"].includes(item.reviewStatus),
+              },
+              ...(!canManageStatus &&
+              ["BORRADOR", "RECHAZADO"].includes(item.reviewStatus)
+                ? [
+                    {
+                      label: "Enviar a revisión",
+                      icon: <SendRounded />,
+                      onClick: () => submitReview(item.id),
+                      disabled: isSubmittingReview,
+                    },
+                  ]
+                : []),
+            ]}
+            deletion={
+              canManageStatus
+                ? {
+                    subject: item.nombreComercial,
+                    title: "Eliminar establecimiento",
+                    description:
+                      "Se retirará del Catastro y de la aplicación. Su historial se conserva.",
+                    onDelete: () => deleteAdminEstablishment(token, item.id),
+                    queryKeys: [adminKeys.allEstablishments(), adminKeys.summary()],
+                    onDeleted: () =>
+                      setPage(
+                        pageAfterRemoval(
+                          page,
+                          establishmentsQuery.data?.items.length ?? 0,
+                        ),
+                      ),
                   }
-                >
-                  <EditRounded />
-                </IconButton>
-              </span>
-            </Tooltip>
-            {canManageStatus ? (
-              <DeleteRecordAction
-                subject={item.nombreComercial}
-                title="Eliminar establecimiento"
-                description="Se retirará del Catastro y de la aplicación. Su historial se conserva."
-                tabIndex={hasFocus ? 0 : -1}
-                onDelete={() => deleteAdminEstablishment(token, item.id)}
-                queryKeys={[adminKeys.allEstablishments(), adminKeys.summary()]}
-                onDeleted={() =>
-                  setPage(
-                    pageAfterRemoval(page, establishmentsQuery.data?.items.length ?? 0),
-                  )
-                }
-              />
-            ) : null}
-            {!canManageStatus && ["BORRADOR", "RECHAZADO"].includes(item.reviewStatus) ? (
-              <Tooltip title="Enviar a revisión" disableInteractive>
-                <span>
-                  <IconButton
-                    aria-label={`Enviar a revisión ${item.nombreComercial}`}
-                    tabIndex={hasFocus ? 0 : -1}
-                    onClick={() => submitReview(item.id)}
-                    disabled={isSubmittingReview}
-                  >
-                    <SendRounded />
-                  </IconButton>
-                </span>
-              </Tooltip>
-            ) : null}
-          </Stack>
+                : undefined
+            }
+          />
         ),
       },
     ],

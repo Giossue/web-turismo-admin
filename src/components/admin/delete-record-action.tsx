@@ -1,6 +1,5 @@
 "use client";
 
-import DeleteOutlineRounded from "@mui/icons-material/DeleteOutlineRounded";
 import {
   Alert,
   Button,
@@ -10,16 +9,25 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
-  IconButton,
-  Tooltip,
 } from "@mui/material";
 import { useMutation, useQueryClient, type QueryKey } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 
 import { useAdminFeedback } from "@/components/admin/admin-feedback";
 import { errorMessage } from "@/lib/errors";
 
-/** Eliminación confirmada con el nombre del registro, pendiente y error recuperable. */
+export type DeleteRecordActionProps = {
+  subject: string;
+  title: string;
+  description: string;
+  onDelete: () => Promise<unknown>;
+  queryKeys: readonly QueryKey[];
+  onDeleted?: () => void;
+  disabled?: boolean;
+  renderTrigger: (trigger: { onClick: () => void; disabled: boolean }) => ReactNode;
+};
+
+/** Eliminación confirmada; el diálogo permanece montado al cerrar el menú de acciones. */
 export function DeleteRecordAction({
   subject,
   title,
@@ -27,18 +35,9 @@ export function DeleteRecordAction({
   onDelete,
   queryKeys,
   onDeleted,
-  tabIndex,
+  renderTrigger,
   disabled = false,
-}: {
-  subject: string;
-  title: string;
-  description: string;
-  onDelete: () => Promise<unknown>;
-  queryKeys: readonly QueryKey[];
-  onDeleted?: () => void;
-  tabIndex?: number;
-  disabled?: boolean;
-}) {
+}: DeleteRecordActionProps) {
   const [open, setOpen] = useState(false);
   const id = useId();
   const queryClient = useQueryClient();
@@ -61,22 +60,14 @@ export function DeleteRecordAction({
 
   return (
     <>
-      <Tooltip title="Eliminar" disableInteractive>
-        <span>
-          <IconButton
-            aria-label={`Eliminar ${subject}`}
-            tabIndex={tabIndex}
-            disabled={disabled || deletion.isPending}
-            onClick={() => {
-              clear();
-              deletion.reset();
-              setOpen(true);
-            }}
-          >
-            <DeleteOutlineRounded fontSize="small" />
-          </IconButton>
-        </span>
-      </Tooltip>
+      {renderTrigger({
+        disabled: disabled || deletion.isPending,
+        onClick: () => {
+          clear();
+          deletion.reset();
+          setOpen(true);
+        },
+      })}
       <Dialog
         open={open}
         onClose={close}
