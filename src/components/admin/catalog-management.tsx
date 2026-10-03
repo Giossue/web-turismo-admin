@@ -415,7 +415,7 @@ export function CatalogManagement({
               description:
                 "Dejará de aparecer en el catálogo. Las fichas existentes y el historial se conservan.",
               onDelete: () => deleteAdminCatalog(token, visibleCatalog, row.id),
-              queryKeys: [adminKeys.allCatalogs()],
+              queryKeys: [adminKeys.allCatalogs(), adminKeys.allNavigationSummaries()],
             }}
           />
         ),
@@ -480,7 +480,10 @@ export function CatalogManagement({
           ...(editorCatalog === "ESTABLISHMENT_CLASSIFICATION" ? { icon } : {}),
         });
       }
-      await queryClient.invalidateQueries({ queryKey: adminKeys.allCatalogs() });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: adminKeys.allCatalogs() }),
+        queryClient.invalidateQueries({ queryKey: adminKeys.allNavigationSummaries() }),
+      ]);
       if (creating && editorCatalog !== "ESTABLISHMENT_CATEGORY") {
         setSearch("");
         setPage(0);
@@ -668,7 +671,10 @@ export function CatalogManagement({
                         "Dejará de estar disponible para nuevos establecimientos. El historial se conserva.",
                       onDelete: () =>
                         deleteAdminCatalog(token, "ESTABLISHMENT_CATEGORY", option.id),
-                      queryKeys: [adminKeys.allCatalogs()],
+                      queryKeys: [
+                        adminKeys.allCatalogs(),
+                        adminKeys.allNavigationSummaries(),
+                      ],
                     }}
                   />
                 </ListItem>

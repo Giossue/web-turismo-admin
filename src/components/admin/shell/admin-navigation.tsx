@@ -37,6 +37,7 @@ type AdminNavigationProps = {
   user: AdminUser;
   items: readonly AdminNavigationItem[];
   selected: AdminSection;
+  notifications?: Partial<Record<AdminSection, boolean>>;
   onSelect: (section: AdminSection) => void;
   onLogout: () => void;
   /** Menú temporal en pantallas pequeñas. */
@@ -76,6 +77,7 @@ function NavigationContent({
   user,
   items,
   selected,
+  notifications,
   onSelect,
   onLogout,
 }: Omit<AdminNavigationProps, "mobileOpen" | "onMobileClose">) {
@@ -86,6 +88,9 @@ function NavigationContent({
       selected={selected === key}
       onClick={() => onSelect(key)}
       aria-current={selected === key ? "page" : undefined}
+      aria-label={
+        notifications?.[key] ? `${label}, con novedades o pendientes` : undefined
+      }
       sx={{
         minHeight: 36,
         px: 1,
@@ -108,6 +113,18 @@ function NavigationContent({
           primary: { variant: "body2", fontWeight: selected === key ? 600 : 500 },
         }}
       />
+      {notifications?.[key] ? (
+        <Box
+          aria-hidden="true"
+          sx={{
+            width: 8,
+            height: 8,
+            flexShrink: 0,
+            borderRadius: "50%",
+            bgcolor: "error.main",
+          }}
+        />
+      ) : null}
     </ListItemButton>
   );
 

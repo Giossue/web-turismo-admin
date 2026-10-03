@@ -107,6 +107,7 @@ export function ReviewSection({
         queryClient.invalidateQueries({ queryKey: adminKeys.summary() }),
         queryClient.invalidateQueries({ queryKey: adminKeys.center(item.code) }),
         queryClient.invalidateQueries({ queryKey: adminKeys.media(item.code) }),
+        queryClient.invalidateQueries({ queryKey: adminKeys.allNavigationSummaries() }),
       ]);
     },
     onError: (cause) => showError(errorMessage(cause, "No se pudo actualizar la ficha.")),
@@ -128,10 +129,13 @@ export function ReviewSection({
       );
       const nextPage = pageAfterRemoval(establishmentsPage, establishments.length);
       if (nextPage !== establishmentsPage) onEstablishmentsPageChange(nextPage);
-      await queryClient.invalidateQueries({
-        queryKey: adminKeys.allEstablishments(),
-        refetchType: nextPage === establishmentsPage ? "active" : "none",
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: adminKeys.allEstablishments(),
+          refetchType: nextPage === establishmentsPage ? "active" : "none",
+        }),
+        queryClient.invalidateQueries({ queryKey: adminKeys.allNavigationSummaries() }),
+      ]);
     },
     onError: (cause) =>
       showError(errorMessage(cause, "No se pudo actualizar el catastro.")),

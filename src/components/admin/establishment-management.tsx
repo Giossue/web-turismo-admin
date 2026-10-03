@@ -180,7 +180,10 @@ export const EstablishmentManagement = forwardRef<
           )
         : createAdminEstablishment(token, input),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: adminKeys.allEstablishments() });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: adminKeys.allEstablishments() }),
+        queryClient.invalidateQueries({ queryKey: adminKeys.allNavigationSummaries() }),
+      ]);
       setDialogOpen(false);
       setEditing(null);
       onNotice(
@@ -194,7 +197,10 @@ export const EstablishmentManagement = forwardRef<
       );
     },
     onError: async (cause) => {
-      await queryClient.invalidateQueries({ queryKey: adminKeys.allEstablishments() });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: adminKeys.allEstablishments() }),
+        queryClient.invalidateQueries({ queryKey: adminKeys.allNavigationSummaries() }),
+      ]);
       onError(errorMessage(cause, "No se pudo guardar el establecimiento."));
     },
   });
@@ -202,7 +208,10 @@ export const EstablishmentManagement = forwardRef<
   const { mutate: submitReview, isPending: isSubmittingReview } = useMutation({
     mutationFn: (id: number) => submitAdminEstablishmentReview(token, id),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: adminKeys.allEstablishments() });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: adminKeys.allEstablishments() }),
+        queryClient.invalidateQueries({ queryKey: adminKeys.allNavigationSummaries() }),
+      ]);
       onNotice("El catastro fue enviado a revisión.");
     },
     onError: (cause) =>
@@ -370,7 +379,11 @@ export const EstablishmentManagement = forwardRef<
                     description:
                       "Se retirará del Catastro y de la aplicación. Su historial se conserva.",
                     onDelete: () => deleteAdminEstablishment(token, item.id),
-                    queryKeys: [adminKeys.allEstablishments(), adminKeys.summary()],
+                    queryKeys: [
+                      adminKeys.allEstablishments(),
+                      adminKeys.summary(),
+                      adminKeys.allNavigationSummaries(),
+                    ],
                     onDeleted: () =>
                       setPage(
                         pageAfterRemoval(

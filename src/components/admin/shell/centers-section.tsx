@@ -141,6 +141,7 @@ export function CentersSection({
                       adminKeys.summary(),
                       adminKeys.center(row.code),
                       adminKeys.media(row.code),
+                      adminKeys.allNavigationSummaries(),
                     ],
                     onDeleted: () => onPageChange(pageAfterRemoval(page, itemsOnPage)),
                   }

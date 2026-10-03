@@ -100,6 +100,7 @@ export function OpinionManagement({ token }: { token: string }) {
         queryClient.invalidateQueries({
           queryKey: adminKeys.opinionHistory(item.reviewCode),
         }),
+        queryClient.invalidateQueries({ queryKey: adminKeys.allNavigationSummaries() }),
       ]);
     },
     onError: (cause) => showError(errorMessage(cause, "No se pudo revisar la opinión.")),
@@ -196,6 +197,7 @@ export function OpinionManagement({ token }: { token: string }) {
                 adminKeys.allOpinions(),
                 adminKeys.opinionHistory(opinion.reviewCode),
                 adminKeys.summary(),
+                adminKeys.allNavigationSummaries(),
               ],
               onDeleted: () => {
                 if (historyOpinion?.reviewCode === opinion.reviewCode)
