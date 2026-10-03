@@ -3,6 +3,7 @@
 import { Autocomplete, TextField, createFilterOptions } from "@mui/material";
 
 import type { CatalogSelectOption } from "./catalog-select";
+import { SearchInputAdornment } from "./search-field";
 
 const optionLabel = (option: CatalogSelectOption) => option.displayName ?? option.name;
 
@@ -81,7 +82,15 @@ export function CatalogAutocomplete({
           inputRef={inputRef}
           slotProps={{
             inputLabel: params.InputLabelProps,
-            input: params.InputProps,
+            input: {
+              ...params.InputProps,
+              startAdornment: (
+                <>
+                  <SearchInputAdornment />
+                  {params.InputProps.startAdornment}
+                </>
+              ),
+            },
             htmlInput: {
               ...params.inputProps,
               name,
