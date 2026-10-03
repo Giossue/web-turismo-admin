@@ -1,6 +1,7 @@
 declare module "@mui/material/styles" {
   interface TypeBackground {
     subtle: string;
+    sidebar: string;
   }
 }
 
@@ -21,6 +22,7 @@ export const webTokens = {
         default: "#f5f8f7",
         paper: "#ffffff",
         subtle: "#e8f0ee",
+        sidebar: "#e5f0e9",
       },
       status: {
         error: {
@@ -64,6 +66,7 @@ export const webTokens = {
         default: "#080808",
         paper: "#151515",
         subtle: "#202020",
+        sidebar: "#14251b",
       },
       text: {
         primary: "#f5f5f5",

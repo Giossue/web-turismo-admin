@@ -25,7 +25,7 @@ const drawerPaperSx = {
     width: drawerWidth,
     boxSizing: "border-box",
     overflowX: "hidden",
-    bgcolor: "background.paper",
+    bgcolor: "background.sidebar",
     borderRight: "1px solid",
     borderColor: "divider",
     borderRadius: 0,
@@ -98,9 +98,9 @@ function NavigationContent({
         borderRadius: 1,
         gap: 1,
         "&.Mui-selected": {
-          bgcolor: "action.selected",
-          color: "text.primary",
-          "&:hover": { bgcolor: "action.selected" },
+          bgcolor: "background.paper",
+          color: "primary.main",
+          "&:hover": { bgcolor: "background.paper" },
         },
       }}
     >
