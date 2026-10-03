@@ -2,7 +2,6 @@
 
 import ArrowBackRounded from "@mui/icons-material/ArrowBackRounded";
 import CloudUploadRounded from "@mui/icons-material/CloudUploadRounded";
-import PublishRounded from "@mui/icons-material/PublishRounded";
 import { Alert, Button, Stack, Typography } from "@mui/material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -10,6 +9,7 @@ import { FormProvider, useForm } from "react-hook-form";
 
 import { CenterFormPanel } from "@/components/admin/center-editor/center-form-panels";
 import { CenterSummaryStep } from "@/components/admin/center-editor/center-summary-step";
+import { CenterVisibilityControl } from "@/components/admin/center-editor/center-visibility-control";
 import {
   CenterWizardNavigation,
   CenterWizardStepper,
@@ -42,12 +42,13 @@ const centerWizardSteps = centerSectionDefinitions.map((section) => ({
   title: section.title,
 }));
 const SUMMARY_STEP = centerSectionDefinitions.length;
-const EDITABLE_STATES = new Set(["BORRADOR", "RECHAZADO", "PUBLICADO"]);
+const EDITABLE_STATES = new Set(["BORRADOR", "PUBLICADO"]);
 const REQUIRED_FIELDS_MESSAGE = "Completa los campos obligatorios para continuar.";
 
 export function CenterEditor({
   token,
   code,
+  canManageVisibility,
   onClose,
   onSaved,
   onNotice,
@@ -55,6 +56,7 @@ export function CenterEditor({
 }: {
   token: string;
   code: string | null;
+  canManageVisibility: boolean;
   onClose: () => void;
   onSaved: (detail: AdminCenterDetail) => void;
   onNotice: (message: string) => void;
@@ -91,12 +93,12 @@ export function CenterEditor({
   });
   const [activeStep, setActiveStep] = useState(0);
   const importInputRef = useRef<HTMLInputElement | null>(null);
+  const submittingReviewRef = useRef(false);
 
   const isNew = code === null;
   const state = detail?.status.code ?? "BORRADOR";
   const canEdit = isNew || EDITABLE_STATES.has(state);
-  const canReview = !isNew && (state === "BORRADOR" || state === "RECHAZADO");
-  const canPublish = state === "APROBADO";
+  const canReview = !isNew && state === "BORRADOR";
   const activeSectionCode =
     activeStep < SUMMARY_STEP ? centerSectionDefinitions[activeStep].code : null;
 
@@ -176,18 +178,24 @@ export function CenterEditor({
   }
 
   async function submitForReview() {
-    if (!isReadyToCreate(form.getValues())) {
-      // Los campos obligatorios viven en el primer paso, que no está montado.
-      setActiveStep(0);
-      onError(REQUIRED_FIELDS_MESSAGE);
-      return;
+    if (submittingReviewRef.current || centerSave.working || !canReview) return;
+    submittingReviewRef.current = true;
+    try {
+      if (!isReadyToCreate(form.getValues())) {
+        // Los campos obligatorios viven en el primer paso, que no está montado.
+        setActiveStep(0);
+        onError(REQUIRED_FIELDS_MESSAGE);
+        return;
+      }
+      if (!(await form.trigger(undefined, { shouldFocus: true }))) {
+        onError(REQUIRED_FIELDS_MESSAGE);
+        return;
+      }
+      autosave.discard();
+      await centerSave.save(form.getValues(), { submitForReview: true });
+    } finally {
+      submittingReviewRef.current = false;
     }
-    if (!(await form.trigger(undefined, { shouldFocus: true }))) {
-      onError(REQUIRED_FIELDS_MESSAGE);
-      return;
-    }
-    autosave.discard();
-    await centerSave.save(form.getValues(), { submitForReview: true });
   }
 
   if (catalogsQuery.isLoading || centerQuery.isLoading) {
@@ -231,20 +239,17 @@ export function CenterEditor({
               {centerSave.reviewing ? "Enviando…" : "Enviar a revisión"}
             </Button>
           ) : null,
-          canPublish ? (
-            <Button
-              key="publish"
-              type="button"
-              variant="contained"
-              startIcon={<PublishRounded />}
-              onClick={() => void centerSave.publish()}
-              disabled={centerSave.working}
-            >
-              {centerSave.publishing ? "Publicando…" : "Publicar"}
-            </Button>
-          ) : null,
         ]}
       />
+      {detail && canManageVisibility ? (
+        <CenterVisibilityControl
+          key={`${detail.code}:${detail.active}`}
+          active={detail.active}
+          working={centerSave.working}
+          applying={centerSave.activating}
+          onApply={centerSave.setActive}
+        />
+      ) : null}
       <input
         ref={importInputRef}
         type="file"
@@ -271,13 +276,15 @@ export function CenterEditor({
         </Alert>
       ) : null}
       {detail?.review?.observation ? (
-        <Alert severity={state === "RECHAZADO" ? "warning" : "info"}>
+        <Alert severity={state === "BORRADOR" ? "warning" : "info"}>
           Observación: {detail.review.observation}
         </Alert>
       ) : null}
-      {!canEdit && state !== "APROBADO" ? (
+      {!canEdit ? (
         <Alert severity="info">
-          La ficha está en revisión. Puedes consultar la propuesta, pero no modificarla.
+          {state === "EN_REVISION"
+            ? "La ficha está en revisión. Puedes consultar la propuesta, pero no modificarla."
+            : "Puedes consultar la ficha, pero su estado no permite modificarla."}
         </Alert>
       ) : null}
 
@@ -294,7 +301,7 @@ export function CenterEditor({
         <MediaManager
           token={token}
           code={code}
-          canEdit={canEdit || state === "APROBADO"}
+          canEdit={canEdit}
           onNotice={onNotice}
           onError={onError}
         />

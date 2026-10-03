@@ -6,8 +6,8 @@ import { useRef } from "react";
 import {
   createAdminCenter,
   getAdminCenter,
-  publishAdminCenter,
   saveAdminCenter,
+  setAdminCenterActive,
   submitAdminCenterReview,
   type AdminCatalogs,
   type AdminCenterDetail,
@@ -27,7 +27,7 @@ type SaveVariables = { values: CenterFormValues; submitForReview: boolean };
 type SaveOptions = { submitForReview?: boolean; silent?: boolean };
 
 /**
- * Guardado y publicación del formulario principal. Ambas mutaciones comparten
+ * Guardado y activación del formulario principal. Ambas mutaciones comparten
  * `centerSaveScope(code)` con los guardados de secciones, así TanStack las
  * ejecuta en serie; la versión se lee de la caché al ejecutar cada una y la
  * respuesta se escribe en `adminKeys.center(code)` antes de que corra la
@@ -55,6 +55,7 @@ export function useCenterSave({
   // Código asignado al crear: los guardados que ya estaban en cola deben
   // actualizar esa ficha en lugar de crear otra.
   const createdCodeRef = useRef<string | null>(null);
+  const applyingActiveRef = useRef(false);
   const scope = centerSaveScope(code ?? "new");
   const storeDetail = async (detail: AdminCenterDetail) => {
     const queryKey = adminKeys.center(detail.code);
@@ -86,9 +87,9 @@ export function useCenterSave({
     onSuccess: storeDetail,
   });
 
-  const publishMutation = useMutation({
+  const activeMutation = useMutation({
     scope,
-    mutationFn: (targetCode: string) => publishAdminCenter(token, targetCode),
+    mutationFn: (active: boolean) => setAdminCenterActive(token, code as string, active),
     onSuccess: storeDetail,
   });
 
@@ -134,23 +135,26 @@ export function useCenterSave({
     }
   }
 
-  async function publish() {
-    if (!code) return;
+  async function setActive(active: boolean) {
+    if (!code || applyingActiveRef.current) return;
+    applyingActiveRef.current = true;
     onError(null);
     try {
-      const published = await publishMutation.mutateAsync(code);
-      onSaved(published);
-      onNotice("La ficha fue publicada en la aplicación móvil.");
+      const saved = await activeMutation.mutateAsync(active);
+      onSaved(saved);
+      onNotice(active ? "La ficha fue activada." : "La ficha fue desactivada.");
     } catch (cause) {
-      onError(errorMessage(cause, "No se pudo publicar la ficha."));
+      onError(errorMessage(cause, "No se pudo cambiar la activación de la ficha."));
+    } finally {
+      applyingActiveRef.current = false;
     }
   }
 
   return {
     save,
-    publish,
+    setActive,
     reviewing: saveMutation.isPending && saveMutation.variables?.submitForReview === true,
-    publishing: publishMutation.isPending,
-    working: saveMutation.isPending || publishMutation.isPending,
+    activating: activeMutation.isPending,
+    working: saveMutation.isPending || activeMutation.isPending,
   };
 }

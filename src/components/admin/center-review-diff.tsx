@@ -203,7 +203,7 @@ export function CenterReviewDiff({
         <SectionHeader
           icon={<DifferenceRounded />}
           title="Revisión por diferencias"
-          description="Compara la versión publicada con la propuesta actual antes de aprobar o publicar la ficha. Los valores mostrados se resuelven con los catálogos administrativos."
+          description="Compara la versión publicada con la propuesta actual antes de aprobar y publicar la ficha. Los valores mostrados se resuelven con los catálogos administrativos."
         />
         <Alert severity={changed.length > 0 ? "info" : "success"}>
           {changed.length > 0

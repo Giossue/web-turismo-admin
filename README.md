@@ -90,13 +90,17 @@ página y conserva las dependencias entre ubicación, actividad, tipo de estable
 Los filtros y la paginación se ejecutan en la API; el grid no filtra únicamente las filas
 de la página actual ni ofrece operadores u ordenaciones que la API no admite.
 
-El estado de la ficha incluye Borrador, En revisión, Aprobado, Publicado, Rechazado e
-Inactivo. La tabla omite la columna Activa/Inactiva: activar un borrador no lo publica.
-El estado corresponde a la versión en trabajo; si se edita un centro ya publicado,
-la versión anterior sigue visible en la app hasta publicar los cambios o desactivar la ficha.
+Las fichas usan tres estados: Borrador, En revisión y Publicado. **Aprobar y publicar**
+publica la propuesta en una sola operación; **Devolver para corregir** la devuelve a
+Borrador y conserva el motivo. Ambas decisiones retiran la ficha de la cola de revisión.
+Si se edita un centro ya publicado, su versión anterior sigue visible en la app hasta
+aprobar y publicar los cambios o desactivar la ficha.
 
-La activación y desactivación se controla dentro de **Editar**, con un interruptor cuyo
-cambio se aplica al pulsar **Guardar**. En Catastro, este control es exclusivo del administrador.
+La activación es independiente del estado y tiene su propia columna y filtro. En el
+editor de centros, el administrador cambia **Ficha activa** y pulsa **Aplicar**: desactivar
+oculta la ficha, conserva su estado y es reversible; activar un borrador no lo publica.
+En Catastro, el interruptor de **Editar** se aplica al pulsar **Guardar** y sigue siendo
+exclusivo del administrador; su flujo de revisión conserva el estado Rechazado.
 
 En **Nuevo establecimiento** y **Editar establecimiento**, Localidad permite escribir para
 buscar por nombre, cantón o provincia, sin distinguir mayúsculas ni tildes. Las opciones
