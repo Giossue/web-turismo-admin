@@ -13,7 +13,6 @@ import {
 } from "@mui/material";
 import { type FormEvent, useRef, useState } from "react";
 
-import { ColorModeButton } from "@/components/ui/color-mode-button";
 import { useAdminAuth } from "@/lib/auth";
 
 export function AdminLogin() {
@@ -51,9 +50,6 @@ export function AdminLogin() {
           "radial-gradient(ellipse at 50% 50%, var(--mui-palette-background-subtle), var(--mui-palette-background-default))",
       }}
     >
-      <Box sx={{ position: "fixed", top: 16, right: 16, zIndex: 1 }}>
-        <ColorModeButton />
-      </Box>
       <Card
         variant="outlined"
         sx={(theme) => ({
@@ -74,11 +70,16 @@ export function AdminLogin() {
         <Typography
           variant="h4"
           component="h1"
-          sx={{ fontSize: "clamp(1.75rem, 8vw, 2.15rem)" }}
+          sx={{ fontSize: "clamp(1.75rem, 8vw, 2.15rem)", textAlign: "center" }}
         >
           Iniciar sesión
         </Typography>
-        <Typography id="login-description" variant="body2" color="text.secondary">
+        <Typography
+          id="login-description"
+          variant="body2"
+          color="text.secondary"
+          sx={{ textAlign: "center" }}
+        >
           Ingresa con tu cuenta institucional para gestionar fichas y revisiones.
         </Typography>
         <Stack
@@ -125,9 +126,6 @@ export function AdminLogin() {
             {pending ? "Validando…" : "Iniciar sesión"}
           </Button>
         </Stack>
-        <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center" }}>
-          Acceso exclusivo para personal autorizado.
-        </Typography>
       </Card>
     </Box>
   );
