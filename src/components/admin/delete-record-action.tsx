@@ -3,7 +3,6 @@
 import {
   Alert,
   Button,
-  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -14,6 +13,7 @@ import { useMutation, useQueryClient, type QueryKey } from "@tanstack/react-quer
 import { useId, useRef, useState, type ReactNode } from "react";
 
 import { useAdminFeedback } from "@/components/admin/admin-feedback";
+import { LoadingSpinner } from "@/components/ui/loading-state";
 import { errorMessage } from "@/lib/errors";
 
 export type DeleteRecordActionProps = {
@@ -107,7 +107,11 @@ export function DeleteRecordAction({
             variant="contained"
             disabled={deletion.isPending}
             onClick={confirmDeletion}
-            startIcon={deletion.isPending ? <CircularProgress size={16} /> : undefined}
+            startIcon={
+              deletion.isPending ? (
+                <LoadingSpinner label="Eliminando" size={16} color="inherit" />
+              ) : undefined
+            }
           >
             {deletion.isPending ? "Eliminando…" : "Eliminar"}
           </Button>

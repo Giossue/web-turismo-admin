@@ -1,10 +1,11 @@
 "use client";
 
-import { Box, LinearProgress, Stack } from "@mui/material";
+import { Box, Stack } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 
 import { ContentState } from "@/components/ui/content-state";
 import { FlatSurface } from "@/components/ui/flat-surface";
+import { LoadingState } from "@/components/ui/loading-state";
 import { MetricCard } from "@/components/ui/metric-card";
 import { summaryQueryOptions } from "@/lib/admin-queries";
 import { errorMessage } from "@/lib/errors";
@@ -12,12 +13,12 @@ import { webTokens } from "@/theme/tokens";
 
 export function SummarySection({ token }: { token: string }) {
   const { data: summary, error, isLoading } = useQuery(summaryQueryOptions(token));
+  if (isLoading) return <LoadingState label="Cargando resumen" />;
   const metric = (value: number | undefined) =>
     value === undefined ? "—" : String(value);
 
   return (
     <Stack spacing={webTokens.spacing.section}>
-      {isLoading ? <LinearProgress aria-label="Cargando resumen" /> : null}
       {error ? (
         <FlatSurface>
           <ContentState

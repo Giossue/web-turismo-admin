@@ -2,7 +2,7 @@
 
 import AddRounded from "@mui/icons-material/AddRounded";
 import MenuRounded from "@mui/icons-material/MenuRounded";
-import { Box, Button, CircularProgress, IconButton, Stack, Tooltip } from "@mui/material";
+import { Box, Button, IconButton, Stack, Tooltip } from "@mui/material";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef, useState } from "react";
 
@@ -18,6 +18,7 @@ import {
   type EstablishmentManagementRef,
 } from "@/components/admin/establishment-management";
 import { OpinionManagement } from "@/components/admin/opinion-management";
+import { LoadingState } from "@/components/ui/loading-state";
 import { PageHeader } from "@/components/ui/page-header";
 import type { AdminCenterDetail } from "@/lib/admin-api";
 import { adminKeys } from "@/lib/admin-queries";
@@ -56,7 +57,7 @@ export function AdminShell() {
 export function AdminSessionLoading() {
   return (
     <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
-      <CircularProgress aria-label="Cargando sesión" />
+      <LoadingState label="Cargando sesión" />
     </Box>
   );
 }

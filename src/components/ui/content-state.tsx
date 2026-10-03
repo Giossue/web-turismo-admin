@@ -1,5 +1,6 @@
-import { Box, CircularProgress, Typography } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 
+import { LoadingState } from "@/components/ui/loading-state";
 import { webTokens } from "@/theme/tokens";
 
 export function ContentState({
@@ -12,11 +13,7 @@ export function ContentState({
   label?: string;
 }) {
   if (status === "loading") {
-    return (
-      <Box sx={{ display: "grid", placeItems: "center", py: webTokens.spacing.state }}>
-        <CircularProgress aria-label={label ?? "Cargando"} />
-      </Box>
-    );
+    return <LoadingState label={label} />;
   }
 
   if (status === "error") {

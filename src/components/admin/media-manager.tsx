@@ -6,7 +6,6 @@ import UploadFileRounded from "@mui/icons-material/UploadFileRounded";
 import {
   Box,
   Button,
-  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -25,6 +24,7 @@ import { useEffect, useRef, useState } from "react";
 import { FlatSurface } from "@/components/ui/flat-surface";
 import { ContentState } from "@/components/ui/content-state";
 import { SelectField } from "@/components/ui/form/select-field";
+import { LoadingSpinner } from "@/components/ui/loading-state";
 import { SectionHeader } from "@/components/ui/section-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
@@ -222,7 +222,13 @@ export function MediaManager({
           <Button
             type="button"
             variant="outlined"
-            startIcon={working ? <CircularProgress size={18} /> : <UploadFileRounded />}
+            startIcon={
+              working ? (
+                <LoadingSpinner label="Procesando" size={18} color="inherit" />
+              ) : (
+                <UploadFileRounded />
+              )
+            }
             onClick={() => fileInput.current?.click()}
             disabled={!canEdit || !code || working}
             sx={{ minWidth: 180 }}

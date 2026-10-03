@@ -78,6 +78,10 @@ con controles en español. Cada fila presenta un único botón de tres puntos si
 Las opciones incluyen etiquetas accesibles y siguen el foco del grid al usar el teclado;
 **Eliminar** abre la confirmación existente antes de enviar la solicitud.
 
+La sesión, el resumen, las tablas, las fichas y los diálogos usan el mismo indicador
+circular de carga. Los listados mantienen ese estilo con y sin filas; los botones usan
+su versión compacta, con el color del texto para conservar el contraste.
+
 Centros y Catastro conservan el buscador y agrupan los criterios detrás de **Filtros**,
 con un contador de criterios activos. Los catálogos básicos buscan localmente entre las
 opciones cargadas; **Tipos y categorías** ofrece únicamente el selector **Actividad**.

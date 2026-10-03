@@ -7,7 +7,6 @@ import MiscellaneousServicesRounded from "@mui/icons-material/MiscellaneousServi
 import {
   Alert,
   Button,
-  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -22,6 +21,7 @@ import { useFormContext, useWatch } from "react-hook-form";
 import { useEditable } from "@/components/ui/form/editable-context";
 import { RhfNumberField, RhfTextField } from "@/components/ui/form/rhf-text-field";
 import { maxLen } from "@/components/ui/form/rules";
+import { LoadingSpinner } from "@/components/ui/loading-state";
 import {
   assistCenterDescription,
   type AdminCatalogs,
@@ -157,7 +157,7 @@ function DescriptionPanel({ code, token }: { code: string | null; token: string 
             </Typography>
           ) : null}
           {assistance.isPending ? (
-            <CircularProgress size={22} aria-label="Generando propuesta" />
+            <LoadingSpinner label="Generando propuesta" size={22} />
           ) : null}
           {assistance.isError ? (
             <Alert severity="error">

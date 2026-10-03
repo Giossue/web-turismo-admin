@@ -7,6 +7,7 @@ import { styled } from "@mui/material/styles";
 import {
   DataGrid,
   FilterPanelTrigger,
+  GridOverlay,
   GridPanel,
   Toolbar,
   ToolbarButton,
@@ -18,6 +19,7 @@ import { esES } from "@mui/x-data-grid/locales";
 import { ADMIN_TABLE_PAGE_SIZE, type AdminTablePagination } from "./admin-table";
 import { ContentState } from "./content-state";
 import { FlatSurface } from "./flat-surface";
+import { LoadingState } from "./loading-state";
 import { SearchField } from "./search-field";
 
 type GridSearch = {
@@ -139,6 +141,14 @@ function AdminNoRowsOverlay() {
   return error ? null : <ContentState status="empty" message={emptyMessage} />;
 }
 
+function AdminLoadingOverlay() {
+  return (
+    <GridOverlay>
+      <LoadingState label="Cargando datos" />
+    </GridOverlay>
+  );
+}
+
 export function AdminDataGrid<R extends GridValidRowModel>({
   ariaLabel,
   rows,
@@ -227,9 +237,13 @@ export function AdminDataGrid<R extends GridValidRowModel>({
               panel: AdminGridPanel,
               filterPanel: AdminFilterPanel,
               noRowsOverlay: AdminNoRowsOverlay,
+              loadingOverlay: AdminLoadingOverlay,
             }}
             slotProps={{
-              loadingOverlay: { variant: "linear-progress", noRowsVariant: "skeleton" },
+              loadingOverlay: {
+                variant: "circular-progress",
+                noRowsVariant: "circular-progress",
+              },
             }}
             localeText={{
               ...esES.components.MuiDataGrid.defaultProps.localeText,

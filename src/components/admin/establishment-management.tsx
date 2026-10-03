@@ -4,7 +4,6 @@ import EditRounded from "@mui/icons-material/EditRounded";
 import SendRounded from "@mui/icons-material/SendRounded";
 import {
   Button,
-  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -42,6 +41,7 @@ import { EstablishmentGridFilters } from "@/components/admin/establishment-grid-
 import { RhfCatalogSelect } from "@/components/ui/form/rhf-select";
 import { RhfTextField } from "@/components/ui/form/rhf-text-field";
 import { maxLen, required } from "@/components/ui/form/rules";
+import { LoadingSpinner } from "@/components/ui/loading-state";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
   createAdminEstablishment,
@@ -629,7 +629,9 @@ export const EstablishmentManagement = forwardRef<
             variant="contained"
             disabled={saveMutation.isPending}
             startIcon={
-              saveMutation.isPending ? <CircularProgress size={16} /> : undefined
+              saveMutation.isPending ? (
+                <LoadingSpinner label="Guardando" size={16} color="inherit" />
+              ) : undefined
             }
           >
             {saveMutation.isPending ? "Guardando…" : "Guardar"}

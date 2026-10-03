@@ -3,7 +3,6 @@
 import CheckCircleRounded from "@mui/icons-material/CheckCircleRounded";
 import {
   Button,
-  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -14,6 +13,7 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 
+import { LoadingSpinner } from "@/components/ui/loading-state";
 import type { ReviewAction } from "@/lib/admin-api";
 import { webTokens } from "@/theme/tokens";
 
@@ -94,7 +94,13 @@ export function ReviewDecisionDialog({
           variant="contained"
           color={action === "REJECT" ? "error" : "primary"}
           disabled={pending || missingReason}
-          startIcon={pending ? <CircularProgress size={16} /> : <CheckCircleRounded />}
+          startIcon={
+            pending ? (
+              <LoadingSpinner label="Guardando" size={16} color="inherit" />
+            ) : (
+              <CheckCircleRounded />
+            )
+          }
         >
           {pending
             ? "Guardando…"
