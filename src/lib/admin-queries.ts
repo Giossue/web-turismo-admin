@@ -19,6 +19,7 @@ import {
   type AdminCenterDetail,
   type AdminCentersOptions,
   type AdminEstablishmentsOptions,
+  type AdminOpinionsOptions,
 } from "./admin-api";
 
 /**
@@ -51,7 +52,7 @@ export const adminKeys = {
   centers: (filters: AdminCentersOptions) =>
     [...adminKeys.allCenters(), filters] as const,
   allOpinions: () => [...adminKeys.all, "opinions"] as const,
-  opinions: (filters: { limit: number; offset: number }) =>
+  opinions: (filters: AdminOpinionsOptions) =>
     [...adminKeys.allOpinions(), filters] as const,
 };
 
@@ -140,10 +141,7 @@ export function establishmentsPageQueryOptions(
   });
 }
 
-export function opinionsPageQueryOptions(
-  token: string,
-  filters: { limit: number; offset: number },
-) {
+export function opinionsPageQueryOptions(token: string, filters: AdminOpinionsOptions) {
   return queryOptions({
     queryKey: adminKeys.opinions(filters),
     queryFn: () => getAdminOpinions(token, filters),

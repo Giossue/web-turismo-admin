@@ -547,11 +547,24 @@ export function getAdminNavigationSummary(token: string) {
   return get<AdminNavigationSummary>("/admin/navigation-summary", token);
 }
 
+export type AdminOpinionsOptions = {
+  q?: string;
+  status?: AdminOpinion["status"];
+  targetType?: OpinionTargetType;
+  rating?: number;
+  limit?: number;
+  offset?: number;
+};
+
 export async function getAdminOpinions(
   token: string,
-  options: { limit?: number; offset?: number } = {},
+  options: AdminOpinionsOptions = {},
 ) {
   const query = toQueryString({
+    q: options.q,
+    status: options.status,
+    targetType: options.targetType,
+    rating: options.rating,
     limit: options.limit ?? 20,
     offset: options.offset ?? 0,
   });

@@ -25,6 +25,8 @@ import {
 } from "@/components/admin/review-decision-dialog";
 import { pageAfterRemoval } from "@/components/admin/shell/pagination";
 import { AdminDataGrid } from "@/components/ui/admin-data-grid";
+import { AdminGridFilterPanel } from "@/components/ui/admin-grid-filter-panel";
+import { SelectField } from "@/components/ui/form/select-field";
 import { ADMIN_TABLE_PAGE_SIZE } from "@/components/ui/admin-table";
 import { ContentState } from "@/components/ui/content-state";
 import { FlatSurface } from "@/components/ui/flat-surface";
@@ -34,6 +36,7 @@ import {
   reviewAdminOpinion,
   type AdminOpinion,
   type AdminOpinionHistory,
+  type AdminOpinionsOptions,
   type ReviewAction,
 } from "@/lib/admin-api";
 import {
@@ -47,6 +50,7 @@ import {
   opinionsPageQueryOptions,
 } from "@/lib/admin-queries";
 import { errorMessage } from "@/lib/errors";
+import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { formatDateTime } from "@/lib/format";
 import { webTokens } from "@/theme/tokens";
 
@@ -57,14 +61,46 @@ const opinionRowId = (opinion: AdminOpinion) => opinion.reviewCode;
 
 type ReviewVariables = { item: AdminOpinion; action: ReviewAction; reason?: string };
 
+const emptyOpinionFilters = { status: "", targetType: "", rating: "" };
+
+const OPINION_STATUS_FILTER_OPTIONS = [
+  { value: "PENDIENTE", label: "Pendientes" },
+  { value: "APROBADA", label: "Publicadas" },
+];
+
+const OPINION_TARGET_FILTER_OPTIONS = [
+  { value: "CENTRO", label: opinionTargetTypeLabel("CENTRO") },
+  { value: "PUNTO_INTERES", label: opinionTargetTypeLabel("PUNTO_INTERES") },
+];
+
+const OPINION_RATING_FILTER_OPTIONS = [5, 4, 3, 2, 1].map((rating) => ({
+  value: String(rating),
+  label: `${rating} ${rating === 1 ? "estrella" : "estrellas"}`,
+}));
+
 /** Moderación de opiniones; usa los avisos de `AdminFeedbackProvider`. */
 export function OpinionManagement({ token }: { token: string }) {
   const queryClient = useQueryClient();
   const { showError, showNotice } = useAdminFeedback();
   const [page, setPage] = useState(0);
+  const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState(emptyOpinionFilters);
+  const appliedSearch = useDebouncedValue(search.trim());
   const opinionsQuery = useQuery(
-    opinionsPageQueryOptions(token, { limit: pageSize, offset: page * pageSize }),
+    opinionsPageQueryOptions(token, {
+      q: appliedSearch || undefined,
+      status: (filters.status || undefined) as AdminOpinionsOptions["status"],
+      targetType: (filters.targetType || undefined) as AdminOpinionsOptions["targetType"],
+      rating: filters.rating ? Number(filters.rating) : undefined,
+      limit: pageSize,
+      offset: page * pageSize,
+    }),
   );
+  const filterCount = Object.values(filters).filter(Boolean).length;
+  const changeFilter = (field: keyof typeof emptyOpinionFilters, value: string) => {
+    setFilters((current) => ({ ...current, [field]: value }));
+    setPage(0);
+  };
   const items = opinionsQuery.data?.items ?? [];
   // Se conserva la opinión al cerrar para no vaciar el diálogo durante la transición.
   const [historyOpinion, setHistoryOpinion] = useState<AdminOpinion | null>(null);
@@ -235,13 +271,59 @@ export function OpinionManagement({ token }: { token: string }) {
               )
             : null
         }
-        emptyMessage="No hay opiniones pendientes ni publicadas."
+        emptyMessage="No hay opiniones para los filtros seleccionados."
         pagination={{
           page,
           total: opinionsQuery.data?.total ?? 0,
           pageSize,
           onPageChange: setPage,
         }}
+        search={{
+          label: "Buscar por autor, destino o comentario",
+          value: search,
+          onChange: (value) => {
+            setSearch(value);
+            setPage(0);
+          },
+        }}
+        filterCount={filterCount}
+        filterPanel={
+          <AdminGridFilterPanel
+            width={360}
+            activeCount={filterCount}
+            onClear={() => {
+              setFilters(emptyOpinionFilters);
+              setPage(0);
+            }}
+          >
+            <Stack spacing={2}>
+              <SelectField
+                id="opinion-status-filter"
+                label="Estado"
+                value={filters.status}
+                options={OPINION_STATUS_FILTER_OPTIONS}
+                emptyLabel="Todos"
+                onChange={(value) => changeFilter("status", value)}
+              />
+              <SelectField
+                id="opinion-target-filter"
+                label="Destino"
+                value={filters.targetType}
+                options={OPINION_TARGET_FILTER_OPTIONS}
+                emptyLabel="Todos"
+                onChange={(value) => changeFilter("targetType", value)}
+              />
+              <SelectField
+                id="opinion-rating-filter"
+                label="Calificación"
+                value={filters.rating}
+                options={OPINION_RATING_FILTER_OPTIONS}
+                emptyLabel="Todas"
+                onChange={(value) => changeFilter("rating", value)}
+              />
+            </Stack>
+          </AdminGridFilterPanel>
+        }
       />
 
       <Dialog
