@@ -11,6 +11,7 @@ import {
   getAdminCenterSections,
   getAdminCenters,
   getAdminEstablishments,
+  getAdminNavigationSummary,
   getAdminOpinionHistory,
   getAdminOpinions,
   getAdminSummary,
@@ -40,6 +41,9 @@ export const adminKeys = {
   opinionHistory: (reviewCode: string | null) =>
     [...adminKeys.all, "opinion-history", reviewCode] as const,
   summary: () => [...adminKeys.all, "summary"] as const,
+  allNavigationSummaries: () => [...adminKeys.all, "navigation-summary"] as const,
+  navigationSummary: (userId: number) =>
+    [...adminKeys.allNavigationSummaries(), userId] as const,
   allCenters: () => [...adminKeys.all, "centers"] as const,
   centers: (filters: AdminCentersOptions) =>
     [...adminKeys.allCenters(), filters] as const,
@@ -83,6 +87,17 @@ export function summaryQueryOptions(token: string) {
     queryFn: () => getAdminSummary(token),
     enabled: token.length > 0,
     staleTime: LIST_STALE_TIME,
+  });
+}
+
+export function navigationSummaryQueryOptions(token: string, userId: number) {
+  return queryOptions({
+    queryKey: adminKeys.navigationSummary(userId),
+    queryFn: () => getAdminNavigationSummary(token),
+    enabled: token.length > 0,
+    staleTime: LIST_STALE_TIME,
+    refetchOnWindowFocus: true,
+    refetchInterval: 30_000,
   });
 }
 

@@ -37,6 +37,7 @@ import { adminSectionConfig, navigationItems, type AdminSection } from "./shell/
 import { SettingsSection } from "./shell/settings-section";
 import { SummarySection } from "./shell/summary-section";
 import { useAdminUrlState } from "./shell/use-admin-url-state";
+import { useAdminNotifications } from "./shell/use-admin-notifications";
 
 export function AdminShell() {
   const { ready, user, logout } = useAdminAuth();
@@ -70,6 +71,7 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
   const queryClient = useQueryClient();
   const nav = useAdminUrlState(isAdmin);
   const { section, state } = nav;
+  const notifications = useAdminNotifications(token, user.id, section);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const establishmentRef = useRef<EstablishmentManagementRef>(null);
   const editorMode = section === "editor";
@@ -103,6 +105,9 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
       for (const queryKey of [adminKeys.allCenters(), adminKeys.summary()]) {
         void queryClient.invalidateQueries({ queryKey, refetchType: "none" });
       }
+      void queryClient.invalidateQueries({
+        queryKey: adminKeys.allNavigationSummaries(),
+      });
     },
     [editorSaved, editorSession, queryClient],
   );
@@ -130,6 +135,7 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
           user={user}
           items={navigationItems(isAdmin)}
           selected={section}
+          notifications={notifications}
           onSelect={navigate}
           onLogout={handleLogout}
           mobileOpen={drawerOpen}

@@ -535,6 +535,10 @@ export async function getAdminSummary(token: string) {
   return get<AdminSummary>("/admin/summary", token);
 }
 
+export function getAdminNavigationSummary(token: string) {
+  return get<AdminNavigationSummary>("/admin/navigation-summary", token);
+}
+
 export async function getAdminOpinions(
   token: string,
   options: { limit?: number; offset?: number } = {},
