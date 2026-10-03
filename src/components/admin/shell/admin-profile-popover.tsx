@@ -21,6 +21,7 @@ import {
 import { useColorScheme } from "@mui/material/styles";
 
 import type { AdminUser } from "@/lib/auth";
+import { webTokens } from "@/theme/tokens";
 
 type AdminProfilePopoverProps = {
   user: AdminUser;
@@ -56,10 +57,11 @@ export function AdminProfilePopover({
           gap: 1,
           justifyContent: "flex-start",
           textAlign: "left",
-          "&:hover": { bgcolor: "action.hover" },
+          color: webTokens.navigation.text,
+          "&:hover": { bgcolor: webTokens.navigation.hover },
           "&.Mui-focusVisible": {
             outline: "2px solid",
-            outlineColor: "primary.main",
+            outlineColor: webTokens.navigation.text,
             outlineOffset: -2,
           },
         }}
@@ -70,8 +72,8 @@ export function AdminProfilePopover({
             width: 32,
             height: 32,
             fontSize: "0.875rem",
-            bgcolor: "background.subtle",
-            color: "text.primary",
+            bgcolor: webTokens.navigation.selected,
+            color: webTokens.navigation.text,
           }}
         >
           {user.name.trim().charAt(0).toLocaleUpperCase("es")}
@@ -82,7 +84,7 @@ export function AdminProfilePopover({
           </Typography>
           <Typography
             variant="caption"
-            color="text.secondary"
+            color={webTokens.navigation.secondaryText}
             component="p"
             noWrap
             title={user.email}
@@ -92,7 +94,7 @@ export function AdminProfilePopover({
         </Box>
         <KeyboardArrowUpRounded
           fontSize="small"
-          sx={{ color: "text.secondary", flexShrink: 0 }}
+          sx={{ color: webTokens.navigation.secondaryText, flexShrink: 0 }}
         />
       </ButtonBase>
       <Popover

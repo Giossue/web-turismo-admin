@@ -26,10 +26,12 @@ const drawerPaperSx = {
     boxSizing: "border-box",
     overflowX: "hidden",
     bgcolor: "background.sidebar",
+    color: webTokens.navigation.text,
     borderRight: "1px solid",
-    borderColor: "divider",
+    borderColor: webTokens.navigation.divider,
     borderRadius: 0,
     boxShadow: "none",
+    "& .MuiDivider-root": { borderColor: webTokens.navigation.divider },
   },
 } as const;
 
@@ -97,10 +99,17 @@ function NavigationContent({
         py: 0.5,
         borderRadius: 1,
         gap: 1,
+        color: "inherit",
+        "&:hover": { bgcolor: webTokens.navigation.hover },
+        "&.Mui-focusVisible": {
+          outline: "2px solid",
+          outlineColor: webTokens.navigation.text,
+          outlineOffset: 2,
+        },
         "&.Mui-selected": {
-          bgcolor: "background.paper",
-          color: "primary.main",
-          "&:hover": { bgcolor: "background.paper" },
+          bgcolor: webTokens.navigation.selected,
+          color: "inherit",
+          "&:hover": { bgcolor: webTokens.navigation.selected },
         },
       }}
     >
@@ -121,7 +130,7 @@ function NavigationContent({
             height: 8,
             flexShrink: 0,
             borderRadius: "50%",
-            bgcolor: "error.main",
+            bgcolor: webTokens.navigation.notification,
           }}
         />
       ) : null}
@@ -148,10 +157,10 @@ function NavigationContent({
             display: "grid",
             placeItems: "center",
             border: "1px solid",
-            borderColor: "divider",
+            borderColor: webTokens.navigation.divider,
             borderRadius: 1,
-            bgcolor: "background.default",
-            color: "primary.main",
+            bgcolor: webTokens.navigation.hover,
+            color: "inherit",
           }}
         >
           <LandscapeRounded fontSize="small" />
@@ -160,7 +169,7 @@ function NavigationContent({
           <Typography variant="body2" fontWeight={600}>
             Turismo Vinculación
           </Typography>
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color={webTokens.navigation.secondaryText}>
             Panel institucional
           </Typography>
         </Box>

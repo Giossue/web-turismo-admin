@@ -22,7 +22,7 @@ export const webTokens = {
         default: "#f5f8f7",
         paper: "#ffffff",
         subtle: "#e8f0ee",
-        sidebar: "#e5f0e9",
+        sidebar: "#123b2a",
       },
       status: {
         error: {
@@ -66,7 +66,7 @@ export const webTokens = {
         default: "#080808",
         paper: "#151515",
         subtle: "#202020",
-        sidebar: "#14251b",
+        sidebar: "#0c2218",
       },
       text: {
         primary: "#f5f5f5",
@@ -100,6 +100,14 @@ export const webTokens = {
         },
       },
     },
+  },
+  navigation: {
+    text: "#f8faf9",
+    secondaryText: "#c2d7cb",
+    divider: "rgba(255, 255, 255, 0.14)",
+    hover: "rgba(255, 255, 255, 0.08)",
+    selected: "rgba(255, 255, 255, 0.12)",
+    notification: "#f87171",
   },
   spacing: {
     page: { xs: 2, md: 4 },
