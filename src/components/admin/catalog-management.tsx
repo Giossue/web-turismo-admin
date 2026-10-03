@@ -120,11 +120,30 @@ const CATALOG_CONFIG: Record<AdminCatalogKey, CatalogConfig> = {
 
 type CatalogTabKey = "ACCESSIBILITY" | "ACTIVITY" | "FACILITY" | "ESTABLISHMENTS";
 
-const CATALOG_TABS: { key: CatalogTabKey; label: string }[] = [
-  { key: "ACCESSIBILITY", label: CATALOG_CONFIG.ACCESSIBILITY.label },
-  { key: "ACTIVITY", label: CATALOG_CONFIG.ACTIVITY.label },
-  { key: "FACILITY", label: CATALOG_CONFIG.FACILITY.label },
-  { key: "ESTABLISHMENTS", label: "Tipos y categorías" },
+const CATALOG_TABS: { key: CatalogTabKey; label: string; description: string }[] = [
+  {
+    key: "ACCESSIBILITY",
+    label: CATALOG_CONFIG.ACCESSIBILITY.label,
+    description:
+      "Condiciones de accesibilidad para personas con discapacidad o movilidad reducida que se registran en las fichas.",
+  },
+  {
+    key: "ACTIVITY",
+    label: CATALOG_CONFIG.ACTIVITY.label,
+    description: "Actividades que se realizan en centros y atractivos turísticos.",
+  },
+  {
+    key: "FACILITY",
+    label: CATALOG_CONFIG.FACILITY.label,
+    description:
+      "Servicios e instalaciones disponibles en los centros, como baños, parqueadero o información turística.",
+  },
+  {
+    key: "ESTABLISHMENTS",
+    label: "Tipos y categorías",
+    description:
+      "Tipos de establecimiento del catastro turístico y las categorías que puede tener cada uno.",
+  },
 ];
 
 const defaultCategoryIcon = "shop-supermarket";
@@ -534,11 +553,9 @@ export function CatalogManagement({
         aria-labelledby={`catalog-tab-${selected}`}
         spacing={webTokens.spacing.control}
       >
-        {selected === "ACTIVITY" ? (
-          <Typography variant="body2" color="text.secondary">
-            Actividades que se realizan en centros y atractivos turísticos.
-          </Typography>
-        ) : null}
+        <Typography variant="body2" color="text.secondary">
+          {CATALOG_TABS.find(({ key }) => key === selected)?.description}
+        </Typography>
 
         <AdminDataGrid
           key={visibleCatalog}
