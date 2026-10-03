@@ -10,6 +10,7 @@ import {
   getAdminCenterMedia,
   getAdminCenterSections,
   getAdminCenters,
+  getAdminEstablishmentMedia,
   getAdminEstablishments,
   getAdminNavigationSummary,
   getAdminOpinionHistory,
@@ -35,6 +36,8 @@ export const adminKeys = {
   centerSections: (code: string | null) =>
     [...adminKeys.center(code), "sections"] as const,
   media: (code: string | null) => [...adminKeys.all, "media", code] as const,
+  establishmentMedia: (id: number | null) =>
+    [...adminKeys.all, "establishment-media", id] as const,
   allEstablishments: () => [...adminKeys.all, "establishments"] as const,
   establishments: (filters: AdminEstablishmentsOptions) =>
     [...adminKeys.allEstablishments(), filters] as const,
@@ -73,6 +76,15 @@ export function centerMediaQueryOptions(token: string, code: string | null) {
   return queryOptions({
     queryKey: adminKeys.media(code),
     queryFn: code ? () => getAdminCenterMedia(token, code) : skipToken,
+    enabled: token.length > 0,
+    staleTime: 5_000,
+  });
+}
+
+export function establishmentMediaQueryOptions(token: string, id: number | null) {
+  return queryOptions({
+    queryKey: adminKeys.establishmentMedia(id),
+    queryFn: id ? () => getAdminEstablishmentMedia(token, id) : skipToken,
     enabled: token.length > 0,
     staleTime: 5_000,
   });

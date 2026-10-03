@@ -29,16 +29,33 @@ import { SectionHeader } from "@/components/ui/section-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
   deleteAdminCenterMedia,
+  deleteAdminEstablishmentMedia,
   uploadAdminCenterMedia,
+  uploadAdminEstablishmentMedia,
+  type AdminEstablishmentMediaItem,
   type AdminMediaItem,
 } from "@/lib/admin-api";
 import { mediaStateLabel, mediaStateTone } from "@/lib/admin-labels";
-import { adminKeys, centerMediaQueryOptions } from "@/lib/admin-queries";
+import {
+  adminKeys,
+  centerMediaQueryOptions,
+  establishmentMediaQueryOptions,
+} from "@/lib/admin-queries";
 import { publicApiUrl } from "@/lib/config";
 import { errorMessage } from "@/lib/errors";
 import { webTokens } from "@/theme/tokens";
 
 type MediaTypeCode = AdminMediaItem["typeCode"];
+
+/** Elemento listado: los establecimientos solo admiten fotografías sin tipo. */
+type MediaListItem = AdminEstablishmentMediaItem &
+  Partial<Pick<AdminMediaItem, "typeCode" | "typeName">>;
+
+/** Dueño de los archivos: la ficha de un centro o un establecimiento del catastro. */
+export type MediaTarget =
+  { kind: "center"; code: string | null } | { kind: "establishment"; id: number | null };
+
+const PHOTO_ACCEPT = "image/jpeg,image/png,image/webp";
 
 const IMAGE_OR_PDF = "image/jpeg,image/png,image/webp,application/pdf";
 const PDF_OR_IMAGE = "application/pdf,image/jpeg,image/png,image/webp";
@@ -107,13 +124,13 @@ function mediaTypeOption(typeCode: MediaTypeCode): MediaTypeOption {
 
 export function MediaManager({
   token,
-  code,
+  target,
   canEdit,
   onNotice,
   onError,
 }: {
   token: string;
-  code: string | null;
+  target: MediaTarget;
   canEdit: boolean;
   onNotice: (message: string) => void;
   onError: (message: string | null) => void;
@@ -124,8 +141,30 @@ export function MediaManager({
   const [sourceAuthor, setSourceAuthor] = useState("");
   const [typeCode, setTypeCode] = useState<MediaTypeCode>("FOTOGRAFIA");
   const [working, setWorking] = useState(false);
-  const [pendingRemoval, setPendingRemoval] = useState<AdminMediaItem | null>(null);
-  const mediaQuery = useQuery(centerMediaQueryOptions(token, code));
+  const [pendingRemoval, setPendingRemoval] = useState<MediaListItem | null>(null);
+  const photosOnly = target.kind === "establishment";
+  const ownerId = target.kind === "center" ? target.code : target.id;
+  const mediaKey =
+    target.kind === "center"
+      ? adminKeys.media(target.code)
+      : adminKeys.establishmentMedia(target.id);
+  const centerQuery = useQuery({
+    ...centerMediaQueryOptions(token, target.kind === "center" ? target.code : null),
+    enabled: token.length > 0 && target.kind === "center",
+  });
+  const establishmentQuery = useQuery({
+    ...establishmentMediaQueryOptions(
+      token,
+      target.kind === "establishment" ? target.id : null,
+    ),
+    enabled: token.length > 0 && target.kind === "establishment",
+  });
+  const mediaQuery: {
+    data?: { items: MediaListItem[] };
+    error: Error | null;
+    isLoading: boolean;
+  } = target.kind === "center" ? centerQuery : establishmentQuery;
+  const effectiveType: MediaTypeCode = photosOnly ? "FOTOGRAFIA" : typeCode;
 
   useEffect(() => {
     if (mediaQuery.error) {
@@ -134,39 +173,61 @@ export function MediaManager({
   }, [mediaQuery.error, onError]);
 
   async function upload(file: File) {
-    if (!code) return;
+    if (!ownerId) return;
     setWorking(true);
     onError(null);
     try {
-      await uploadAdminCenterMedia(token, code, file, {
-        typeCode,
-        description,
-        sourceAuthor,
-      });
+      if (target.kind === "center" && target.code) {
+        await uploadAdminCenterMedia(token, target.code, file, {
+          typeCode,
+          description,
+          sourceAuthor,
+        });
+      } else if (target.kind === "establishment" && target.id) {
+        await uploadAdminEstablishmentMedia(token, target.id, file, {
+          description,
+          sourceAuthor,
+        });
+      }
       setDescription("");
       setSourceAuthor("");
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: adminKeys.media(code) }),
+        queryClient.invalidateQueries({ queryKey: mediaKey }),
         queryClient.invalidateQueries({ queryKey: adminKeys.allNavigationSummaries() }),
       ]);
-      onNotice("Archivo cargado. Quedará pendiente hasta publicar la ficha.");
+      onNotice(
+        photosOnly
+          ? "Fotografía cargada."
+          : "Archivo cargado. Quedará pendiente hasta publicar la ficha.",
+      );
     } catch (cause) {
-      onError(errorMessage(cause, "No se pudo cargar el archivo multimedia."));
+      onError(
+        errorMessage(
+          cause,
+          photosOnly
+            ? "No se pudo cargar la fotografía."
+            : "No se pudo cargar el archivo multimedia.",
+        ),
+      );
     } finally {
       setWorking(false);
       if (fileInput.current) fileInput.current.value = "";
     }
   }
 
-  async function remove(item: AdminMediaItem) {
-    if (!code) return;
-    const messages = mediaTypeOption(item.typeCode);
+  async function remove(item: MediaListItem) {
+    if (!ownerId) return;
+    const messages = mediaTypeOption(item.typeCode ?? "FOTOGRAFIA");
     setWorking(true);
     onError(null);
     try {
-      await deleteAdminCenterMedia(token, code, item.id);
+      if (target.kind === "center" && target.code) {
+        await deleteAdminCenterMedia(token, target.code, item.id);
+      } else if (target.kind === "establishment" && target.id) {
+        await deleteAdminEstablishmentMedia(token, target.id, item.id);
+      }
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: adminKeys.media(code) }),
+        queryClient.invalidateQueries({ queryKey: mediaKey }),
         queryClient.invalidateQueries({ queryKey: adminKeys.allNavigationSummaries() }),
       ]);
       onNotice(messages.removed);
@@ -184,42 +245,54 @@ export function MediaManager({
       <Stack spacing={webTokens.spacing.control}>
         <SectionHeader
           icon={<PhotoLibraryRounded />}
-          title="Archivos institucionales"
-          description="Sube fotografías, multimedia o anexos documentales. Las imágenes tienen límite de 10 MB y el resto de archivos de 50 MB."
+          title={
+            photosOnly ? "Fotografías del establecimiento" : "Archivos institucionales"
+          }
+          description={
+            photosOnly
+              ? "Sube fotografías JPEG, PNG o WebP de hasta 10 MB."
+              : "Sube fotografías, multimedia o anexos documentales. Las imágenes tienen límite de 10 MB y el resto de archivos de 50 MB."
+          }
         />
         <Stack
           direction={{ xs: "column", md: "row" }}
           spacing={webTokens.spacing.control}
         >
-          <SelectField
-            id="media-type"
-            label="Tipo de archivo"
-            value={typeCode}
-            options={MEDIA_TYPE_OPTIONS}
-            onChange={(value) => {
-              if (value) setTypeCode(value);
-            }}
-            disabled={!canEdit || !code || working}
-          />
+          {photosOnly ? null : (
+            <SelectField
+              id="media-type"
+              label="Tipo de archivo"
+              value={typeCode}
+              options={MEDIA_TYPE_OPTIONS}
+              onChange={(value) => {
+                if (value) setTypeCode(value);
+              }}
+              disabled={!canEdit || !ownerId || working}
+            />
+          )}
           <TextField
-            label="Descripción del archivo"
+            label={
+              photosOnly ? "Descripción de la fotografía" : "Descripción del archivo"
+            }
+            slotProps={{ htmlInput: { maxLength: 2000 } }}
             value={description}
             onChange={(event) => setDescription(event.target.value)}
-            disabled={!canEdit || !code || working}
+            disabled={!canEdit || !ownerId || working}
             fullWidth
           />
           <TextField
             label="Autor o fuente"
+            slotProps={{ htmlInput: { maxLength: 250 } }}
             value={sourceAuthor}
             onChange={(event) => setSourceAuthor(event.target.value)}
-            disabled={!canEdit || !code || working}
+            disabled={!canEdit || !ownerId || working}
             fullWidth
           />
           <input
             ref={fileInput}
             hidden
             type="file"
-            accept={mediaTypeOption(typeCode).accept}
+            accept={photosOnly ? PHOTO_ACCEPT : mediaTypeOption(effectiveType).accept}
             onChange={(event) => {
               const file = event.target.files?.[0];
               if (file) void upload(file);
@@ -236,10 +309,14 @@ export function MediaManager({
               )
             }
             onClick={() => fileInput.current?.click()}
-            disabled={!canEdit || !code || working}
+            disabled={!canEdit || !ownerId || working}
             sx={{ minWidth: 180 }}
           >
-            {working ? "Procesando…" : "Seleccionar archivo"}
+            {working
+              ? "Procesando…"
+              : photosOnly
+                ? "Seleccionar fotografía"
+                : "Seleccionar archivo"}
           </Button>
         </Stack>
         {mediaQuery.error ? (
@@ -250,7 +327,11 @@ export function MediaManager({
         {!mediaQuery.isLoading && !mediaQuery.error && items.length === 0 ? (
           <ContentState
             status="empty"
-            message="Aún no hay archivos multimedia cargados."
+            message={
+              photosOnly
+                ? "Aún no hay fotografías cargadas."
+                : "Aún no hay archivos multimedia cargados."
+            }
           />
         ) : null}
         {items.map((item) => (
@@ -260,7 +341,7 @@ export function MediaManager({
               spacing={webTokens.spacing.control}
               alignItems="center"
             >
-              {item.downloadUrl && item.typeCode === "FOTOGRAFIA" ? (
+              {item.downloadUrl && (item.typeCode ?? "FOTOGRAFIA") === "FOTOGRAFIA" ? (
                 <Box
                   component="img"
                   src={`${publicApiUrl}${item.downloadUrl}`}
@@ -276,7 +357,8 @@ export function MediaManager({
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography noWrap>{item.originalName}</Typography>
                 <Typography variant="caption" color="text.secondary">
-                  {item.typeName} · {item.description || "Sin descripción"}
+                  {item.typeName ? `${item.typeName} · ` : ""}
+                  {item.description || "Sin descripción"}
                   {item.sourceAuthor ? ` · ${item.sourceAuthor}` : ""}
                 </Typography>
               </Box>
@@ -284,7 +366,7 @@ export function MediaManager({
                 label={mediaStateLabel(item.state)}
                 tone={mediaStateTone(item.state)}
               />
-              {item.downloadUrl && item.typeCode !== "FOTOGRAFIA" ? (
+              {item.downloadUrl && (item.typeCode ?? "FOTOGRAFIA") !== "FOTOGRAFIA" ? (
                 <Button
                   component="a"
                   href={`${publicApiUrl}${item.downloadUrl}`}

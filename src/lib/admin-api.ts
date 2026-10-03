@@ -170,6 +170,12 @@ export type AdminMediaItem = {
   downloadUrl: string | null;
 };
 
+/** Fotografía de un establecimiento del catastro. */
+export type AdminEstablishmentMediaItem = Omit<
+  AdminMediaItem,
+  "name" | "typeCode" | "typeName"
+>;
+
 export type CatalogOption = {
   id: number;
   code?: string;
@@ -739,6 +745,21 @@ export async function uploadAdminCenterMedia(
     sourceAuthor?: string;
   } = {},
 ) {
+  return post<AdminMediaItem>(
+    centerPath(code, "media"),
+    token,
+    mediaFormData(file, metadata),
+  );
+}
+
+export async function deleteAdminCenterMedia(token: string, code: string, id: number) {
+  return del<{ id: number; state: "ELIMINADO" }>(centerPath(code, `media/${id}`), token);
+}
+
+function mediaFormData(
+  file: File,
+  metadata: { typeCode?: string; description?: string; sourceAuthor?: string },
+) {
   const body = new FormData();
   if (metadata.typeCode) body.append("typeCode", metadata.typeCode);
   if (metadata.description?.trim())
@@ -746,11 +767,38 @@ export async function uploadAdminCenterMedia(
   if (metadata.sourceAuthor?.trim())
     body.append("sourceAuthor", metadata.sourceAuthor.trim());
   body.append("file", file, file.name);
-  return post<AdminMediaItem>(centerPath(code, "media"), token, body);
+  return body;
 }
 
-export async function deleteAdminCenterMedia(token: string, code: string, id: number) {
-  return del<{ id: number; state: "ELIMINADO" }>(centerPath(code, `media/${id}`), token);
+export async function getAdminEstablishmentMedia(token: string, id: number) {
+  return get<{ items: AdminEstablishmentMediaItem[] }>(
+    `/admin/establishments/${id}/media`,
+    token,
+  );
+}
+
+export async function uploadAdminEstablishmentMedia(
+  token: string,
+  id: number,
+  file: File,
+  metadata: { description?: string; sourceAuthor?: string } = {},
+) {
+  return post<AdminEstablishmentMediaItem>(
+    `/admin/establishments/${id}/media`,
+    token,
+    mediaFormData(file, metadata),
+  );
+}
+
+export async function deleteAdminEstablishmentMedia(
+  token: string,
+  id: number,
+  mediaId: number,
+) {
+  return del<{ id: number; state: "ELIMINADO" }>(
+    `/admin/establishments/${id}/media/${mediaId}`,
+    token,
+  );
 }
 
 /**

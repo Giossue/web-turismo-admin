@@ -288,7 +288,7 @@ export function CenterEditor({
       {activeSectionCode === "anexos" ? (
         <MediaManager
           token={token}
-          code={code}
+          target={{ kind: "center", code }}
           canEdit={canEdit}
           onNotice={onNotice}
           onError={onError}

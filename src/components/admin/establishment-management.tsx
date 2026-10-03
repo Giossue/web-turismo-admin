@@ -29,6 +29,7 @@ import { Controller, useForm, useWatch } from "react-hook-form";
 import { AdminDataGrid } from "@/components/ui/admin-data-grid";
 import { ADMIN_TABLE_PAGE_SIZE } from "@/components/ui/admin-table";
 import { CoordinateFieldset } from "@/components/admin/coordinate-fieldset";
+import { MediaManager } from "@/components/admin/media-manager";
 import { RecordActionsMenu } from "@/components/admin/record-actions-menu";
 import { pageAfterRemoval } from "@/components/admin/shell/pagination";
 import {
@@ -631,6 +632,20 @@ export const EstablishmentManagement = forwardRef<
               />
             ) : null}
           </Stack>
+          {editing ? (
+            <Stack sx={{ mt: webTokens.spacing.control }}>
+              <MediaManager
+                token={token}
+                target={{ kind: "establishment", id: editing.id }}
+                canEdit={
+                  canManageStatus ||
+                  ["BORRADOR", "RECHAZADO"].includes(editing.reviewStatus)
+                }
+                onNotice={onNotice}
+                onError={onError}
+              />
+            </Stack>
+          ) : null}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDialogOpen(false)} disabled={saveMutation.isPending}>
