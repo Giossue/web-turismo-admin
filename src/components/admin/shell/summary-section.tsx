@@ -29,7 +29,7 @@ export function SummarySection({ token }: { token: string }) {
       <Box
         sx={{
           display: "grid",
-          gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", lg: "repeat(4, 1fr)" },
+          gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", lg: "repeat(3, 1fr)" },
           gap: webTokens.spacing.control,
         }}
       >
@@ -43,11 +43,6 @@ export function SummarySection({ token }: { token: string }) {
           value={metric(summary?.pendingReview)}
           label="En revisión"
           color="warning.main"
-        />
-        <MetricCard
-          value={metric(summary?.inactive)}
-          label="Inactivos"
-          color="text.secondary"
         />
       </Box>
     </Stack>

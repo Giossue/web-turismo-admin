@@ -25,9 +25,7 @@ describe("flujo de centros con tres estados", () => {
   test("filtra por estado editorial sin restringir por activación", async () => {
     const page = { items: [], total: 0, limit: 25, offset: 0 };
     const fetchMock = mockApi(page);
-    expect(
-      await getAdminCenters("token", { status: "PUBLICADO" }),
-    ).toEqual(page);
+    expect(await getAdminCenters("token", { status: "PUBLICADO" })).toEqual(page);
     expect(fetchMock.mock.calls[0]?.[0]).toBe(
       apiEndpoint("/admin/centers?status=PUBLICADO&limit=25&offset=0"),
     );
