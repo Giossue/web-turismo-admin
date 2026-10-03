@@ -26,7 +26,6 @@ describe("parseAdminNavState", () => {
       editorCode: null,
       editorSession: 0,
       centerStatus: "ALL",
-      centerActive: "ALL",
       queryDraft: "",
       centersPage: 0,
       reviewCentersPage: 0,
@@ -43,7 +42,7 @@ describe("parseAdminNavState", () => {
     expect(state.reviewCentersPage).toBe(0);
   });
 
-  test("ofrece tres estados y separa el filtro de activación", () => {
+  test("ofrece tres estados e ignora el antiguo filtro de activación de la URL", () => {
     expect(CENTER_STATUS_FILTER_OPTIONS.map(({ value }) => value)).toEqual([
       "ALL",
       "BORRADOR",
@@ -52,12 +51,11 @@ describe("parseAdminNavState", () => {
     ]);
     const state = parse("section=centers&status=PUBLICADO&active=false&page=2");
     expect(state.centerStatus).toBe("PUBLICADO");
-    expect(state.centerActive).toBe("INACTIVE");
     expect(serializeAdminNavState(state, "centers", "")).toBe(
-      "?section=centers&status=PUBLICADO&active=false&page=2",
+      "?section=centers&status=PUBLICADO&page=2",
     );
-    expect(parse("section=centers&active=true").centerActive).toBe("ACTIVE");
-    expect(parse("section=centers&active=otra").centerActive).toBe("ALL");
+    expect(parse("section=centers&active=true")).toEqual(parse("section=centers"));
+    expect(parse("section=centers&active=otra")).toEqual(parse("section=centers"));
     expect(serializeAdminNavState(state, "review", "")).toBe("?section=review");
   });
 
@@ -173,13 +171,6 @@ describe("adminNavReducer", () => {
     expect(
       adminNavReducer(base, { type: "setCenterStatus", status: "BORRADOR" }).centersPage,
     ).toBe(0);
-    const inactive = adminNavReducer(base, {
-      type: "setCenterActive",
-      active: "INACTIVE",
-    });
-    expect(inactive.centersPage).toBe(0);
-    expect(inactive.centerStatus).toBe("PUBLICADO");
-    expect(inactive.centerActive).toBe("INACTIVE");
     expect(
       adminNavReducer(base, { type: "setQueryDraft", query: "lago" }).centersPage,
     ).toBe(0);

@@ -7,7 +7,7 @@ import { CenterReviewDiff } from "@/components/admin/center-review-diff";
 import { FlatSurface } from "@/components/ui/flat-surface";
 import { SectionHeader } from "@/components/ui/section-header";
 import type { AdminCatalogs, AdminCenterDetail } from "@/lib/admin-api";
-import { activeLabel, centerStatusLabel } from "@/lib/admin-labels";
+import { centerStatusLabel } from "@/lib/admin-labels";
 import { centerSectionDefinitions } from "@/lib/center-sections/definitions";
 import { findCatalogOption } from "@/lib/values";
 import { webTokens } from "@/theme/tokens";
@@ -46,7 +46,6 @@ export function CenterSummaryStep({
     ["Parroquia", findCatalogName(catalogs?.parishes, draft?.parishId)],
     ["Coordenadas", formatCoordinates(draft?.latitude, draft?.longitude)],
     ["Estado", detail ? centerStatusLabel(detail.status) : PENDING],
-    ["Activación", detail ? activeLabel(detail.active) : PENDING],
   ];
 
   return (

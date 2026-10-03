@@ -252,7 +252,6 @@ export type AdminCenterSections = {
 
 export type AdminCentersOptions = {
   status?: string;
-  active?: boolean;
   q?: string;
   limit?: number;
   offset?: number;
@@ -511,7 +510,6 @@ export function deleteAdminCatalog(token: string, catalog: AdminCatalogKey, id: 
 export async function getAdminCenters(token: string, options: AdminCentersOptions = {}) {
   const query = toQueryString({
     status: options.status === "ALL" ? undefined : options.status,
-    active: options.active,
     q: options.q,
     limit: options.limit ?? 25,
     offset: options.offset ?? 0,
@@ -707,14 +705,6 @@ export async function reviewAdminCenter(
   observation?: string,
 ) {
   return patch<AdminCenter>(centerPath(code, "review"), token, { action, observation });
-}
-
-export async function setAdminCenterActive(token: string, code: string, active: boolean) {
-  return authorizedRequest<AdminCenterDetail>(
-    apiEndpoint(centerPath(code, active ? "reactivate" : "deactivate")),
-    token,
-    { method: "POST" },
-  );
 }
 
 export async function getAdminCenterMedia(token: string, code: string) {

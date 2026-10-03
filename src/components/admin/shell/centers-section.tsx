@@ -20,21 +20,11 @@ import {
 import { SelectField } from "@/components/ui/form/select-field";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { deleteAdminCenter, type AdminCenter, type ReviewAction } from "@/lib/admin-api";
-import {
-  activeLabel,
-  activeTone,
-  centerStatusLabel,
-  centerStatusTone,
-} from "@/lib/admin-labels";
+import { centerStatusLabel, centerStatusTone } from "@/lib/admin-labels";
 import { adminKeys, centersPageQueryOptions } from "@/lib/admin-queries";
 import { errorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
-import {
-  CENTER_ACTIVE_FILTER_OPTIONS,
-  CENTER_STATUS_FILTER_OPTIONS,
-  type CenterActiveFilter,
-  type CenterStatusFilter,
-} from "./admin-nav-state";
+import { CENTER_STATUS_FILTER_OPTIONS, type CenterStatusFilter } from "./admin-nav-state";
 
 const pageSize = ADMIN_TABLE_PAGE_SIZE;
 const getCenterRowId = (center: AdminCenter) => center.code;
@@ -42,20 +32,17 @@ const getCenterRowId = (center: AdminCenter) => center.code;
 export function CentersSection({
   token,
   status,
-  active,
   query,
   appliedQuery,
   page,
   onQueryChange,
   onStatusChange,
-  onActiveChange,
   onPageChange,
   onOpen,
   canDelete,
 }: {
   token: string;
   status: CenterStatusFilter;
-  active: CenterActiveFilter;
   /** Texto del campo de búsqueda. */
   query: string;
   /** Búsqueda ya aplicada a la consulta (tras el retardo). */
@@ -63,7 +50,6 @@ export function CentersSection({
   page: number;
   onQueryChange: (value: string) => void;
   onStatusChange: (value: CenterStatusFilter) => void;
-  onActiveChange: (value: CenterActiveFilter) => void;
   onPageChange: (page: number) => void;
   onOpen: (code: string) => void;
   canDelete: boolean;
@@ -71,7 +57,6 @@ export function CentersSection({
   const centersQuery = useQuery(
     centersPageQueryOptions(token, {
       status,
-      active: active === "ALL" ? undefined : active === "ACTIVE",
       q: appliedQuery,
       limit: pageSize,
       offset: page * pageSize,
@@ -108,15 +93,6 @@ export function CentersSection({
             label={centerStatusLabel(row.status)}
             tone={centerStatusTone(row.status.code)}
           />
-        ),
-      },
-      {
-        field: "active",
-        headerName: "Activación",
-        width: 125,
-        filterable: false,
-        renderCell: ({ row }) => (
-          <StatusBadge label={activeLabel(row.active)} tone={activeTone(row.active)} />
         ),
       },
       {
@@ -179,7 +155,7 @@ export function CentersSection({
     ],
     [onOpen, canDelete, token, page, onPageChange, itemsOnPage],
   );
-  const filterCount = Number(status !== "ALL") + Number(active !== "ALL");
+  const filterCount = Number(status !== "ALL");
 
   return (
     <AdminDataGrid
@@ -205,10 +181,7 @@ export function CentersSection({
         <AdminGridFilterPanel
           width={360}
           activeCount={filterCount}
-          onClear={() => {
-            onStatusChange("ALL");
-            onActiveChange("ALL");
-          }}
+          onClear={() => onStatusChange("ALL")}
         >
           <SelectField
             id="center-status"
@@ -216,13 +189,6 @@ export function CentersSection({
             value={status}
             options={CENTER_STATUS_FILTER_OPTIONS}
             onChange={(value) => onStatusChange(value || "ALL")}
-          />
-          <SelectField
-            id="center-active"
-            label="Activación"
-            value={active}
-            options={CENTER_ACTIVE_FILTER_OPTIONS}
-            onChange={(value) => onActiveChange(value || "ALL")}
           />
         </AdminGridFilterPanel>
       }

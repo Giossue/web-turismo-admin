@@ -9,14 +9,6 @@ export const CENTER_STATUS_FILTER_OPTIONS = [
 
 export type CenterStatusFilter = (typeof CENTER_STATUS_FILTER_OPTIONS)[number]["value"];
 
-export const CENTER_ACTIVE_FILTER_OPTIONS = [
-  { value: "ALL", label: "Todas" },
-  { value: "ACTIVE", label: "Activas" },
-  { value: "INACTIVE", label: "Inactivas" },
-] as const;
-
-export type CenterActiveFilter = (typeof CENTER_ACTIVE_FILTER_OPTIONS)[number]["value"];
-
 /** Longitud mínima de una búsqueda de fichas. */
 const MIN_CENTER_QUERY_LENGTH = 2;
 
@@ -31,7 +23,6 @@ export type AdminNavState = {
   /** Aumenta al abrir el editor: es la `key` que reinicia su estado local. */
   editorSession: number;
   centerStatus: CenterStatusFilter;
-  centerActive: CenterActiveFilter;
   /** Texto escrito en la búsqueda de fichas (se consulta con retardo). */
   queryDraft: string;
   centersPage: number;
@@ -44,7 +35,6 @@ export type AdminNavAction =
   | { type: "openEditor"; code: string | null }
   | { type: "editorSaved"; code: string; session: number }
   | { type: "setCenterStatus"; status: CenterStatusFilter }
-  | { type: "setCenterActive"; active: CenterActiveFilter }
   | { type: "setQueryDraft"; query: string }
   | { type: "setCentersPage"; page: number }
   | { type: "setReviewCentersPage"; page: number }
@@ -63,7 +53,6 @@ export function parseAdminNavState(params: SearchParamsLike): AdminNavState {
   const fromUrl = params.get("section");
   const section = isAdminSection(fromUrl) ? fromUrl : "summary";
   const status = params.get("status");
-  const active = params.get("active");
   const query = params.get("q")?.trim() ?? "";
   const page = parsePage(params.get("page"));
   return {
@@ -71,7 +60,6 @@ export function parseAdminNavState(params: SearchParamsLike): AdminNavState {
     editorCode: section === "editor" ? params.get("code") || null : null,
     editorSession: 0,
     centerStatus: isCenterStatusFilter(status) ? status : "ALL",
-    centerActive: active === "true" ? "ACTIVE" : active === "false" ? "INACTIVE" : "ALL",
     queryDraft: query.length >= MIN_CENTER_QUERY_LENGTH ? query : "",
     centersPage: section === "centers" || section === "editor" ? page : 0,
     reviewCentersPage: section === "review" ? page : 0,
@@ -94,9 +82,6 @@ export function serializeAdminNavState(
   params.set("section", section);
   if (section === "centers" && state.centerStatus !== "ALL") {
     params.set("status", state.centerStatus);
-  }
-  if (section === "centers" && state.centerActive !== "ALL") {
-    params.set("active", String(state.centerActive === "ACTIVE"));
   }
   if (section === "centers" && centerQuery) params.set("q", centerQuery);
   if (section === "editor" && state.editorCode) params.set("code", state.editorCode);
@@ -150,8 +135,6 @@ export function adminNavReducer(
         : { ...state, editorCode: action.code };
     case "setCenterStatus":
       return { ...state, centerStatus: action.status, centersPage: 0 };
-    case "setCenterActive":
-      return { ...state, centerActive: action.active, centersPage: 0 };
     case "setQueryDraft":
       return { ...state, queryDraft: action.query, centersPage: 0 };
     case "setCentersPage":

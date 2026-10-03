@@ -1,10 +1,6 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
 
-import {
-  getAdminCenters,
-  reviewAdminCenter,
-  setAdminCenterActive,
-} from "@/lib/admin-api";
+import { getAdminCenters, reviewAdminCenter } from "@/lib/admin-api";
 import {
   centerStatusLabel,
   centerStatusTone,
@@ -25,32 +21,17 @@ function mockApi(data: unknown) {
   return fetchMock;
 }
 
-describe("flujo de centros independiente de activación", () => {
-  test("filtra por estado editorial y conserva active=false en la API", async () => {
+describe("flujo de centros con tres estados", () => {
+  test("filtra por estado editorial sin restringir por activación", async () => {
     const page = { items: [], total: 0, limit: 25, offset: 0 };
     const fetchMock = mockApi(page);
     expect(
-      await getAdminCenters("token", { status: "PUBLICADO", active: false }),
+      await getAdminCenters("token", { status: "PUBLICADO" }),
     ).toEqual(page);
     expect(fetchMock.mock.calls[0]?.[0]).toBe(
-      apiEndpoint("/admin/centers?status=PUBLICADO&active=false&limit=25&offset=0"),
+      apiEndpoint("/admin/centers?status=PUBLICADO&limit=25&offset=0"),
     );
   });
-
-  for (const active of [false, true]) {
-    test(`${active ? "activa" : "desactiva"} sin enviar un estado editorial`, async () => {
-      const detail = { code: "CT/1", active, status: { code: "PUBLICADO" } };
-      const fetchMock = mockApi(detail);
-      expect(await setAdminCenterActive("token", "CT/1", active)).toMatchObject(detail);
-      const [url, init] = fetchMock.mock.calls[0] as unknown as Parameters<typeof fetch>;
-      expect(url).toBe(
-        apiEndpoint(`/admin/centers/CT%2F1/${active ? "reactivate" : "deactivate"}`),
-      );
-      expect(init?.method).toBe("POST");
-      expect(init?.body).toBeUndefined();
-      expect(new Headers(init?.headers).get("Authorization")).toBe("Bearer token");
-    });
-  }
 
   test("aprobar envía una sola decisión y devolver conserva el motivo", async () => {
     const fetchMock = mockApi({ code: "CT1" });

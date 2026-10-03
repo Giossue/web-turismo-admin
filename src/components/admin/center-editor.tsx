@@ -9,7 +9,6 @@ import { FormProvider, useForm } from "react-hook-form";
 
 import { CenterFormPanel } from "@/components/admin/center-editor/center-form-panels";
 import { CenterSummaryStep } from "@/components/admin/center-editor/center-summary-step";
-import { CenterVisibilityControl } from "@/components/admin/center-editor/center-visibility-control";
 import {
   CenterWizardNavigation,
   CenterWizardStepper,
@@ -48,7 +47,6 @@ const REQUIRED_FIELDS_MESSAGE = "Completa los campos obligatorios para continuar
 export function CenterEditor({
   token,
   code,
-  canManageVisibility,
   onClose,
   onSaved,
   onNotice,
@@ -56,7 +54,6 @@ export function CenterEditor({
 }: {
   token: string;
   code: string | null;
-  canManageVisibility: boolean;
   onClose: () => void;
   onSaved: (detail: AdminCenterDetail) => void;
   onNotice: (message: string) => void;
@@ -241,15 +238,6 @@ export function CenterEditor({
           ) : null,
         ]}
       />
-      {detail && canManageVisibility ? (
-        <CenterVisibilityControl
-          key={`${detail.code}:${detail.active}`}
-          active={detail.active}
-          working={centerSave.working}
-          applying={centerSave.activating}
-          onApply={centerSave.setActive}
-        />
-      ) : null}
       <input
         ref={importInputRef}
         type="file"

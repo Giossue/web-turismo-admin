@@ -9,7 +9,6 @@ import {
   effectiveCenterQuery,
   parseAdminNavState,
   serializeAdminNavState,
-  type CenterActiveFilter,
   type CenterStatusFilter,
 } from "./admin-nav-state";
 import { resolveSection, type AdminSection } from "./sections";
@@ -44,8 +43,6 @@ export function useAdminUrlState(isAdmin: boolean) {
         dispatch({ type: "editorSaved", code, session }),
       setCenterStatus: (status: CenterStatusFilter) =>
         dispatch({ type: "setCenterStatus", status }),
-      setCenterActive: (active: CenterActiveFilter) =>
-        dispatch({ type: "setCenterActive", active }),
       setQueryDraft: (query: string) => dispatch({ type: "setQueryDraft", query }),
       setCentersPage: (page: number) => dispatch({ type: "setCentersPage", page }),
       setReviewCentersPage: (page: number) =>

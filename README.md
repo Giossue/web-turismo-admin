@@ -94,11 +94,10 @@ Las fichas usan tres estados: Borrador, En revisión y Publicado. **Aprobar y pu
 publica la propuesta en una sola operación; **Devolver para corregir** la devuelve a
 Borrador y conserva el motivo. Ambas decisiones retiran la ficha de la cola de revisión.
 Si se edita un centro ya publicado, su versión anterior sigue visible en la app hasta
-aprobar y publicar los cambios o desactivar la ficha.
+aprobar y publicar los cambios.
 
-La activación es independiente del estado y tiene su propia columna y filtro. En el
-editor de centros, el administrador cambia **Ficha activa** y pulsa **Aplicar**: desactivar
-oculta la ficha, conserva su estado y es reversible; activar un borrador no lo publica.
+El inventario, los filtros, el editor y el resumen de centros muestran únicamente el
+estado editorial; no presentan controles ni indicadores de activación.
 En Catastro, el interruptor de **Editar** se aplica al pulsar **Guardar** y sigue siendo
 exclusivo del administrador; su flujo de revisión conserva el estado Rechazado.
 
