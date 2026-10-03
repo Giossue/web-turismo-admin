@@ -12,6 +12,9 @@ import {
 import { navigationSummaryQueryOptions } from "@/lib/admin-queries";
 import type { AdminSection } from "./sections";
 
+/** Solo estas secciones muestran el aviso en el sidebar. */
+const BADGE_SECTIONS: NotificationSection[] = ["review", "opinions"];
+
 export function useAdminNotifications(
   token: string,
   userId: number,
@@ -37,5 +40,8 @@ export function useAdminNotifications(
     store.markSeen(key, query.data[key]?.latestChange ?? null);
   }, [query.data, query.isSuccess, section, store]);
 
-  return navigationNotificationFlags(query.data, seen);
+  const flags = navigationNotificationFlags(query.data, seen);
+  return Object.fromEntries(
+    BADGE_SECTIONS.map((key) => [key, flags[key] ?? false]),
+  ) as Partial<Record<NotificationSection, boolean>>;
 }

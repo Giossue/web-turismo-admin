@@ -273,6 +273,7 @@ export type AdminCenterSections = {
 export type AdminCentersOptions = {
   status?: string;
   q?: string;
+  active?: boolean;
   limit?: number;
   offset?: number;
 };
@@ -531,6 +532,7 @@ export async function getAdminCenters(token: string, options: AdminCentersOption
   const query = toQueryString({
     status: options.status === "ALL" ? undefined : options.status,
     q: options.q,
+    active: options.active,
     limit: options.limit ?? 25,
     offset: options.offset ?? 0,
   });

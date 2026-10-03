@@ -8,7 +8,7 @@ import VisibilityRounded from "@mui/icons-material/VisibilityRounded";
 import { Stack, Typography } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import type { GridColDef } from "@mui/x-data-grid";
-import { useMemo } from "react";
+import { type ReactNode, useMemo } from "react";
 import { RecordActionsMenu } from "@/components/admin/record-actions-menu";
 import { pageAfterRemoval } from "./pagination";
 
@@ -222,6 +222,9 @@ export function CenterTable({
   review,
   onOpen,
   pagination,
+  search,
+  filterCount,
+  filterPanel,
 }: {
   centers: AdminCenter[];
   loading: boolean;
@@ -233,6 +236,9 @@ export function CenterTable({
   };
   onOpen: (code: string) => void;
   pagination: AdminTablePagination;
+  search?: { label: string; value: string; onChange: (value: string) => void };
+  filterCount?: number;
+  filterPanel?: ReactNode;
 }) {
   const hasReview = Boolean(review);
   const reviewPending = review?.pending ?? false;
@@ -347,6 +353,9 @@ export function CenterTable({
       error={error}
       emptyMessage="No hay fichas para mostrar."
       pagination={pagination}
+      search={search}
+      filterCount={filterCount}
+      filterPanel={filterPanel}
     />
   );
 }

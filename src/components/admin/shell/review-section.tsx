@@ -3,10 +3,20 @@
 import CheckRounded from "@mui/icons-material/CheckRounded";
 import CloseRounded from "@mui/icons-material/CloseRounded";
 import VisibilityRounded from "@mui/icons-material/VisibilityRounded";
-import { Box, Stack, Typography } from "@mui/material";
+import { Box, Stack, Tab, Tabs, Typography } from "@mui/material";
 import type { GridColDef } from "@mui/x-data-grid";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useRef, useState } from "react";
+import { type ReactNode, useMemo, useRef, useState } from "react";
+
+import { EstablishmentGridFilters } from "@/components/admin/establishment-grid-filters";
+import {
+  changeEstablishmentFilter,
+  emptyEstablishmentFilters,
+  establishmentFiltersToQuery,
+  type EstablishmentFilterField,
+} from "@/components/admin/establishment-grid-filter-state";
+import { AdminGridFilterPanel } from "@/components/ui/admin-grid-filter-panel";
+import { SelectField } from "@/components/ui/form/select-field";
 
 import { useAdminFeedback } from "@/components/admin/admin-feedback";
 import { RecordActionsMenu } from "@/components/admin/record-actions-menu";
@@ -19,7 +29,6 @@ import {
   type AdminTablePagination,
 } from "@/components/ui/admin-table";
 import { AdminDataGrid } from "@/components/ui/admin-data-grid";
-import { SectionHeader } from "@/components/ui/section-header";
 import {
   reviewAdminCenter,
   reviewAdminEstablishment,
@@ -29,10 +38,12 @@ import {
 } from "@/lib/admin-api";
 import {
   adminKeys,
+  catalogsQueryOptions,
   centersPageQueryOptions,
   establishmentsPageQueryOptions,
 } from "@/lib/admin-queries";
 import { errorMessage } from "@/lib/errors";
+import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { webTokens } from "@/theme/tokens";
 import { CenterTable } from "./centers-section";
 import { EstablishmentDetailDialog } from "./establishment-detail-dialog";
@@ -40,10 +51,33 @@ import { pageAfterRemoval } from "./pagination";
 
 const pageSize = ADMIN_TABLE_PAGE_SIZE;
 
+type GridSearch = { label: string; value: string; onChange: (value: string) => void };
+
 const REVIEW_HELPER_TEXT: Record<ReviewAction, string> = {
   APPROVE: "Opcional. Puedes dejar una nota para la auditoría.",
   REJECT: "Explica qué debe corregirse antes de volver a solicitar revisión.",
 };
+
+type ReviewTab = "centers" | "establishments";
+
+const REVIEW_TABS: { key: ReviewTab; label: string; description: string }[] = [
+  {
+    key: "centers",
+    label: "Fichas",
+    description: "Fichas de centros turísticos enviadas a revisión antes de publicarse.",
+  },
+  {
+    key: "establishments",
+    label: "Catastros",
+    description:
+      "Establecimientos enviados a revisión antes de publicarse en la aplicación.",
+  },
+];
+
+const ACTIVE_FILTER_OPTIONS = [
+  { value: "true", label: "Activas" },
+  { value: "false", label: "Inactivas" },
+];
 
 type ReviewVariables<T> = { item: T; action: ReviewAction; observation?: string };
 
@@ -65,20 +99,39 @@ export function ReviewSection({
 }) {
   const queryClient = useQueryClient();
   const { showError, showNotice } = useAdminFeedback();
+  const [tab, setTab] = useState<ReviewTab>("centers");
+  const [centerSearch, setCenterSearch] = useState("");
+  const [centerActive, setCenterActive] = useState("");
+  const [establishmentSearch, setEstablishmentSearch] = useState("");
+  const [establishmentFilters, setEstablishmentFilters] = useState({
+    ...emptyEstablishmentFilters,
+  });
+  const appliedCenterSearch = useDebouncedValue(centerSearch.trim());
+  const appliedEstablishmentSearch = useDebouncedValue(establishmentSearch.trim());
+  const { data: catalogs } = useQuery(catalogsQueryOptions(token));
   const centersQuery = useQuery(
     centersPageQueryOptions(token, {
       status: "REVIEW_QUEUE",
+      q: appliedCenterSearch || undefined,
+      active: centerActive === "" ? undefined : centerActive === "true",
       limit: pageSize,
       offset: centersPage * pageSize,
     }),
   );
   const establishmentsQuery = useQuery(
     establishmentsPageQueryOptions(token, {
+      ...establishmentFiltersToQuery(establishmentFilters),
+      q: appliedEstablishmentSearch || undefined,
       reviewStatus: "EN_REVISION",
       limit: pageSize,
       offset: establishmentsPage * pageSize,
     }),
   );
+  // Total sin filtros para el aviso de la pestaña.
+  const pendingEstablishmentsQuery = useQuery(
+    establishmentsPageQueryOptions(token, { reviewStatus: "EN_REVISION", limit: 1 }),
+  );
+  const hasPendingEstablishments = (pendingEstablishmentsQuery.data?.total ?? 0) > 0;
   const centers = centersQuery.data?.items ?? [];
   const establishments = establishmentsQuery.data?.items ?? [];
   const centerReview = useReviewIntent<AdminCenter>();
@@ -146,51 +199,153 @@ export function ReviewSection({
 
   return (
     <Stack spacing={webTokens.spacing.control}>
-      <CenterTable
-        centers={centers}
-        loading={centersQuery.isLoading}
-        error={
-          centersQuery.error
-            ? errorMessage(centersQuery.error, "No se pudieron cargar las fichas.")
-            : null
-        }
-        review={{ pending: centerMutation.isPending, onReview: centerReview.start }}
-        onOpen={onOpen}
-        pagination={{
-          page: centersPage,
-          total: centersQuery.data?.total ?? 0,
-          onPageChange: onCentersPageChange,
-        }}
-      />
-      <Box sx={{ pt: 2 }}>
-        <SectionHeader
-          title="Catastros en revisión"
-          description="Establecimientos enviados a revisión antes de publicarse en la aplicación."
-        />
-      </Box>
-      <EstablishmentReviewTable
-        establishments={establishments}
-        loading={establishmentsQuery.isLoading}
-        error={
-          establishmentsQuery.error
-            ? errorMessage(
-                establishmentsQuery.error,
-                "No se pudieron cargar los catastros en revisión.",
-              )
-            : null
-        }
-        pagination={{
-          page: establishmentsPage,
-          total: establishmentsQuery.data?.total ?? 0,
-          onPageChange: onEstablishmentsPageChange,
-        }}
-        workingId={
-          establishmentMutation.isPending
-            ? (establishmentMutation.variables?.item.id ?? null)
-            : null
-        }
-        onReview={establishmentReview.start}
-      />
+      <Tabs
+        value={tab}
+        onChange={(_, value: ReviewTab) => setTab(value)}
+        variant="scrollable"
+        allowScrollButtonsMobile
+        aria-label="Tipo de revisión"
+      >
+        {REVIEW_TABS.map(({ key, label }) => (
+          <Tab
+            key={key}
+            value={key}
+            id={`review-tab-${key}`}
+            aria-controls="review-panel"
+            aria-label={
+              key === "establishments" && hasPendingEstablishments
+                ? `${label}, con pendientes`
+                : undefined
+            }
+            label={
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <span>{label}</span>
+                {key === "establishments" && hasPendingEstablishments ? (
+                  <Box
+                    aria-hidden="true"
+                    sx={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      bgcolor: webTokens.navigation.notification,
+                    }}
+                  />
+                ) : null}
+              </Stack>
+            }
+          />
+        ))}
+      </Tabs>
+
+      <Stack
+        id="review-panel"
+        role="tabpanel"
+        aria-labelledby={`review-tab-${tab}`}
+        spacing={webTokens.spacing.control}
+      >
+        <Typography variant="body2" color="text.secondary">
+          {REVIEW_TABS.find(({ key }) => key === tab)?.description}
+        </Typography>
+
+        {tab === "centers" ? (
+          <CenterTable
+            centers={centers}
+            loading={centersQuery.isLoading}
+            error={
+              centersQuery.error
+                ? errorMessage(centersQuery.error, "No se pudieron cargar las fichas.")
+                : null
+            }
+            review={{ pending: centerMutation.isPending, onReview: centerReview.start }}
+            onOpen={onOpen}
+            pagination={{
+              page: centersPage,
+              total: centersQuery.data?.total ?? 0,
+              onPageChange: onCentersPageChange,
+            }}
+            search={{
+              label: "Buscar por nombre o código",
+              value: centerSearch,
+              onChange: (value) => {
+                setCenterSearch(value);
+                onCentersPageChange(0);
+              },
+            }}
+            filterCount={Number(centerActive !== "")}
+            filterPanel={
+              <AdminGridFilterPanel
+                width={360}
+                activeCount={Number(centerActive !== "")}
+                onClear={() => {
+                  setCenterActive("");
+                  onCentersPageChange(0);
+                }}
+              >
+                <SelectField
+                  id="review-center-active"
+                  label="Estado"
+                  value={centerActive}
+                  options={ACTIVE_FILTER_OPTIONS}
+                  emptyLabel="Todas"
+                  onChange={(value) => {
+                    setCenterActive(value);
+                    onCentersPageChange(0);
+                  }}
+                />
+              </AdminGridFilterPanel>
+            }
+          />
+        ) : (
+          <EstablishmentReviewTable
+            establishments={establishments}
+            loading={establishmentsQuery.isLoading}
+            error={
+              establishmentsQuery.error
+                ? errorMessage(
+                    establishmentsQuery.error,
+                    "No se pudieron cargar los catastros en revisión.",
+                  )
+                : null
+            }
+            pagination={{
+              page: establishmentsPage,
+              total: establishmentsQuery.data?.total ?? 0,
+              onPageChange: onEstablishmentsPageChange,
+            }}
+            search={{
+              label: "Buscar por nombre, actividad o registro",
+              value: establishmentSearch,
+              onChange: (value) => {
+                setEstablishmentSearch(value);
+                onEstablishmentsPageChange(0);
+              },
+            }}
+            filterCount={Object.values(establishmentFilters).filter(Boolean).length}
+            filterPanel={
+              <EstablishmentGridFilters
+                values={establishmentFilters}
+                catalogs={catalogs}
+                onChange={(field: EstablishmentFilterField, value: string) => {
+                  setEstablishmentFilters((current) =>
+                    changeEstablishmentFilter(current, field, value),
+                  );
+                  onEstablishmentsPageChange(0);
+                }}
+                onClear={() => {
+                  setEstablishmentFilters({ ...emptyEstablishmentFilters });
+                  onEstablishmentsPageChange(0);
+                }}
+              />
+            }
+            workingId={
+              establishmentMutation.isPending
+                ? (establishmentMutation.variables?.item.id ?? null)
+                : null
+            }
+            onReview={establishmentReview.start}
+          />
+        )}
+      </Stack>
 
       {centerIntent ? (
         <ReviewDecisionDialog
@@ -264,6 +419,9 @@ function EstablishmentReviewTable({
   loading,
   error,
   pagination,
+  search,
+  filterCount,
+  filterPanel,
   workingId,
   onReview,
 }: {
@@ -271,6 +429,9 @@ function EstablishmentReviewTable({
   loading: boolean;
   error: string | null;
   pagination: AdminTablePagination;
+  search: GridSearch;
+  filterCount: number;
+  filterPanel: ReactNode;
   workingId: number | null;
   onReview: (establishment: AdminEstablishment, action: ReviewAction) => void;
 }) {
@@ -416,6 +577,9 @@ function EstablishmentReviewTable({
         error={error}
         emptyMessage="No hay catastros pendientes de revisión."
         pagination={pagination}
+        search={search}
+        filterCount={filterCount}
+        filterPanel={filterPanel}
       />
       <EstablishmentDetailDialog
         establishment={detail}
