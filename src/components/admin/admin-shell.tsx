@@ -190,11 +190,13 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
               token={token}
               canDelete={isAdmin}
               status={state.centerStatus}
+              active={state.centerActive}
               query={state.queryDraft}
               appliedQuery={nav.centerQuery}
               page={state.centersPage}
               onQueryChange={nav.setQueryDraft}
               onStatusChange={nav.setCenterStatus}
+              onActiveChange={nav.setCenterActive}
               onPageChange={nav.setCentersPage}
               onOpen={openEditor}
             />
@@ -213,6 +215,7 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
               key={editorSession}
               token={token}
               code={state.editorCode}
+              canManageVisibility={isAdmin}
               onClose={closeEditor}
               onSaved={handleEditorSaved}
               onNotice={feedback.showNotice}

@@ -1,5 +1,6 @@
 import type {
   AdminMediaItem,
+  CenterStatus,
   EstablishmentReviewStatus,
   OpinionStatus,
   OpinionTargetType,
@@ -34,18 +35,31 @@ export function establishmentReviewStatusTone(
   return ESTABLISHMENT_REVIEW_STATUS_TONES[status];
 }
 
-const CENTER_STATUS_TONES: Record<string, StatusTone> = {
-  BORRADOR: "default",
-  EN_REVISION: "warning",
-  APROBADO: "success",
-  PUBLICADO: "success",
-  RECHAZADO: "error",
-  INACTIVO: "default",
+const CENTER_STATUS_LABELS: Record<CenterStatus, string> = {
+  BORRADOR: "Borrador",
+  EN_REVISION: "En revisión",
+  PUBLICADO: "Publicado",
 };
 
-/** Tono del estado de una ficha (`status.code` de la API; el nombre viene de la API). */
+const CENTER_STATUS_TONES: Record<CenterStatus, StatusTone> = {
+  BORRADOR: "default",
+  EN_REVISION: "warning",
+  PUBLICADO: "success",
+};
+
+function isCenterStatus(code: string): code is CenterStatus {
+  return Object.hasOwn(CENTER_STATUS_LABELS, code);
+}
+
+/** Las respuestas con un estado desconocido conservan la etiqueta de la API. */
+export function centerStatusLabel(status: { code: string; name: string }): string {
+  return isCenterStatus(status.code)
+    ? CENTER_STATUS_LABELS[status.code]
+    : status.name || status.code;
+}
+
 export function centerStatusTone(code: string): StatusTone {
-  return CENTER_STATUS_TONES[code] ?? "default";
+  return isCenterStatus(code) ? CENTER_STATUS_TONES[code] : "default";
 }
 
 const OPINION_TARGET_TYPE_LABELS: Record<OpinionTargetType, string> = {

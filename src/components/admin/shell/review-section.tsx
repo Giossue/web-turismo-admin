@@ -6,7 +6,7 @@ import VisibilityRounded from "@mui/icons-material/VisibilityRounded";
 import { Box, IconButton, Stack, Tooltip, Typography } from "@mui/material";
 import type { GridColDef } from "@mui/x-data-grid";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { useAdminFeedback } from "@/components/admin/admin-feedback";
 import {
@@ -82,6 +82,7 @@ export function ReviewSection({
   const establishments = establishmentsQuery.data?.items ?? [];
   const centerReview = useReviewIntent<AdminCenter>();
   const establishmentReview = useReviewIntent<AdminEstablishment>();
+  const centerSubmittingRef = useRef(false);
 
   const centerMutation = useMutation({
     mutationFn: ({ item, action, observation }: ReviewVariables<AdminCenter>) =>
@@ -91,12 +92,10 @@ export function ReviewSection({
       centerReview.close();
       showNotice(
         action === "APPROVE"
-          ? "La ficha fue aprobada correctamente."
-          : "La ficha fue rechazada y la observación quedó registrada.",
+          ? "La ficha fue aprobada y publicada."
+          : "La ficha volvió a borrador para corregirla. El motivo quedó registrado.",
       );
-      // Las fichas aprobadas siguen en la cola; las rechazadas salen de ella.
-      const nextPage =
-        action === "REJECT" ? pageAfterRemoval(centersPage, centers.length) : centersPage;
+      const nextPage = pageAfterRemoval(centersPage, centers.length);
       if (nextPage !== centersPage) onCentersPageChange(nextPage);
       await Promise.all([
         queryClient.invalidateQueries({
@@ -106,9 +105,13 @@ export function ReviewSection({
         }),
         queryClient.invalidateQueries({ queryKey: adminKeys.summary() }),
         queryClient.invalidateQueries({ queryKey: adminKeys.center(item.code) }),
+        queryClient.invalidateQueries({ queryKey: adminKeys.media(item.code) }),
       ]);
     },
     onError: (cause) => showError(errorMessage(cause, "No se pudo actualizar la ficha.")),
+    onSettled: () => {
+      centerSubmittingRef.current = false;
+    },
   });
 
   const establishmentMutation = useMutation({
@@ -187,21 +190,40 @@ export function ReviewSection({
       {centerIntent ? (
         <ReviewDecisionDialog
           open={centerReview.open}
-          title={centerIntent.action === "APPROVE" ? "Aprobar ficha" : "Rechazar ficha"}
+          title={
+            centerIntent.action === "APPROVE"
+              ? "Aprobar y publicar ficha"
+              : "Devolver ficha para corregir"
+          }
           subject={`${centerIntent.item.name || "Esta ficha"} (${centerIntent.item.code})`}
           action={centerIntent.action}
           reason={centerReview.reason}
           onReasonChange={centerReview.setReason}
           helperText={REVIEW_HELPER_TEXT[centerIntent.action]}
+          confirmLabel={
+            centerIntent.action === "APPROVE"
+              ? "Aprobar y publicar"
+              : "Devolver para corregir"
+          }
+          reasonLabel={
+            centerIntent.action === "REJECT" ? "Motivo de devolución" : "Observación"
+          }
+          reasonRequired={centerIntent.action === "REJECT"}
           pending={centerMutation.isPending}
           onCancel={centerReview.close}
-          onConfirm={() =>
+          onConfirm={() => {
+            if (
+              centerSubmittingRef.current ||
+              (centerIntent.action === "REJECT" && !centerReview.reason.trim())
+            )
+              return;
+            centerSubmittingRef.current = true;
             centerMutation.mutate({
               item: centerIntent.item,
               action: centerIntent.action,
               observation: centerReview.reason.trim() || undefined,
-            })
-          }
+            });
+          }}
         />
       ) : null}
       {establishmentIntent ? (

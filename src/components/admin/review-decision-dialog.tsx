@@ -30,6 +30,7 @@ export function ReviewDecisionDialog({
   reasonRequired = false,
   reasonMaxLength,
   helperText,
+  confirmLabel,
   pending,
   onCancel,
   onConfirm,
@@ -48,6 +49,8 @@ export function ReviewDecisionDialog({
   reasonRequired?: boolean;
   reasonMaxLength?: number;
   helperText?: string;
+  /** Etiqueta específica del flujo; otros dominios conservan Aprobar/Rechazar. */
+  confirmLabel?: string;
   pending: boolean;
   onCancel: () => void;
   onConfirm: () => void;
@@ -93,7 +96,9 @@ export function ReviewDecisionDialog({
           disabled={pending || missingReason}
           startIcon={pending ? <CircularProgress size={16} /> : <CheckCircleRounded />}
         >
-          {pending ? "Guardando…" : action === "APPROVE" ? "Aprobar" : "Rechazar"}
+          {pending
+            ? "Guardando…"
+            : (confirmLabel ?? (action === "APPROVE" ? "Aprobar" : "Rechazar"))}
         </Button>
       </DialogActions>
     </Dialog>
