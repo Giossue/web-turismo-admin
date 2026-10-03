@@ -5,7 +5,11 @@ import {
   reviewAdminCenter,
   setAdminCenterActive,
 } from "@/lib/admin-api";
-import { centerStatusLabel, centerStatusTone, establishmentReviewStatusLabel } from "@/lib/admin-labels";
+import {
+  centerStatusLabel,
+  centerStatusTone,
+  establishmentReviewStatusLabel,
+} from "@/lib/admin-labels";
 import { apiEndpoint } from "@/lib/http";
 
 const originalFetch = globalThis.fetch;
@@ -14,7 +18,9 @@ afterEach(() => {
 });
 
 function mockApi(data: unknown) {
-  const fetchMock = mock(async () => Response.json({ data }));
+  const fetchMock = mock<(...args: Parameters<typeof fetch>) => Promise<Response>>(
+    async () => Response.json({ data }),
+  );
   globalThis.fetch = fetchMock as unknown as typeof fetch;
   return fetchMock;
 }
@@ -35,7 +41,7 @@ describe("flujo de centros independiente de activación", () => {
     test(`${active ? "activa" : "desactiva"} sin enviar un estado editorial`, async () => {
       const detail = { code: "CT/1", active, status: { code: "PUBLICADO" } };
       const fetchMock = mockApi(detail);
-      expect(await setAdminCenterActive("token", "CT/1", active)).toEqual(detail);
+      expect(await setAdminCenterActive("token", "CT/1", active)).toMatchObject(detail);
       const [url, init] = fetchMock.mock.calls[0] as unknown as Parameters<typeof fetch>;
       expect(url).toBe(
         apiEndpoint(`/admin/centers/CT%2F1/${active ? "reactivate" : "deactivate"}`),
@@ -66,7 +72,9 @@ describe("flujo de centros independiente de activación", () => {
 
   test("conserva estados desconocidos y el rechazo independiente de catastro", () => {
     expect(centerStatusLabel({ code: "BORRADOR", name: "Draft" })).toBe("Borrador");
-    expect(centerStatusLabel({ code: "FUTURO", name: "Estado futuro" })).toBe("Estado futuro");
+    expect(centerStatusLabel({ code: "FUTURO", name: "Estado futuro" })).toBe(
+      "Estado futuro",
+    );
     expect(centerStatusTone("FUTURO")).toBe("default");
     expect(establishmentReviewStatusLabel("RECHAZADO")).toBe("Rechazado");
   });

@@ -710,9 +710,10 @@ export async function reviewAdminCenter(
 }
 
 export async function setAdminCenterActive(token: string, code: string, active: boolean) {
-  return post<AdminCenterDetail>(
-    centerPath(code, active ? "reactivate" : "deactivate"),
+  return authorizedRequest<AdminCenterDetail>(
+    apiEndpoint(centerPath(code, active ? "reactivate" : "deactivate")),
     token,
+    { method: "POST" },
   );
 }
 
