@@ -109,16 +109,16 @@ export function AdminProfilePopover({
             id: popoverId,
             role: "dialog",
             "aria-labelledby": titleId,
-            sx: { width: 300, maxWidth: "calc(100vw - 32px)" },
+            sx: { width: 264, maxWidth: "calc(100vw - 32px)" },
           },
         }}
       >
-        <Stack spacing={2} sx={{ p: 2 }}>
+        <Stack spacing={1.25} sx={{ p: 1.5 }}>
           <Box>
             <Typography component="h2" variant="subtitle1" id={titleId}>
               Mi perfil
             </Typography>
-            <Typography variant="body2" sx={{ mt: 1, overflowWrap: "anywhere" }}>
+            <Typography variant="body2" sx={{ mt: 0.5, overflowWrap: "anywhere" }}>
               {user.name}
             </Typography>
             <Typography
@@ -130,7 +130,7 @@ export function AdminProfilePopover({
             </Typography>
           </Box>
           <Divider />
-          <Stack spacing={1}>
+          <Stack spacing={0.75}>
             <Typography variant="body2" fontWeight={500}>
               Tema
             </Typography>
@@ -142,45 +142,52 @@ export function AdminProfilePopover({
               color="primary"
               disabled={currentMode === undefined}
               aria-label="Tema"
+              sx={{ "& .MuiToggleButton-root": { minHeight: 32, py: 0.5, gap: 0.75 } }}
               onChange={(_, nextMode: string | null) => {
                 if (nextMode === "light" || nextMode === "dark") {
                   setMode(nextMode);
                 }
               }}
             >
-              <ToggleButton value="light" aria-label="Tema claro" sx={{ gap: 1 }}>
+              <ToggleButton value="light" aria-label="Tema claro">
                 <LightModeRounded fontSize="small" />
                 Claro
               </ToggleButton>
-              <ToggleButton value="dark" aria-label="Tema oscuro" sx={{ gap: 1 }}>
+              <ToggleButton value="dark" aria-label="Tema oscuro">
                 <DarkModeRounded fontSize="small" />
                 Oscuro
               </ToggleButton>
             </ToggleButtonGroup>
           </Stack>
           <Divider />
-          <Button
-            color="inherit"
-            fullWidth
-            startIcon={<SettingsRounded />}
-            onClick={() => {
-              closePopover();
-              onOpenSettings();
-            }}
-          >
-            Configuración
-          </Button>
-          <Button
-            color="inherit"
-            fullWidth
-            startIcon={<LogoutRounded />}
-            onClick={() => {
-              closePopover();
-              onLogout();
-            }}
-          >
-            Cerrar sesión
-          </Button>
+          <Stack spacing={0.5}>
+            <Button
+              color="inherit"
+              size="small"
+              fullWidth
+              sx={{ justifyContent: "flex-start" }}
+              startIcon={<SettingsRounded />}
+              onClick={() => {
+                closePopover();
+                onOpenSettings();
+              }}
+            >
+              Configuración
+            </Button>
+            <Button
+              color="inherit"
+              size="small"
+              fullWidth
+              sx={{ justifyContent: "flex-start" }}
+              startIcon={<LogoutRounded />}
+              onClick={() => {
+                closePopover();
+                onLogout();
+              }}
+            >
+              Cerrar sesión
+            </Button>
+          </Stack>
         </Stack>
       </Popover>
     </>
