@@ -27,6 +27,11 @@ export function useAdminUrlState(isAdmin: boolean) {
     ADMIN_SEARCH_DEBOUNCE_MS,
   );
   const centerQuery = effectiveCenterQuery(state.queryDraft, debouncedQuery);
+  const debouncedUsersQuery = useDebouncedValue(
+    state.usersQueryDraft.trim(),
+    ADMIN_SEARCH_DEBOUNCE_MS,
+  );
+  const usersQuery = effectiveCenterQuery(state.usersQueryDraft, debouncedUsersQuery);
   const search = serializeAdminNavState(state, section, centerQuery);
 
   useEffect(() => {
@@ -45,6 +50,9 @@ export function useAdminUrlState(isAdmin: boolean) {
         dispatch({ type: "setCenterStatus", status }),
       setQueryDraft: (query: string) => dispatch({ type: "setQueryDraft", query }),
       setCentersPage: (page: number) => dispatch({ type: "setCentersPage", page }),
+      setUsersQueryDraft: (query: string) =>
+        dispatch({ type: "setUsersQueryDraft", query }),
+      setUsersPage: (page: number) => dispatch({ type: "setUsersPage", page }),
       setReviewCentersPage: (page: number) =>
         dispatch({ type: "setReviewCentersPage", page }),
       setReviewEstablishmentsPage: (page: number) =>
@@ -53,5 +61,5 @@ export function useAdminUrlState(isAdmin: boolean) {
     [],
   );
 
-  return { state, section, centerQuery, ...actions };
+  return { state, section, centerQuery, usersQuery, ...actions };
 }

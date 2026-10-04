@@ -16,10 +16,12 @@ import {
   getAdminOpinionHistory,
   getAdminOpinions,
   getAdminSummary,
+  getAdminUsers,
   type AdminCenterDetail,
   type AdminCentersOptions,
   type AdminEstablishmentsOptions,
   type AdminOpinionsOptions,
+  type AdminUsersOptions,
 } from "./admin-api";
 
 /**
@@ -54,6 +56,8 @@ export const adminKeys = {
   allOpinions: () => [...adminKeys.all, "opinions"] as const,
   opinions: (filters: AdminOpinionsOptions) =>
     [...adminKeys.allOpinions(), filters] as const,
+  allUsers: () => [...adminKeys.all, "users"] as const,
+  users: (filters: AdminUsersOptions) => [...adminKeys.allUsers(), filters] as const,
 };
 
 export function catalogsQueryOptions(token: string, includeInactive = false) {
@@ -145,6 +149,16 @@ export function opinionsPageQueryOptions(token: string, filters: AdminOpinionsOp
   return queryOptions({
     queryKey: adminKeys.opinions(filters),
     queryFn: () => getAdminOpinions(token, filters),
+    enabled: token.length > 0,
+    staleTime: LIST_STALE_TIME,
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function usersPageQueryOptions(token: string, filters: AdminUsersOptions) {
+  return queryOptions({
+    queryKey: adminKeys.users(filters),
+    queryFn: () => getAdminUsers(token, filters),
     enabled: token.length > 0,
     staleTime: LIST_STALE_TIME,
     placeholderData: keepPreviousData,

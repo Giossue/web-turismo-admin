@@ -26,6 +26,8 @@ export type AdminNavState = {
   /** Texto escrito en la búsqueda de fichas (se consulta con retardo). */
   queryDraft: string;
   centersPage: number;
+  usersQueryDraft: string;
+  usersPage: number;
   reviewCentersPage: number;
   reviewEstablishmentsPage: number;
 };
@@ -37,6 +39,8 @@ export type AdminNavAction =
   | { type: "setCenterStatus"; status: CenterStatusFilter }
   | { type: "setQueryDraft"; query: string }
   | { type: "setCentersPage"; page: number }
+  | { type: "setUsersQueryDraft"; query: string }
+  | { type: "setUsersPage"; page: number }
   | { type: "setReviewCentersPage"; page: number }
   | { type: "setReviewEstablishmentsPage"; page: number };
 
@@ -62,6 +66,9 @@ export function parseAdminNavState(params: SearchParamsLike): AdminNavState {
     centerStatus: isCenterStatusFilter(status) ? status : "ALL",
     queryDraft: query.length >= MIN_CENTER_QUERY_LENGTH ? query : "",
     centersPage: section === "centers" || section === "editor" ? page : 0,
+    usersQueryDraft:
+      section === "users" && query.length >= MIN_CENTER_QUERY_LENGTH ? query : "",
+    usersPage: section === "users" ? page : 0,
     reviewCentersPage: section === "review" ? page : 0,
     reviewEstablishmentsPage:
       section === "review" ? parsePage(params.get("establishmentsPage")) : 0,
@@ -84,13 +91,21 @@ export function serializeAdminNavState(
     params.set("status", state.centerStatus);
   }
   if (section === "centers" && centerQuery) params.set("q", centerQuery);
+  if (
+    section === "users" &&
+    state.usersQueryDraft.trim().length >= MIN_CENTER_QUERY_LENGTH
+  ) {
+    params.set("q", state.usersQueryDraft.trim());
+  }
   if (section === "editor" && state.editorCode) params.set("code", state.editorCode);
   const page =
     section === "review"
       ? state.reviewCentersPage
       : section === "centers" || section === "editor"
         ? state.centersPage
-        : 0;
+        : section === "users"
+          ? state.usersPage
+          : 0;
   if (page > 0) params.set("page", String(page + 1));
   if (section === "review" && state.reviewEstablishmentsPage > 0) {
     params.set("establishmentsPage", String(state.reviewEstablishmentsPage + 1));
@@ -139,6 +154,10 @@ export function adminNavReducer(
       return { ...state, queryDraft: action.query, centersPage: 0 };
     case "setCentersPage":
       return { ...state, centersPage: Math.max(action.page, 0) };
+    case "setUsersQueryDraft":
+      return { ...state, usersQueryDraft: action.query, usersPage: 0 };
+    case "setUsersPage":
+      return { ...state, usersPage: Math.max(action.page, 0) };
     case "setReviewCentersPage":
       return { ...state, reviewCentersPage: Math.max(action.page, 0) };
     case "setReviewEstablishmentsPage":

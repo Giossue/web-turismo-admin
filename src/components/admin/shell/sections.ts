@@ -6,6 +6,7 @@ import PlaceRounded from "@mui/icons-material/PlaceRounded";
 import RateReviewRounded from "@mui/icons-material/RateReviewRounded";
 import SettingsRounded from "@mui/icons-material/SettingsRounded";
 import StorefrontRounded from "@mui/icons-material/StorefrontRounded";
+import PeopleAltRounded from "@mui/icons-material/PeopleAltRounded";
 import type { SvgIconComponent } from "@mui/icons-material";
 
 const ADMIN_SECTIONS = [
@@ -15,6 +16,7 @@ const ADMIN_SECTIONS = [
   "centers",
   "establishments",
   "catalogs",
+  "users",
   "editor",
   "settings",
 ] as const;
@@ -86,6 +88,14 @@ export const adminSectionConfig: Record<AdminSection, AdminSectionConfig> = {
     description: "Administra las opciones disponibles para fichas y establecimientos.",
     navLabel: "Catálogos",
     icon: CategoryRounded,
+    adminOnly: true,
+    inNavigation: true,
+  },
+  users: {
+    title: "Usuarios",
+    description: "Consulta las cuentas registradas, sus roles y su estado.",
+    navLabel: "Usuarios",
+    icon: PeopleAltRounded,
     adminOnly: true,
     inNavigation: true,
   },

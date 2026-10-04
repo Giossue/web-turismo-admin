@@ -7,6 +7,17 @@ import { ApiError, apiEndpoint, sendApiRequest, toApiError, toQueryString } from
 /** Página de resultados de un listado administrativo. */
 export type Page<T> = { items: T[]; total: number; limit: number; offset: number };
 
+export type AdminAccount = {
+  id: string;
+  name: string;
+  email: string;
+  roles: string[];
+  active: boolean;
+  createdAt: string;
+};
+
+export type AdminUsersOptions = { q?: string; limit?: number; offset?: number };
+
 export const notificationSections = [
   "review",
   "opinions",
@@ -537,6 +548,15 @@ export async function getAdminCenters(token: string, options: AdminCentersOption
     offset: options.offset ?? 0,
   });
   return get<Page<AdminCenter>>(`/admin/centers${query}`, token);
+}
+
+export async function getAdminUsers(token: string, options: AdminUsersOptions = {}) {
+  const query = toQueryString({
+    q: options.q,
+    limit: options.limit ?? 20,
+    offset: options.offset ?? 0,
+  });
+  return get<Page<AdminAccount>>(`/admin/users${query}`, token);
 }
 
 export async function getAdminSummary(token: string) {

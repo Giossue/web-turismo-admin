@@ -33,6 +33,7 @@ import { AdminAccessDenied } from "./shell/admin-access-denied";
 import { AdminNavigation, drawerWidth } from "./shell/admin-navigation";
 import { CentersSection } from "./shell/centers-section";
 import { ReviewSection } from "./shell/review-section";
+import { UsersSection } from "./shell/users-section";
 import { adminSectionConfig, navigationItems, type AdminSection } from "./shell/sections";
 import { SettingsSection } from "./shell/settings-section";
 import { SummarySection } from "./shell/summary-section";
@@ -234,6 +235,16 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
               token={token}
               onNotice={feedback.showNotice}
               onError={feedback.showError}
+            />
+          ) : null}
+          {section === "users" ? (
+            <UsersSection
+              token={token}
+              query={state.usersQueryDraft}
+              appliedQuery={nav.usersQuery}
+              page={state.usersPage}
+              onQueryChange={nav.setUsersQueryDraft}
+              onPageChange={nav.setUsersPage}
             />
           ) : null}
         </Stack>
