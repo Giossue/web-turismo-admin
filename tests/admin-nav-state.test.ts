@@ -28,6 +28,8 @@ describe("parseAdminNavState", () => {
       centerStatus: "ALL",
       queryDraft: "",
       centersPage: 0,
+      usersQueryDraft: "",
+      usersPage: 0,
       reviewCentersPage: 0,
       reviewEstablishmentsPage: 0,
     });
