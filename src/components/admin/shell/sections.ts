@@ -14,11 +14,11 @@ const ADMIN_SECTIONS = [
   "summary",
   "review",
   "opinions",
-  "activity",
   "centers",
   "establishments",
   "catalogs",
   "users",
+  "activity",
   "editor",
   "settings",
 ] as const;
