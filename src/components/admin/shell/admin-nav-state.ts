@@ -1,4 +1,5 @@
 import { isAdminSection, type AdminSection } from "./sections";
+import type { AdminActivityType } from "@/lib/admin-api";
 
 export const CENTER_STATUS_FILTER_OPTIONS = [
   { value: "ALL", label: "Todos" },
@@ -28,6 +29,11 @@ export type AdminNavState = {
   centersPage: number;
   usersQueryDraft: string;
   usersPage: number;
+  activityQueryDraft: string;
+  activityType: AdminActivityType | "";
+  activityFrom: string;
+  activityTo: string;
+  activityPage: number;
   reviewCentersPage: number;
   reviewEstablishmentsPage: number;
 };
@@ -41,6 +47,11 @@ export type AdminNavAction =
   | { type: "setCentersPage"; page: number }
   | { type: "setUsersQueryDraft"; query: string }
   | { type: "setUsersPage"; page: number }
+  | { type: "setActivityQueryDraft"; query: string }
+  | { type: "setActivityType"; activityType: AdminActivityType | "" }
+  | { type: "setActivityFrom"; date: string }
+  | { type: "setActivityTo"; date: string }
+  | { type: "setActivityPage"; page: number }
   | { type: "setReviewCentersPage"; page: number }
   | { type: "setReviewEstablishmentsPage"; page: number };
 
@@ -52,6 +63,18 @@ function parsePage(value: string | null): number {
   return Number.isInteger(page) && page > 0 ? page - 1 : 0;
 }
 
+function isActivityType(value: string | null): value is AdminActivityType {
+  return ["CENTRO", "ESTABLECIMIENTO", "CATALOGO", "OPINION"].includes(value ?? "");
+}
+
+function parseDate(value: string | null): string {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return "";
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== value
+    ? ""
+    : value;
+}
+
 /** Estado inicial a partir de la URL (una sola lectura al montar el panel). */
 export function parseAdminNavState(params: SearchParamsLike): AdminNavState {
   const fromUrl = params.get("section");
@@ -59,6 +82,7 @@ export function parseAdminNavState(params: SearchParamsLike): AdminNavState {
   const status = params.get("status");
   const query = params.get("q")?.trim() ?? "";
   const page = parsePage(params.get("page"));
+  const activityType = params.get("type");
   return {
     section,
     editorCode: section === "editor" ? params.get("code") || null : null,
@@ -69,6 +93,13 @@ export function parseAdminNavState(params: SearchParamsLike): AdminNavState {
     usersQueryDraft:
       section === "users" && query.length >= MIN_CENTER_QUERY_LENGTH ? query : "",
     usersPage: section === "users" ? page : 0,
+    activityQueryDraft:
+      section === "activity" && query.length >= MIN_CENTER_QUERY_LENGTH ? query : "",
+    activityType:
+      section === "activity" && isActivityType(activityType) ? activityType : "",
+    activityFrom: section === "activity" ? parseDate(params.get("from")) : "",
+    activityTo: section === "activity" ? parseDate(params.get("to")) : "",
+    activityPage: section === "activity" ? page : 0,
     reviewCentersPage: section === "review" ? page : 0,
     reviewEstablishmentsPage:
       section === "review" ? parsePage(params.get("establishmentsPage")) : 0,
@@ -84,6 +115,8 @@ export function serializeAdminNavState(
   state: AdminNavState,
   section: AdminSection,
   centerQuery: string,
+  usersQuery = state.usersQueryDraft.trim(),
+  activityQuery = state.activityQueryDraft.trim(),
 ): string {
   const params = new URLSearchParams();
   params.set("section", section);
@@ -91,11 +124,14 @@ export function serializeAdminNavState(
     params.set("status", state.centerStatus);
   }
   if (section === "centers" && centerQuery) params.set("q", centerQuery);
-  if (
-    section === "users" &&
-    state.usersQueryDraft.trim().length >= MIN_CENTER_QUERY_LENGTH
-  ) {
-    params.set("q", state.usersQueryDraft.trim());
+  if (section === "users" && usersQuery.length >= MIN_CENTER_QUERY_LENGTH) {
+    params.set("q", usersQuery);
+  }
+  if (section === "activity") {
+    if (activityQuery.length >= MIN_CENTER_QUERY_LENGTH) params.set("q", activityQuery);
+    if (state.activityType) params.set("type", state.activityType);
+    if (state.activityFrom) params.set("from", state.activityFrom);
+    if (state.activityTo) params.set("to", state.activityTo);
   }
   if (section === "editor" && state.editorCode) params.set("code", state.editorCode);
   const page =
@@ -105,7 +141,9 @@ export function serializeAdminNavState(
         ? state.centersPage
         : section === "users"
           ? state.usersPage
-          : 0;
+          : section === "activity"
+            ? state.activityPage
+            : 0;
   if (page > 0) params.set("page", String(page + 1));
   if (section === "review" && state.reviewEstablishmentsPage > 0) {
     params.set("establishmentsPage", String(state.reviewEstablishmentsPage + 1));
@@ -158,6 +196,16 @@ export function adminNavReducer(
       return { ...state, usersQueryDraft: action.query, usersPage: 0 };
     case "setUsersPage":
       return { ...state, usersPage: Math.max(action.page, 0) };
+    case "setActivityQueryDraft":
+      return { ...state, activityQueryDraft: action.query, activityPage: 0 };
+    case "setActivityType":
+      return { ...state, activityType: action.activityType, activityPage: 0 };
+    case "setActivityFrom":
+      return { ...state, activityFrom: action.date, activityPage: 0 };
+    case "setActivityTo":
+      return { ...state, activityTo: action.date, activityPage: 0 };
+    case "setActivityPage":
+      return { ...state, activityPage: Math.max(action.page, 0) };
     case "setReviewCentersPage":
       return { ...state, reviewCentersPage: Math.max(action.page, 0) };
     case "setReviewEstablishmentsPage":

@@ -30,6 +30,11 @@ describe("parseAdminNavState", () => {
       centersPage: 0,
       usersQueryDraft: "",
       usersPage: 0,
+      activityQueryDraft: "",
+      activityType: "",
+      activityFrom: "",
+      activityTo: "",
+      activityPage: 0,
       reviewCentersPage: 0,
       reviewEstablishmentsPage: 0,
     });

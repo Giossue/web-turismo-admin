@@ -32,7 +32,21 @@ export function useAdminUrlState(isAdmin: boolean) {
     ADMIN_SEARCH_DEBOUNCE_MS,
   );
   const usersQuery = effectiveCenterQuery(state.usersQueryDraft, debouncedUsersQuery);
-  const search = serializeAdminNavState(state, section, centerQuery);
+  const debouncedActivityQuery = useDebouncedValue(
+    state.activityQueryDraft.trim(),
+    ADMIN_SEARCH_DEBOUNCE_MS,
+  );
+  const activityQuery = effectiveCenterQuery(
+    state.activityQueryDraft,
+    debouncedActivityQuery,
+  );
+  const search = serializeAdminNavState(
+    state,
+    section,
+    centerQuery,
+    usersQuery,
+    activityQuery,
+  );
 
   useEffect(() => {
     if (window.location.search === search) return;
@@ -53,6 +67,14 @@ export function useAdminUrlState(isAdmin: boolean) {
       setUsersQueryDraft: (query: string) =>
         dispatch({ type: "setUsersQueryDraft", query }),
       setUsersPage: (page: number) => dispatch({ type: "setUsersPage", page }),
+      setActivityQueryDraft: (query: string) =>
+        dispatch({ type: "setActivityQueryDraft", query }),
+      setActivityType: (
+        activityType: "CENTRO" | "ESTABLECIMIENTO" | "CATALOGO" | "OPINION" | "",
+      ) => dispatch({ type: "setActivityType", activityType }),
+      setActivityFrom: (date: string) => dispatch({ type: "setActivityFrom", date }),
+      setActivityTo: (date: string) => dispatch({ type: "setActivityTo", date }),
+      setActivityPage: (page: number) => dispatch({ type: "setActivityPage", page }),
       setReviewCentersPage: (page: number) =>
         dispatch({ type: "setReviewCentersPage", page }),
       setReviewEstablishmentsPage: (page: number) =>
@@ -61,5 +83,5 @@ export function useAdminUrlState(isAdmin: boolean) {
     [],
   );
 
-  return { state, section, centerQuery, usersQuery, ...actions };
+  return { state, section, centerQuery, usersQuery, activityQuery, ...actions };
 }

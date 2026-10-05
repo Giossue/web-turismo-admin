@@ -18,6 +18,27 @@ export type AdminAccount = {
 
 export type AdminUsersOptions = { q?: string; limit?: number; offset?: number };
 
+export type AdminActivityType = "CENTRO" | "ESTABLECIMIENTO" | "CATALOGO" | "OPINION";
+
+export type AdminActivityItem = {
+  id: string;
+  type: AdminActivityType;
+  action: string;
+  context: string | null;
+  subject: string;
+  actor: string;
+  createdAt: string;
+};
+
+export type AdminActivityOptions = {
+  type?: AdminActivityType;
+  from?: string;
+  to?: string;
+  q?: string;
+  limit?: number;
+  offset?: number;
+};
+
 export const notificationSections = [
   "review",
   "opinions",
@@ -557,6 +578,21 @@ export async function getAdminUsers(token: string, options: AdminUsersOptions = 
     offset: options.offset ?? 0,
   });
   return get<Page<AdminAccount>>(`/admin/users${query}`, token);
+}
+
+export async function getAdminActivity(
+  token: string,
+  options: AdminActivityOptions = {},
+) {
+  const query = toQueryString({
+    type: options.type,
+    from: options.from,
+    to: options.to,
+    q: options.q,
+    limit: options.limit ?? 20,
+    offset: options.offset ?? 0,
+  });
+  return get<Page<AdminActivityItem>>(`/admin/activity${query}`, token);
 }
 
 export async function getAdminSummary(token: string) {

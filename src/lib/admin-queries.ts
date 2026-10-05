@@ -7,6 +7,7 @@ import {
 
 import {
   getAdminCatalogs,
+  getAdminActivity,
   getAdminCenterMedia,
   getAdminCenterSections,
   getAdminCenters,
@@ -18,6 +19,7 @@ import {
   getAdminSummary,
   getAdminUsers,
   type AdminCenterDetail,
+  type AdminActivityOptions,
   type AdminCentersOptions,
   type AdminEstablishmentsOptions,
   type AdminOpinionsOptions,
@@ -58,6 +60,9 @@ export const adminKeys = {
     [...adminKeys.allOpinions(), filters] as const,
   allUsers: () => [...adminKeys.all, "users"] as const,
   users: (filters: AdminUsersOptions) => [...adminKeys.allUsers(), filters] as const,
+  allActivity: () => [...adminKeys.all, "activity"] as const,
+  activity: (filters: AdminActivityOptions) =>
+    [...adminKeys.allActivity(), filters] as const,
 };
 
 export function catalogsQueryOptions(token: string, includeInactive = false) {
@@ -159,6 +164,16 @@ export function usersPageQueryOptions(token: string, filters: AdminUsersOptions)
   return queryOptions({
     queryKey: adminKeys.users(filters),
     queryFn: () => getAdminUsers(token, filters),
+    enabled: token.length > 0,
+    staleTime: LIST_STALE_TIME,
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function activityPageQueryOptions(token: string, filters: AdminActivityOptions) {
+  return queryOptions({
+    queryKey: adminKeys.activity(filters),
+    queryFn: () => getAdminActivity(token, filters),
     enabled: token.length > 0,
     staleTime: LIST_STALE_TIME,
     placeholderData: keepPreviousData,

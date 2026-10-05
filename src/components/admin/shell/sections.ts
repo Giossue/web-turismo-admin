@@ -2,6 +2,7 @@ import AssessmentRounded from "@mui/icons-material/AssessmentRounded";
 import CategoryRounded from "@mui/icons-material/CategoryRounded";
 import EditNoteRounded from "@mui/icons-material/EditNoteRounded";
 import FactCheckRounded from "@mui/icons-material/FactCheckRounded";
+import HistoryRounded from "@mui/icons-material/HistoryRounded";
 import PlaceRounded from "@mui/icons-material/PlaceRounded";
 import RateReviewRounded from "@mui/icons-material/RateReviewRounded";
 import SettingsRounded from "@mui/icons-material/SettingsRounded";
@@ -13,6 +14,7 @@ const ADMIN_SECTIONS = [
   "summary",
   "review",
   "opinions",
+  "activity",
   "centers",
   "establishments",
   "catalogs",
@@ -61,6 +63,14 @@ export const adminSectionConfig: Record<AdminSection, AdminSectionConfig> = {
       "Modera las opiniones de visitantes y conserva la versión publicada mientras una edición está pendiente.",
     navLabel: "Opiniones",
     icon: RateReviewRounded,
+    adminOnly: true,
+    inNavigation: true,
+  },
+  activity: {
+    title: "Actividad reciente",
+    description: "Consulta los cambios y revisiones registrados en el panel.",
+    navLabel: "Actividad",
+    icon: HistoryRounded,
     adminOnly: true,
     inNavigation: true,
   },

@@ -32,6 +32,7 @@ import { webTokens } from "@/theme/tokens";
 import { AdminAccessDenied } from "./shell/admin-access-denied";
 import { AdminNavigation, drawerWidth } from "./shell/admin-navigation";
 import { CentersSection } from "./shell/centers-section";
+import { ActivitySection } from "./shell/activity-section";
 import { ReviewSection } from "./shell/review-section";
 import { UsersSection } from "./shell/users-section";
 import { adminSectionConfig, navigationItems, type AdminSection } from "./shell/sections";
@@ -194,6 +195,22 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
             />
           ) : null}
           {section === "opinions" ? <OpinionManagement token={token} /> : null}
+          {section === "activity" ? (
+            <ActivitySection
+              token={token}
+              query={state.activityQueryDraft}
+              appliedQuery={nav.activityQuery}
+              type={state.activityType}
+              from={state.activityFrom}
+              to={state.activityTo}
+              page={state.activityPage}
+              onQueryChange={nav.setActivityQueryDraft}
+              onTypeChange={nav.setActivityType}
+              onFromChange={nav.setActivityFrom}
+              onToChange={nav.setActivityTo}
+              onPageChange={nav.setActivityPage}
+            />
+          ) : null}
           {section === "centers" ? (
             <CentersSection
               token={token}
