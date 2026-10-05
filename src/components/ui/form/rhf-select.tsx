@@ -94,6 +94,8 @@ export function RhfSelect<
     control,
     rules: withRequiredRule(rules, required),
   });
+  // Una regla `required` también muestra el asterisco.
+  const isRequired = required || Boolean(rules?.required);
   const value = typeof field.value === "string" ? field.value : "";
   const displayValue = options.some((option) => option.value === value) ? value : "";
   const errorText = fieldState.error?.message;
@@ -101,7 +103,7 @@ export function RhfSelect<
   return (
     <FormControl
       fullWidth
-      required={required}
+      required={isRequired}
       disabled={disabled || !editable}
       error={Boolean(fieldState.error)}
     >
@@ -170,6 +172,8 @@ export function RhfCatalogSelect<
     control,
     rules: withRequiredRule(rules, required),
   });
+  // Una regla `required` también muestra el asterisco.
+  const isRequired = required || Boolean(rules?.required);
 
   if (searchable) {
     return (
@@ -179,7 +183,7 @@ export function RhfCatalogSelect<
         name={field.name}
         value={field.value == null ? "" : String(field.value)}
         options={options}
-        required={required}
+        required={isRequired}
         disabled={disabled || !editable}
         loading={loading}
         helperText={fieldState.error?.message}
@@ -201,7 +205,7 @@ export function RhfCatalogSelect<
       value={field.value == null ? "" : String(field.value)}
       options={options}
       emptyLabel={emptyLabel}
-      required={required}
+      required={isRequired}
       disabled={disabled || !editable}
       helperText={fieldState.error?.message}
       inputRef={field.ref}

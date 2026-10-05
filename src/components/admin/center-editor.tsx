@@ -43,7 +43,8 @@ const centerWizardSteps = centerSectionDefinitions.map((section) => ({
 }));
 const SUMMARY_STEP = centerSectionDefinitions.length;
 const EDITABLE_STATES = new Set(["BORRADOR", "PUBLICADO"]);
-const REQUIRED_FIELDS_MESSAGE = "Completa los campos obligatorios para continuar.";
+const REQUIRED_FIELDS_MESSAGE =
+  "Faltan campos obligatorios: complétalos (están marcados en rojo) para continuar.";
 
 export function CenterEditor({
   token,
@@ -90,6 +91,7 @@ export function CenterEditor({
     resetOptions: { keepDirtyValues: true },
   });
   const [activeStep, setActiveStep] = useState(0);
+  const focusMissingRef = useRef(false);
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const submittingReviewRef = useRef(false);
 
@@ -160,6 +162,12 @@ export function CenterEditor({
     if (queryError) onError(errorMessage(queryError, "No se pudo cargar la ficha."));
   }, [onError, queryError]);
 
+  useEffect(() => {
+    if (!focusMissingRef.current || activeStep !== 0) return;
+    focusMissingRef.current = false;
+    void form.trigger([...CENTER_CREATE_FIELDS], { shouldFocus: true });
+  }, [activeStep, form]);
+
   async function goNext() {
     if (activeSectionCode === null) return;
     // En una ficha nueva, «Siguiente» desde el primer paso la crea; en los demás
@@ -173,9 +181,11 @@ export function CenterEditor({
       return;
     }
     if (creating) {
-      // Sin este aviso, «Siguiente» no hacía nada visible si faltaba un dato.
-      if (!isReadyToCreate(form.getValues()) || !(await form.trigger())) {
-        onError(REQUIRED_FIELDS_MESSAGE);
+      if (
+        !isReadyToCreate(form.getValues()) ||
+        !(await form.trigger(undefined, { shouldFocus: true }))
+      ) {
+        showMissingFields();
         return;
       }
       if (!(await autosave.flush({ force: true }))) return;
@@ -189,11 +199,24 @@ export function CenterEditor({
   /** Crea la ficha nueva con lo cargado; al crearse se suben las fotos importadas. */
   async function createNow() {
     if (!isReadyToCreate(form.getValues())) {
-      setActiveStep(0);
-      onError(REQUIRED_FIELDS_MESSAGE);
+      showMissingFields();
       return;
     }
-    if (!(await autosave.flush({ force: true }))) onError(REQUIRED_FIELDS_MESSAGE);
+    await autosave.flush({ force: true });
+  }
+
+  /**
+   * Lleva al primer paso (donde viven los datos obligatorios para crear o
+   * enviar la ficha) y, ya montado, marca en rojo y enfoca lo que falta.
+   */
+  function showMissingFields() {
+    onError(REQUIRED_FIELDS_MESSAGE);
+    if (activeStep === 0) {
+      void form.trigger([...CENTER_CREATE_FIELDS], { shouldFocus: true });
+      return;
+    }
+    focusMissingRef.current = true;
+    setActiveStep(0);
   }
 
   async function submitForReview() {
@@ -201,9 +224,7 @@ export function CenterEditor({
     submittingReviewRef.current = true;
     try {
       if (!isReadyToCreate(form.getValues())) {
-        // Los campos obligatorios viven en el primer paso, que no está montado.
-        setActiveStep(0);
-        onError(REQUIRED_FIELDS_MESSAGE);
+        showMissingFields();
         return;
       }
       if (!(await form.trigger(undefined, { shouldFocus: true }))) {

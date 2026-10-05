@@ -52,6 +52,8 @@ export function RhfTextField<
     <TextField
       fullWidth
       {...props}
+      // Una regla `required` también muestra el asterisco.
+      required={props.required ?? Boolean(rules?.required)}
       name={field.name}
       value={field.value ?? ""}
       onChange={field.onChange}
