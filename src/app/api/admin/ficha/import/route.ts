@@ -122,6 +122,7 @@ export async function POST(request: NextRequest) {
           ...resultado.advertencias,
           ...advertenciasDeCatalogos(catalogosResueltos),
         ],
+        fotos: resultado.imagenesAdjuntas,
       },
     });
   } catch (error) {

@@ -38,6 +38,7 @@ import type {
   FichaExtraida,
   FichaIdentificacion,
   FichaImagenAnexo,
+  FichaImagenAdjunta,
   FichaIngreso,
   FichaResponsableFirma,
   FichaResumenValoracion,
@@ -48,6 +49,7 @@ import type {
 
 const EXTENSIONES_PERMITIDAS = new Set(["xlsx", "xlsm"]);
 export const TAMANO_MAXIMO_BYTES = 20 * 1024 * 1024;
+const TAMANO_MAXIMO_IMAGEN_BYTES = 10 * 1024 * 1024;
 
 export class FichaInvalidaError extends Error {}
 
@@ -138,6 +140,10 @@ function validarPlantilla(workbook: ExcelJS.Workbook): ExcelJS.Worksheet {
 }
 
 function leerCodigoAtractivo(worksheet: ExcelJS.Worksheet): string | null {
+  // Las fórmulas de la plantilla sin nombre pueden no traer resultado en caché;
+  // `leerCelda` las representa como 0 para preservar dígitos válidos en fichas llenas.
+  if (leerTextoOpcional(worksheet, "B6") === null) return null;
+
   const partes = CODIGOS_COLUMNAS.map((col) => {
     const valor = leerCelda(worksheet, `${col}2`);
     return valor === null ? "" : String(valor);
@@ -494,22 +500,74 @@ function leerAccesibilidadDetalle(
   return items;
 }
 
-function leerImagenes(workbook: ExcelJS.Workbook): FichaImagenAnexo[] {
-  const imagenes: FichaImagenAnexo[] = [];
-  for (const media of workbook.model.media ?? []) {
-    if (media.type !== "image") continue;
-    const imagen = media as unknown as {
-      name: string;
-      extension: string;
-      buffer?: Buffer;
-    };
-    imagenes.push({
-      archivo: imagen.name,
-      extension: imagen.extension,
-      tamanoBytes: imagen.buffer?.length ?? 0,
+function leerImagenesAnexos(
+  workbook: ExcelJS.Workbook,
+  advertencias: string[],
+): { metadata: FichaImagenAnexo[]; adjuntas: FichaImagenAdjunta[] } {
+  const worksheet = workbook.getWorksheet(HOJA_PRINCIPAL);
+  if (!worksheet) return { metadata: [], adjuntas: [] };
+
+  const media =
+    (
+      workbook.model as unknown as {
+        media?: Array<{ type: string; extension: string; buffer?: Buffer }>;
+      }
+    ).media ?? [];
+  const metadata: FichaImagenAnexo[] = [];
+  const adjuntas: FichaImagenAdjunta[] = [];
+
+  for (const imagen of worksheet.getImages()) {
+    const row = imagen.range.tl.nativeRow;
+    const column = imagen.range.tl.nativeCol;
+    // La hoja usa las filas 304–320 como espacio de fotografías de anexos.
+    // Se ignoran logos y firmas colocados en otras hojas o secciones.
+    if (row < 303 || row > 319 || column < 1 || column > 21) continue;
+
+    const archivo = media[Number(imagen.imageId)];
+    if (!archivo || archivo.type !== "image") {
+      advertencias.push(
+        "No se pudo extraer una imagen ubicada en los anexos de la ficha.",
+      );
+      continue;
+    }
+
+    const nombre = `foto-${metadata.length + 1}.${archivo.extension}`;
+    const tamanoBytes = archivo.buffer?.length ?? 0;
+    metadata.push({ archivo: nombre, extension: archivo.extension, tamanoBytes });
+
+    const mimeType =
+      archivo.extension === "png"
+        ? "image/png"
+        : archivo.extension === "jpeg"
+          ? "image/jpeg"
+          : archivo.extension === "webp"
+            ? "image/webp"
+            : null;
+    if (!mimeType) {
+      advertencias.push(
+        `La imagen ${metadata.length} de los anexos tiene un formato no compatible; no se adjuntó.`,
+      );
+      continue;
+    }
+    if (tamanoBytes === 0 || tamanoBytes > TAMANO_MAXIMO_IMAGEN_BYTES) {
+      advertencias.push(
+        tamanoBytes === 0
+          ? `No se pudo extraer la imagen ${metadata.length} de los anexos.`
+          : `La imagen ${metadata.length} de los anexos supera el límite de 10 MB y no se adjuntó.`,
+      );
+      continue;
+    }
+
+    adjuntas.push({
+      nombre,
+      extension: archivo.extension as FichaImagenAdjunta["extension"],
+      mimeType,
+      tamanoBytes,
+      contenidoBase64: archivo.buffer!.toString("base64"),
     });
   }
-  return imagenes;
+
+  return { metadata, adjuntas };
 }
 
 /**
@@ -528,6 +586,7 @@ export async function parsearFicha(
   const worksheet = validarPlantilla(workbook);
 
   const advertencias: string[] = [];
+  const imagenesAnexos = leerImagenesAnexos(workbook, advertencias);
   const identificacion = leerIdentificacion(worksheet);
   const ubicacion = leerUbicacion(worksheet, advertencias);
   const caracteristicas = leerCaracteristicas(worksheet);
@@ -579,7 +638,7 @@ export async function parsearFicha(
     },
     resumenValoracion: leerResumenValoracion(workbook),
     accesibilidadDetalle: leerAccesibilidadDetalle(workbook),
-    imagenes: leerImagenes(workbook),
+    imagenes: imagenesAnexos.metadata,
     politicas: leerPoliticas(worksheet),
     actividades: leerActividades(worksheet),
     promocion: leerPromocion(worksheet),
@@ -597,5 +656,5 @@ export async function parsearFicha(
     );
   }
 
-  return { datos, advertencias };
+  return { datos, advertencias, imagenesAdjuntas: imagenesAnexos.adjuntas };
 }

@@ -2,6 +2,7 @@
 
 import ArrowBackRounded from "@mui/icons-material/ArrowBackRounded";
 import CloudUploadRounded from "@mui/icons-material/CloudUploadRounded";
+import DownloadRounded from "@mui/icons-material/DownloadRounded";
 import { Alert, Button, Stack, Typography } from "@mui/material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -139,13 +140,15 @@ export function CenterEditor({
     onNotice,
     onError,
   });
+  const uploadImportedPhotos = fichaImport.uploadImportedPhotos;
 
   const handleDetailChanged = useCallback(
     (saved: AdminCenterDetail) => {
       queryClient.setQueryData(adminKeys.center(saved.code), saved);
       onSaved(saved);
+      void uploadImportedPhotos(saved.code);
     },
-    [onSaved, queryClient],
+    [onSaved, queryClient, uploadImportedPhotos],
   );
   const notifyCoordinatesPicked = useCallback(
     () => onNotice("Coordenadas seleccionadas en el mapa."),
@@ -212,6 +215,16 @@ export function CenterEditor({
           </Button>
         }
         actions={[
+          <Button
+            key="template"
+            component="a"
+            href="/templates/ficha-mintur-vacia.xlsm"
+            download="Ficha_MINTUR_vacia.xlsm"
+            variant="outlined"
+            startIcon={<DownloadRounded />}
+          >
+            Descargar plantilla vacía
+          </Button>,
           canEdit ? (
             <Button
               key="import"
@@ -219,7 +232,7 @@ export function CenterEditor({
               variant="outlined"
               startIcon={<CloudUploadRounded />}
               onClick={() => importInputRef.current?.click()}
-              disabled={fichaImport.importing}
+              disabled={fichaImport.importing || fichaImport.uploadingPhotos}
             >
               {fichaImport.importing ? "Importando…" : "Importar ficha (.xlsx / .xlsm)"}
             </Button>
@@ -261,6 +274,30 @@ export function CenterEditor({
               </Typography>
             ))}
           </Stack>
+        </Alert>
+      ) : null}
+      {fichaImport.pendingPhotoCount > 0 ? (
+        <Alert
+          severity={fichaImport.photoUploadError ? "warning" : "info"}
+          action={
+            code ? (
+              <Button
+                color="inherit"
+                size="small"
+                disabled={fichaImport.uploadingPhotos}
+                onClick={() => void fichaImport.uploadImportedPhotos(code)}
+              >
+                {fichaImport.uploadingPhotos ? "Subiendo…" : "Reintentar"}
+              </Button>
+            ) : undefined
+          }
+        >
+          {fichaImport.photoUploadError ??
+            (code
+              ? fichaImport.uploadingPhotos
+                ? `Subiendo ${fichaImport.pendingPhotoCount} foto(s) importada(s)…`
+                : `${fichaImport.pendingPhotoCount} foto(s) importada(s) pendientes de carga.`
+              : `${fichaImport.pendingPhotoCount} foto(s) detectada(s); se adjuntarán al guardar la ficha.`)}
         </Alert>
       ) : null}
       {detail?.review?.observation ? (

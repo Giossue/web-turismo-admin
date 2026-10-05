@@ -5,6 +5,13 @@ import path from "node:path";
 import { FichaInvalidaError, parsearFicha } from "@/lib/ficha/parser";
 
 const RUTA_FIXTURE = path.join(import.meta.dir, "fixtures", "santuario-del-guayco.xlsm");
+const RUTA_PLANTILLA_VACIA = path.join(
+  import.meta.dir,
+  "..",
+  "public",
+  "templates",
+  "ficha-mintur-vacia.xlsm",
+);
 
 async function parsearFixture() {
   const buffer = await readFile(RUTA_FIXTURE);
@@ -15,7 +22,31 @@ async function parsearFixture() {
   return parsearFicha(arrayBuffer, "santuario-del-guayco.xlsm");
 }
 
+async function parsearPlantillaVacia() {
+  const buffer = await readFile(RUTA_PLANTILLA_VACIA);
+  const arrayBuffer = buffer.buffer.slice(
+    buffer.byteOffset,
+    buffer.byteOffset + buffer.byteLength,
+  );
+  return parsearFicha(arrayBuffer, "Ficha_MINTUR_vacia.xlsm");
+}
+
 describe("parsearFicha — casos de la sección 8 del plan", () => {
+  test("la plantilla de descarga está vacía y conserva el formato importable", async () => {
+    const { datos, imagenesAdjuntas } = await parsearPlantillaVacia();
+    expect(datos.identificacion.nombre).toBeNull();
+    expect(datos.identificacion.codigoAtractivo).toBeNull();
+    expect(datos.ubicacion.provincia.texto).toBeNull();
+    expect(datos.descripcion).toBeNull();
+    expect(datos.accesoConectividad.transporteDetalle).toHaveLength(0);
+    expect(datos.imagenes).toHaveLength(0);
+    expect(imagenesAdjuntas).toHaveLength(0);
+    expect(datos.accesibilidadDetalle.every((item) => item.respuesta === null)).toBe(
+      true,
+    );
+    expect(datos.responsables.elaborado.nombre).toBeNull();
+  });
+
   test("nombre y código del atractivo", async () => {
     const { datos } = await parsearFixture();
     expect(datos.identificacion.nombre).toBe("Santuario del Guayco");
@@ -35,6 +66,19 @@ describe("parsearFicha — casos de la sección 8 del plan", () => {
     expect(datos.accesoConectividad.transporteDetalle[0].nombre).toBe(
       "Cooperativa de camionetas Benalcázar",
     );
+  });
+
+  test("extrae las fotos de anexos y omite imágenes fuera de ese bloque", async () => {
+    const { datos, imagenesAdjuntas } = await parsearFixture();
+    expect(datos.imagenes).toHaveLength(3);
+    expect(imagenesAdjuntas).toHaveLength(3);
+
+    for (const imagen of imagenesAdjuntas) {
+      expect(["image/png", "image/jpeg", "image/webp"]).toContain(imagen.mimeType);
+      expect(Buffer.from(imagen.contenidoBase64, "base64")).toHaveLength(
+        imagen.tamanoBytes,
+      );
+    }
   });
 
   test("total informativo de RESUMEN DE RESULTADOS", async () => {

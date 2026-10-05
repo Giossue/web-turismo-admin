@@ -371,8 +371,15 @@ tabla en vez de los nombres provisionales usados más arriba (`plantaTuristica[]
 6. El usuario revisa, corrige lo marcado, y guarda con el flujo normal (borrador → enviar a
    revisión → publicar) — exactamente el mismo camino que si hubiera llenado el formulario a
    mano.
-7. Las imágenes detectadas se muestran como sugerencias de anexo; el usuario decide subirlas o
-   no mediante el flujo de medios ya existente (`media-manager.tsx`).
+7. Las fotos PNG/JPEG/WebP ancladas en las filas 304–320 de `Ficha_Jerarquia` se detectan y
+   quedan pendientes durante la revisión. Tras guardar el centro, se cargan como medios
+   `FOTOGRAFIA` mediante el flujo existente; si alguna falla, queda disponible la opción de
+   reintento. Se ignoran las imágenes decorativas y las firmas fuera de ese bloque. Cada foto
+   debe pesar como máximo 10 MB.
+
+En el encabezado de **Centros turísticos** y del editor se descarga `Ficha_MINTUR_vacia.xlsm`.
+La copia conserva el formato `.xlsm`, macros y estructura de hojas, con datos, fotos y firmas
+del archivo de ejemplo eliminados.
 
 ## 7. Riesgos y limitaciones
 
@@ -448,10 +455,8 @@ pendientes:
    (`respuesta`, `presente`, `cumple`, `aplica`)? El importador puede producir el valor
    correcto del enum a partir del "S/I" del Excel; cómo se traduce a la base es decisión de
    quien mantiene la API.
-4. Las imágenes (`xl/media/image1-5.png`) están ancladas por `drawing1.xml`/`drawing2.xml`
-   (2 fotos, mapa, y una imagen adicional). ¿El botón de importación debe sugerir las 3-4
-   imágenes automáticamente, o solo las que superen cierto tamaño mínimo (para descartar
-   logos/decoración de plantilla)?
+4. Resuelta: solo se adjuntan imágenes ancladas en el bloque de anexos (filas 304–320) de la
+   hoja principal. Se omiten logos, imágenes de otras hojas y firmas.
 5. **¿Cómo quieres que la UI use los datos de las 6 secciones que ya se extraen pero no se
    guardan** (políticas, promoción, visitantes, recurso humano, planta, conservación)? Opciones:
    (a) llamar a `saveAdminCenterSection` automáticamente por cada una justo después de crear el

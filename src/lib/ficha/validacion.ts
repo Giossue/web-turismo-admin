@@ -163,6 +163,14 @@ export const fichaImagenAnexoSchema = z.object({
   tamanoBytes: z.number(),
 });
 
+export const fichaImagenAdjuntaSchema = z.object({
+  nombre: z.string(),
+  extension: z.enum(["png", "jpeg", "webp"]),
+  mimeType: z.enum(["image/png", "image/jpeg", "image/webp"]),
+  tamanoBytes: z.number().int().positive(),
+  contenidoBase64: z.string().min(1),
+});
+
 // --- Políticas, actividades, promoción, visitantes y recurso humano ---
 
 export const fichaPoliticaSchema = z.object({
@@ -419,4 +427,5 @@ export const fichaExtraidaSchema = z.object({
 export const resultadoParseoFichaSchema = z.object({
   datos: fichaExtraidaSchema,
   advertencias: z.array(z.string()),
+  imagenesAdjuntas: z.array(fichaImagenAdjuntaSchema),
 });

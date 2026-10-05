@@ -1,6 +1,7 @@
 "use client";
 
 import AddRounded from "@mui/icons-material/AddRounded";
+import DownloadRounded from "@mui/icons-material/DownloadRounded";
 import MenuRounded from "@mui/icons-material/MenuRounded";
 import { Box, Button, IconButton, Stack, Tooltip } from "@mui/material";
 import { useQueryClient } from "@tanstack/react-query";
@@ -118,9 +119,24 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
 
   const headerAction =
     section === "centers" ? (
-      <Button variant="contained" startIcon={<AddRounded />} onClick={() => openEditor()}>
-        Nueva ficha
-      </Button>
+      <>
+        <Button
+          component="a"
+          href="/templates/ficha-mintur-vacia.xlsm"
+          download="Ficha_MINTUR_vacia.xlsm"
+          variant="outlined"
+          startIcon={<DownloadRounded />}
+        >
+          Descargar plantilla
+        </Button>
+        <Button
+          variant="contained"
+          startIcon={<AddRounded />}
+          onClick={() => openEditor()}
+        >
+          Nueva ficha
+        </Button>
+      </>
     ) : section === "establishments" ? (
       <Button
         variant="contained"

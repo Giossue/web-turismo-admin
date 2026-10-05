@@ -10,6 +10,7 @@ import type {
   fichaFormacionPersonalSchema,
   fichaIdentificacionSchema,
   fichaImagenAnexoSchema,
+  fichaImagenAdjuntaSchema,
   fichaIngresoSchema,
   fichaPoliticaSchema,
   fichaPromocionSchema,
@@ -38,6 +39,7 @@ export type FichaAccesibilidadDetalleItem = z.infer<
   typeof fichaAccesibilidadDetalleItemSchema
 >;
 export type FichaImagenAnexo = z.infer<typeof fichaImagenAnexoSchema>;
+export type FichaImagenAdjunta = z.infer<typeof fichaImagenAdjuntaSchema>;
 export type FichaPolitica = z.infer<typeof fichaPoliticaSchema>;
 export type FichaFormacionPersonal = z.infer<typeof fichaFormacionPersonalSchema>;
 export type FichaRecursoHumano = z.infer<typeof fichaRecursoHumanoSchema>;

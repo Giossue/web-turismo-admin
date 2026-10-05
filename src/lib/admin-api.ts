@@ -446,10 +446,19 @@ export type CatalogMutationResult = {
 };
 
 /** Resultado de `/api/admin/ficha/import` (ruta interna de este portal). */
+export type FichaImportPhoto = {
+  nombre: string;
+  extension: "png" | "jpeg" | "webp";
+  mimeType: "image/png" | "image/jpeg" | "image/webp";
+  tamanoBytes: number;
+  contenidoBase64: string;
+};
+
 type FichaImportResult = {
   formulario: ReturnType<typeof mapearFichaAFormulario>;
   sugerenciasSecciones: SugerenciasSecciones;
   advertencias: string[];
+  fotos: FichaImportPhoto[];
 };
 
 type AdminAccessTokenRefresh = (expiredToken: string) => Promise<string | null>;

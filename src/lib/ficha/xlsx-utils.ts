@@ -30,7 +30,10 @@ export function leerCelda(
         .join("");
     }
     if (value instanceof Date) return value.toISOString();
-    if ("text" in value) return String((value as { text: unknown }).text);
+    if ("text" in value) {
+      const text = (value as { text: unknown }).text;
+      return text === null || text === undefined ? null : String(text);
+    }
     return null;
   }
   return normalizarValorCelda(value);

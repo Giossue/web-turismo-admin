@@ -4,9 +4,14 @@ El panel puede precargar el formulario de "Nueva ficha" a partir de la "Ficha pa
 levantamiento y jerarquización de atractivos turísticos" (plantilla MINTUR 2017) en Excel.
 El botón **"Importar ficha (.xlsx / .xlsm)"** está en el encabezado del editor de fichas.
 
-El proceso **nunca guarda nada automáticamente**: solo lee el archivo, precarga los campos que
-pudo resolver con confianza y muestra advertencias para los que no. El usuario revisa, corrige
-y guarda con el flujo normal (borrador → revisión → publicación).
+La importación precarga los campos que pudo resolver con confianza y muestra advertencias para
+los que no; esos cambios no se guardan hasta que el usuario use el flujo normal (borrador →
+revisión → publicación). Las fotografías ancladas en el bloque de anexos se detectan y se cargan
+como archivos del centro después de guardar la ficha.
+
+En el módulo **Centros turísticos** está el botón **"Descargar plantilla"**, que entrega una
+copia vacía como `Ficha_MINTUR_vacia.xlsm`. Conserva el formato habilitado para macros y las
+hojas auxiliares; elimina los datos del archivo de ejemplo y sus fotografías y firmas.
 
 ## Formatos soportados
 
@@ -48,6 +53,9 @@ y guarda con el flujo normal (borrador → revisión → publicación).
   contingencia.
 - **Descripción** del atractivo.
 - **Firmas de responsabilidad** (elaborado/validado/aprobado).
+- **Fotos de anexos**: detecta imágenes PNG, JPEG o WebP colocadas en las filas 304–320 de
+  `Ficha_Jerarquia`, las muestra como pendientes y las carga al centro luego de guardar. Se
+  omiten imágenes decorativas y firmas ubicadas fuera de ese bloque; el límite es 10 MB por foto.
 - **Hoja `ficha_Accesibilidad`**: el detalle de criterios SI/NO por categoría de discapacidad
   (se muestra como referencia; el mapeo a los criterios del formulario de accesibilidad
   detallada es un trabajo posterior).
