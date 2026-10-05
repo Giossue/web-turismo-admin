@@ -395,6 +395,28 @@ export function CenterEditor({
         working={centerSave.working}
         onPrevious={() => setActiveStep((current) => Math.max(0, current - 1))}
         onNext={() => void goNext()}
+        finalAction={
+          isNew ? (
+            <Button
+              type="button"
+              variant="contained"
+              onClick={() => void createNow()}
+              disabled={centerSave.working}
+            >
+              {centerSave.working ? "Guardando…" : "Guardar ficha"}
+            </Button>
+          ) : canReview ? (
+            <Button
+              type="button"
+              variant="contained"
+              startIcon={<CloudUploadRounded />}
+              onClick={() => void submitForReview()}
+              disabled={centerSave.working}
+            >
+              {centerSave.reviewing ? "Enviando…" : "Enviar a revisión"}
+            </Button>
+          ) : undefined
+        }
       />
     </Stack>
   );

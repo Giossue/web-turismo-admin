@@ -12,6 +12,8 @@ import {
   Typography,
 } from "@mui/material";
 
+import type { ReactNode } from "react";
+
 import { FlatSurface } from "@/components/ui/flat-surface";
 import { webTokens } from "@/theme/tokens";
 
@@ -193,12 +195,15 @@ export function CenterWizardNavigation({
   working,
   onPrevious,
   onNext,
+  finalAction,
 }: {
   activeStep: number;
   lastStep: number;
   working: boolean;
   onPrevious: () => void;
   onNext: () => void;
+  /** Acción principal del último paso (guardar o enviar a revisión). */
+  finalAction?: ReactNode;
 }) {
   return (
     <Stack
@@ -227,9 +232,11 @@ export function CenterWizardNavigation({
           Siguiente
         </Button>
       ) : (
-        <Typography variant="body2" color="text.secondary">
-          Revisión final de la ficha
-        </Typography>
+        (finalAction ?? (
+          <Typography variant="body2" color="text.secondary">
+            Revisión final de la ficha
+          </Typography>
+        ))
       )}
     </Stack>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import FactCheckRounded from "@mui/icons-material/FactCheckRounded";
-import { Box, Divider, Grid, Stack, Typography } from "@mui/material";
+import { Alert, Box, Divider, Grid, Stack, Typography } from "@mui/material";
 
 import { CenterReviewDiff } from "@/components/admin/center-review-diff";
 import { FlatSurface } from "@/components/ui/flat-surface";
@@ -39,6 +39,33 @@ export function CenterSummaryStep({
   const completedSections = centerSectionDefinitions.filter(
     (section) => sectionValues[section.code] !== undefined,
   ).length;
+  const missingSections = centerSectionDefinitions.filter(
+    (section) => sectionValues[section.code] === undefined,
+  );
+  const state = detail?.status.code;
+  const readiness = !detail
+    ? {
+        severity: "warning" as const,
+        message:
+          "La ficha aún no está guardada. Pulsa «Guardar ficha» para crearla; después podrás enviarla a revisión.",
+      }
+    : state && state !== "BORRADOR"
+      ? {
+          severity: "info" as const,
+          message: `La ficha está en estado «${centerStatusLabel(detail.status)}»; no hay nada que enviar.`,
+        }
+      : missingSections.length > 0
+        ? {
+            severity: "warning" as const,
+            message: `Faltan ${missingSections.length} apartado(s) por completar: ${missingSections
+              .map((section) => section.title)
+              .join(", ")}. Complétalos antes de enviarla a revisión.`,
+          }
+        : {
+            severity: "success" as const,
+            message:
+              "Todos los apartados tienen información. Pulsa «Enviar a revisión» para que se apruebe y publique.",
+          };
   const summaryRows = [
     ["Nombre", draft?.name ?? PENDING],
     ["Subtipo", findCatalogName(catalogs?.subtypes, draft?.subtypeId)],
@@ -50,6 +77,7 @@ export function CenterSummaryStep({
 
   return (
     <Stack spacing={webTokens.spacing.section}>
+      <Alert severity={readiness.severity}>{readiness.message}</Alert>
       <FlatSurface padding="default">
         <Stack spacing={webTokens.spacing.section}>
           <SectionHeader
