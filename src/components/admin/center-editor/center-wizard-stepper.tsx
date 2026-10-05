@@ -187,6 +187,12 @@ export function CenterWizardStepper({
             );
           })}
         </Box>
+        {canNavigate ? null : (
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
+            Completa los datos obligatorios de este paso y pulsa «Siguiente» para crear la
+            ficha; después podrás moverte entre todos los apartados.
+          </Typography>
+        )}
       </Box>
     </FlatSurface>
   );
