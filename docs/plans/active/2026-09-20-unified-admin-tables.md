@@ -12,8 +12,10 @@ vacío del filtro de Catastro y evitando estilos duplicados.
   paginación.
 - Reutilizar esas primitivas en las tres tablas operativas actuales.
 - Mantener acciones, estados, filtros, paginación y diálogos existentes.
-- Mejorar la semántica de las filas con encabezados de fila y conservar el scroll
-  horizontal en pantallas pequeñas.
+- Mejorar la semántica de las filas con encabezados de fila.
+- En pantallas menores a 600 px, mostrar tarjetas móviles en los ocho listados
+  administrativos; conservar la tabla desde 600 px, junto con filtros, estados,
+  acciones y paginación.
 - Aplicar búsqueda automática a todos los filtros: los selectores consultan al cambiar y
   los campos de texto usan un debounce compartido de 1.5 segundos.
 - Retirar el botón manual de búsqueda de Catastro.
@@ -30,7 +32,7 @@ vacío del filtro de Catastro y evitando estilos duplicados.
 - `bun run lint`
 - `bun run typecheck`
 - `bun run build`
-- Revisar el diff y el comportamiento responsive de las tres tablas.
+- Revisar el diff y el comportamiento responsive de todos los listados administrativos.
 
 ## Estado
 
@@ -44,3 +46,6 @@ En Catálogos, las pestañas y la búsqueda quedan en filas separadas para facil
 escaneo antes de la tabla.
 Los avisos globales del panel quedan centrados, sin borde ni botón de cierre, y se ocultan
 automáticamente después de 3 segundos.
+El 5 de octubre de 2026, los ocho listados administrativos pasaron a usar tarjetas en
+móviles y conservar la tabla en pantallas desde 600 px. La presentación móvil comparte
+buscador, filtros y pie de paginación, y cada módulo aporta sus propios datos y acciones.
