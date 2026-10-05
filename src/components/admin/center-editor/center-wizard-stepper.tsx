@@ -2,7 +2,15 @@
 
 import ArrowBackRounded from "@mui/icons-material/ArrowBackRounded";
 import ArrowForwardRounded from "@mui/icons-material/ArrowForwardRounded";
-import { Box, Button, ButtonBase, Stack, Typography } from "@mui/material";
+import {
+  Box,
+  Button,
+  ButtonBase,
+  LinearProgress,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
 
 import { FlatSurface } from "@/components/ui/flat-surface";
 import { webTokens } from "@/theme/tokens";
@@ -30,13 +38,53 @@ export function CenterWizardStepper({
   onSelect: (step: number) => void;
 }) {
   const isSummary = activeStep >= steps.length;
+  const currentIndex = Math.min(activeStep, steps.length - 1);
+  const progress = isSummary
+    ? 100
+    : Math.round((activeStep / Math.max(steps.length, 1)) * 100);
   return (
     <FlatSurface padding="compact">
       <Box component="nav" aria-label="Secciones de la ficha turística">
+        {/* Móvil: cabecera compacta con progreso y selector, sin la cuadrícula. */}
+        <Stack gap={1.25} sx={{ display: { xs: "flex", sm: "none" } }}>
+          <Stack
+            direction="row"
+            alignItems="baseline"
+            justifyContent="space-between"
+            gap={1}
+          >
+            <Typography variant="caption" color="text.secondary">
+              {isSummary ? "Revisión final" : `Paso ${activeStep + 1} de ${steps.length}`}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {progress}% completado
+            </Typography>
+          </Stack>
+          <LinearProgress
+            variant="determinate"
+            value={progress}
+            aria-label="Avance de la ficha"
+            sx={{ borderRadius: 999, height: 6 }}
+          />
+          <TextField
+            select
+            size="small"
+            label="Sección"
+            value={String(currentIndex)}
+            onChange={(event) => onSelect(Number(event.target.value))}
+            slotProps={{ select: { native: true } }}
+          >
+            {steps.map((step, index) => (
+              <option key={step.key} value={index} disabled={index > 0 && !canNavigate}>
+                {index + 1}. {step.title}
+              </option>
+            ))}
+          </TextField>
+        </Stack>
         <Box
           component="ol"
           sx={{
-            display: "grid",
+            display: { xs: "none", sm: "grid" },
             gridTemplateColumns: {
               xs: "repeat(2, minmax(0, 1fr))",
               sm: "repeat(4, minmax(0, 1fr))",
