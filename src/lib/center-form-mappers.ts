@@ -25,7 +25,6 @@ const SECTIONS_INFERRED_FROM_DRAFT: ReadonlyArray<
       Boolean(
         draft.name &&
         draft.subtypeId &&
-        draft.touristZoneId &&
         draft.parishId &&
         draft.productLineId &&
         draft.scenarioId,

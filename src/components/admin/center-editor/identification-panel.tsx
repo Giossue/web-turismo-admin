@@ -131,7 +131,6 @@ export function IdentificationPanel({
             name="touristZoneId"
             options={options.zones}
             disabled={!cantonId}
-            required
           />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
