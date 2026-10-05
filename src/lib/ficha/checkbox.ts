@@ -1,5 +1,6 @@
 import type ExcelJS from "exceljs";
 
+import { casillaFormularioMarcada } from "./controles-formulario";
 import {
   columnaANumero,
   encontrarMerge,
@@ -30,6 +31,7 @@ export function leerMarcaDirecta(
   worksheet: ExcelJS.Worksheet,
   ref: string,
 ): boolean | null {
+  if (casillaFormularioMarcada(worksheet, ref)) return true;
   return interpretarMarca(leerTexto(worksheet, ref));
 }
 
@@ -58,7 +60,7 @@ export function leerMarcaJuntoAEtiqueta(
   const merge = encontrarMerge(worksheet, celdaInicio);
   const [col, row] = separarColumnaFila(merge ? merge.split(":")[1] : celdaInicio);
   const colCasilla = numeroAColumna(columnaANumero(col) + 1);
-  return interpretarMarca(leerTexto(worksheet, `${colCasilla}${row}`));
+  return leerMarcaDirecta(worksheet, `${colCasilla}${row}`);
 }
 
 /**

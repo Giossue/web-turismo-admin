@@ -1,5 +1,6 @@
 import ExcelJS from "exceljs";
 
+import { cargarCasillasFormulario } from "./controles-formulario";
 import {
   leerMarcaDirecta,
   leerMarcaJuntoAEtiqueta,
@@ -108,6 +109,7 @@ async function abrirLibro(buffer: ArrayBuffer): Promise<ExcelJS.Workbook> {
   const workbook = new ExcelJS.Workbook();
   try {
     await workbook.xlsx.load(buffer);
+    await cargarCasillasFormulario(buffer, workbook);
   } catch {
     throw new FichaInvalidaError(
       "El archivo está vacío, corrupto, o no es un Excel válido (OOXML).",
