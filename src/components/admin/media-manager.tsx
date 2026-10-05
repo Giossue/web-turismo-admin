@@ -14,16 +14,15 @@ import {
   Divider,
   IconButton,
   Stack,
-  TextField,
   Tooltip,
   Typography,
 } from "@mui/material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
+import { PhotoUploadDialog } from "@/components/admin/photo-upload-dialog";
 import { FlatSurface } from "@/components/ui/flat-surface";
 import { ContentState } from "@/components/ui/content-state";
-import { LoadingSpinner } from "@/components/ui/loading-state";
 import { SectionHeader } from "@/components/ui/section-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
@@ -54,11 +53,6 @@ type MediaListItem = AdminEstablishmentMediaItem &
 /** Dueño de los archivos: la ficha de un centro o un establecimiento del catastro. */
 export type MediaTarget =
   { kind: "center"; code: string | null } | { kind: "establishment"; id: number | null };
-
-const PHOTO_ACCEPT = "image/jpeg,image/png";
-const PHOTO_TYPES = new Set(PHOTO_ACCEPT.split(","));
-/** Igual que `MEDIA_MAX_IMAGE_BYTES` de la API; se valida antes de subir. */
-const PHOTO_MAX_BYTES = 5 * 1024 * 1024;
 
 type MediaTypeOption = {
   value: MediaTypeCode;
@@ -123,10 +117,8 @@ export function MediaManager({
   onNotice: (message: string) => void;
   onError: (message: string | null) => void;
 }) {
-  const fileInput = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
-  const [description, setDescription] = useState("");
-  const [sourceAuthor, setSourceAuthor] = useState("");
+  const [uploadOpen, setUploadOpen] = useState(false);
   const [working, setWorking] = useState(false);
   const [pendingRemoval, setPendingRemoval] = useState<MediaListItem | null>(null);
   const ownerId = target.kind === "center" ? target.code : target.id;
@@ -156,45 +148,31 @@ export function MediaManager({
     }
   }, [mediaQuery.error, onError]);
 
-  async function upload(file: File) {
-    if (!ownerId) return;
-    if (!PHOTO_TYPES.has(file.type) || file.size > PHOTO_MAX_BYTES) {
-      onError("La fotografía debe ser JPEG o PNG y pesar como máximo 5 MB.");
-      if (fileInput.current) fileInput.current.value = "";
-      return;
+  async function uploadPhoto(
+    file: File,
+    metadata: { description: string; sourceAuthor: string },
+  ) {
+    if (target.kind === "center" && target.code) {
+      await uploadAdminCenterMedia(token, target.code, file, {
+        typeCode: "FOTOGRAFIA",
+        ...metadata,
+      });
+    } else if (target.kind === "establishment" && target.id) {
+      await uploadAdminEstablishmentMedia(token, target.id, file, metadata);
     }
-    setWorking(true);
-    onError(null);
-    try {
-      if (target.kind === "center" && target.code) {
-        await uploadAdminCenterMedia(token, target.code, file, {
-          typeCode: "FOTOGRAFIA",
-          description,
-          sourceAuthor,
-        });
-      } else if (target.kind === "establishment" && target.id) {
-        await uploadAdminEstablishmentMedia(token, target.id, file, {
-          description,
-          sourceAuthor,
-        });
-      }
-      setDescription("");
-      setSourceAuthor("");
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: mediaKey }),
-        queryClient.invalidateQueries({ queryKey: adminKeys.allNavigationSummaries() }),
-      ]);
-      onNotice(
-        target.kind === "center"
-          ? "Fotografía cargada. Quedará pendiente hasta publicar la ficha."
-          : "Fotografía cargada.",
-      );
-    } catch (cause) {
-      onError(errorMessage(cause, "No se pudo cargar la fotografía."));
-    } finally {
-      setWorking(false);
-      if (fileInput.current) fileInput.current.value = "";
-    }
+  }
+
+  async function onPhotosUploaded(count: number) {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: mediaKey }),
+      queryClient.invalidateQueries({ queryKey: adminKeys.allNavigationSummaries() }),
+    ]);
+    const label = count === 1 ? "Fotografía cargada." : `${count} fotografías cargadas.`;
+    onNotice(
+      target.kind === "center"
+        ? `${label} Quedará pendiente hasta publicar la ficha.`
+        : label,
+    );
   }
 
   async function remove(item: MediaListItem) {
@@ -234,53 +212,23 @@ export function MediaManager({
           }
           description="Sube fotografías JPEG o PNG de hasta 5 MB. Se recortan a 4:3 y se optimizan en WebP automáticamente."
         />
-        <Stack
-          direction={{ xs: "column", md: "row" }}
-          spacing={webTokens.spacing.control}
-        >
-          <TextField
-            label="Descripción de la fotografía"
-            slotProps={{ htmlInput: { maxLength: 2000 } }}
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            disabled={!canEdit || !ownerId || working}
-            fullWidth
-          />
-          <TextField
-            label="Autor o fuente"
-            slotProps={{ htmlInput: { maxLength: 250 } }}
-            value={sourceAuthor}
-            onChange={(event) => setSourceAuthor(event.target.value)}
-            disabled={!canEdit || !ownerId || working}
-            fullWidth
-          />
-          <input
-            ref={fileInput}
-            hidden
-            type="file"
-            accept={PHOTO_ACCEPT}
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) void upload(file);
-            }}
-          />
+        <Box>
           <Button
             type="button"
-            variant="outlined"
-            startIcon={
-              working ? (
-                <LoadingSpinner label="Procesando" size={18} color="inherit" />
-              ) : (
-                <UploadFileRounded />
-              )
-            }
-            onClick={() => fileInput.current?.click()}
+            variant="contained"
+            startIcon={<UploadFileRounded />}
+            onClick={() => setUploadOpen(true)}
             disabled={!canEdit || !ownerId || working}
-            sx={{ minWidth: 180 }}
           >
-            {working ? "Procesando…" : "Seleccionar fotografía"}
+            Subir fotografías
           </Button>
-        </Stack>
+        </Box>
+        <PhotoUploadDialog
+          open={uploadOpen}
+          onClose={() => setUploadOpen(false)}
+          upload={uploadPhoto}
+          onUploaded={(count) => void onPhotosUploaded(count)}
+        />
         {mediaQuery.error ? (
           <ContentState status="error" message="No se pudo cargar la multimedia." />
         ) : mediaQuery.isLoading ? (
