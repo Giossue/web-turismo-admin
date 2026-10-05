@@ -29,6 +29,7 @@ import {
   type AdminTablePagination,
 } from "@/components/ui/admin-table";
 import { AdminDataGrid } from "@/components/ui/admin-data-grid";
+import { StatusBadge } from "@/components/ui/status-badge";
 import {
   reviewAdminCenter,
   reviewAdminEstablishment,
@@ -580,6 +581,68 @@ function EstablishmentReviewTable({
         search={search}
         filterCount={filterCount}
         filterPanel={filterPanel}
+        mobileCard={(item) => ({
+          title: item.nombreComercial,
+          subtitle: item.categoriaEtiqueta ?? item.categoria ?? "Sin categoría",
+          status: <StatusBadge label="En revisión" tone="warning" />,
+          fields: [
+            { label: "Ubicación", value: `${item.localityName}, ${item.cantonName}` },
+            {
+              label: "Actividad / tipo",
+              value: (
+                <Stack spacing={0.25}>
+                  <Typography variant="body2">{item.actividad}</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {item.clasificacion ?? "Sin tipo de establecimiento"}
+                  </Typography>
+                </Stack>
+              ),
+            },
+            {
+              label: "Registro y RUC",
+              value: (
+                <Stack spacing={0.25}>
+                  <Typography variant="body2">
+                    {item.numeroRegistro ?? "Sin registro"}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    RUC: {item.ruc ?? "—"}
+                  </Typography>
+                </Stack>
+              ),
+            },
+            { label: "Enviado por", value: item.requestedBy ?? "—" },
+          ],
+          actions: (
+            <RecordActionsMenu
+              subject={item.nombreComercial}
+              actions={[
+                {
+                  label: "Ver detalle",
+                  icon: <VisibilityRounded fontSize="small" />,
+                  onClick: () => {
+                    setDetail(item);
+                    setDetailOpen(true);
+                  },
+                },
+                {
+                  label: "Rechazar",
+                  icon: <CloseRounded fontSize="small" />,
+                  color: "error",
+                  disabled: workingId === item.id,
+                  onClick: () => onReview(item, "REJECT"),
+                },
+                {
+                  label: "Aprobar",
+                  icon: <CheckRounded fontSize="small" />,
+                  color: "success",
+                  disabled: workingId === item.id,
+                  onClick: () => onReview(item, "APPROVE"),
+                },
+              ]}
+            />
+          ),
+        })}
       />
       <EstablishmentDetailDialog
         establishment={detail}

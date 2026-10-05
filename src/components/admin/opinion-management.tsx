@@ -157,6 +157,50 @@ export function OpinionManagement({ token }: { token: string }) {
   }
 
   const intent = review.intent;
+  const renderOpinionActions = useCallback(
+    (opinion: AdminOpinion, tabIndex?: number) => (
+      <RecordActionsMenu
+        subject={`opinión de ${opinion.authorName} sobre ${opinion.target.name}`}
+        tabIndex={tabIndex}
+        actions={[
+          {
+            label: "Ver historial",
+            icon: <HistoryRounded fontSize="small" />,
+            onClick: () => openHistory(opinion),
+          },
+        ]}
+        deletion={{
+          subject: `opinión de ${opinion.authorName} sobre ${opinion.target.name}`,
+          title: "Eliminar opinión",
+          description:
+            "Se retirarán todas sus versiones de la aplicación y dejará de contar en las calificaciones. El historial se conserva.",
+          disabled: reviewMutation.isPending,
+          onDelete: () => deleteAdminOpinion(token, opinion.reviewCode),
+          queryKeys: [
+            adminKeys.allOpinions(),
+            adminKeys.opinionHistory(opinion.reviewCode),
+            adminKeys.summary(),
+            adminKeys.allNavigationSummaries(),
+          ],
+          onDeleted: () => {
+            if (historyOpinion?.reviewCode === opinion.reviewCode) setHistoryOpen(false);
+            setPage(pageAfterRemoval(page, items.length));
+          },
+        }}
+      />
+    ),
+    [
+      historyOpinion?.reviewCode,
+      items.length,
+      openHistory,
+      page,
+      reviewMutation.isPending,
+      setHistoryOpen,
+      setPage,
+      token,
+    ],
+  );
+
   const columns = useMemo<GridColDef<AdminOpinion>[]>(
     () => [
       {
@@ -211,48 +255,11 @@ export function OpinionManagement({ token }: { token: string }) {
         align: "right",
         headerAlign: "right",
         filterable: false,
-        renderCell: ({ row: opinion, hasFocus }) => (
-          <RecordActionsMenu
-            subject={`opinión de ${opinion.authorName} sobre ${opinion.target.name}`}
-            tabIndex={hasFocus ? 0 : -1}
-            actions={[
-              {
-                label: "Ver historial",
-                icon: <HistoryRounded fontSize="small" />,
-                onClick: () => openHistory(opinion),
-              },
-            ]}
-            deletion={{
-              subject: `opinión de ${opinion.authorName} sobre ${opinion.target.name}`,
-              title: "Eliminar opinión",
-              description:
-                "Se retirarán todas sus versiones de la aplicación y dejará de contar en las calificaciones. El historial se conserva.",
-              disabled: reviewMutation.isPending,
-              onDelete: () => deleteAdminOpinion(token, opinion.reviewCode),
-              queryKeys: [
-                adminKeys.allOpinions(),
-                adminKeys.opinionHistory(opinion.reviewCode),
-                adminKeys.summary(),
-                adminKeys.allNavigationSummaries(),
-              ],
-              onDeleted: () => {
-                if (historyOpinion?.reviewCode === opinion.reviewCode)
-                  setHistoryOpen(false);
-                setPage(pageAfterRemoval(page, items.length));
-              },
-            }}
-          />
-        ),
+        renderCell: ({ row: opinion, hasFocus }) =>
+          renderOpinionActions(opinion, hasFocus ? 0 : -1),
       },
     ],
-    [
-      openHistory,
-      reviewMutation.isPending,
-      token,
-      historyOpinion?.reviewCode,
-      page,
-      items.length,
-    ],
+    [renderOpinionActions],
   );
 
   return (
@@ -324,6 +331,24 @@ export function OpinionManagement({ token }: { token: string }) {
             </Stack>
           </AdminGridFilterPanel>
         }
+        mobileCard={(opinion) => ({
+          title: opinion.target.name,
+          subtitle: `${opinionTargetTypeLabel(opinion.target.type)}${opinion.target.code ? ` · ${opinion.target.code}` : ""}`,
+          status: (
+            <StatusBadge
+              label={opinionStatusLabel(opinion.status)}
+              tone={opinionStatusTone(opinion.status)}
+            />
+          ),
+          fields: [
+            { label: "Usuario", value: opinion.authorName },
+            {
+              label: "Calificación propuesta",
+              value: <OpinionVersionSummary version={opinion.proposed} />,
+            },
+          ],
+          actions: renderOpinionActions(opinion),
+        })}
       />
 
       <Dialog

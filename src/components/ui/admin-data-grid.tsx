@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 import FilterListRounded from "@mui/icons-material/FilterListRounded";
-import { Box, Button, Stack } from "@mui/material";
+import { Box, Button, Card, CardContent, Stack, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import {
   DataGrid,
@@ -16,7 +16,11 @@ import {
 } from "@mui/x-data-grid";
 import { esES } from "@mui/x-data-grid/locales";
 
-import { ADMIN_TABLE_PAGE_SIZE, type AdminTablePagination } from "./admin-table";
+import {
+  ADMIN_TABLE_PAGE_SIZE,
+  AdminTableFooter,
+  type AdminTablePagination,
+} from "./admin-table";
 import { ContentState } from "./content-state";
 import { FlatSurface } from "./flat-surface";
 import { LoadingState } from "./loading-state";
@@ -26,6 +30,15 @@ type GridSearch = {
   label: string;
   value: string;
   onChange: (value: string) => void;
+};
+
+export type AdminMobileCard = {
+  title: ReactNode;
+  subtitle?: ReactNode;
+  status?: ReactNode;
+  fields?: Array<{ label: string; value: ReactNode }>;
+  primaryAction?: { label: string; onClick: () => void };
+  actions?: ReactNode;
 };
 
 type AdminDataGridProps<R extends GridValidRowModel> = Pick<
@@ -45,6 +58,8 @@ type AdminDataGridProps<R extends GridValidRowModel> = Pick<
   toolbarContent?: ReactNode;
   toolbarActions?: ReactNode;
   hideFooter?: boolean;
+  /** Datos y acciones resumidas para tarjetas en pantallas menores a 600 px. */
+  mobileCard: (row: R) => AdminMobileCard;
 };
 
 type GridControls = Pick<
@@ -151,7 +166,7 @@ function AdminLoadingOverlay() {
 
 export function AdminDataGrid<R extends GridValidRowModel>({
   ariaLabel,
-  rows,
+  rows = [],
   columns,
   getRowId,
   loading = false,
@@ -165,6 +180,7 @@ export function AdminDataGrid<R extends GridValidRowModel>({
   toolbarContent,
   toolbarActions,
   hideFooter = false,
+  mobileCard,
 }: AdminDataGridProps<R>) {
   const pageSize = pagination.pageSize ?? ADMIN_TABLE_PAGE_SIZE;
   // Una consulta de otra página no debe reiniciar el grid mientras llega su total.
@@ -195,90 +211,257 @@ export function AdminDataGrid<R extends GridValidRowModel>({
     ],
   );
 
+  const gridProps = {
+    "aria-label": ariaLabel,
+    rows,
+    columns,
+    getRowId,
+    loading,
+    disableRowSelectionOnClick: true,
+    disableColumnSorting: true,
+    disableColumnSelector: true,
+    disableColumnMenu: true,
+    paginationMode: "server" as const,
+    rowCount,
+    paginationModel: { page: pagination.page, pageSize },
+    onPaginationModelChange: (model: { page: number }) => {
+      if (model.page !== pagination.page) pagination.onPageChange(model.page);
+    },
+    pageSizeOptions: [pageSize],
+    filterMode: "server" as const,
+    showToolbar: Boolean(search || filtering || toolbarContent || toolbarActions),
+    slots: {
+      toolbar: AdminGridToolbar,
+      panel: AdminGridPanel,
+      filterPanel: AdminFilterPanel,
+      noRowsOverlay: AdminNoRowsOverlay,
+      loadingOverlay: AdminLoadingOverlay,
+    },
+    slotProps: {
+      loadingOverlay: {
+        variant: "circular-progress" as const,
+        noRowsVariant: "circular-progress" as const,
+      },
+    },
+    localeText: {
+      ...esES.components.MuiDataGrid.defaultProps.localeText,
+      noRowsLabel: emptyMessage,
+    },
+  };
+
   return (
     <GridControlsContext.Provider value={controls}>
       <Stack spacing={1} sx={{ minWidth: 0 }}>
         {error ? <ContentState status="error" message={error} /> : null}
-        <FlatSurface
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            minHeight: 320,
-            maxHeight: 680,
-            width: "100%",
-            minWidth: 0,
-            overflow: "hidden",
-          }}
-        >
-          <DataGrid<R>
-            aria-label={ariaLabel}
-            rows={rows}
-            columns={columns}
-            getRowId={getRowId}
-            loading={loading}
-            rowHeight={72}
-            columnHeaderHeight={44}
-            disableRowSelectionOnClick
-            disableColumnSorting
-            disableColumnSelector
-            disableColumnMenu
-            paginationMode="server"
-            rowCount={rowCount}
-            paginationModel={{ page: pagination.page, pageSize }}
-            onPaginationModelChange={(model) => {
-              if (model.page !== pagination.page) pagination.onPageChange(model.page);
-            }}
-            pageSizeOptions={[pageSize]}
-            filterMode="server"
-            hideFooter={hideFooter}
-            showToolbar={Boolean(search || filtering || toolbarContent || toolbarActions)}
-            slots={{
-              toolbar: AdminGridToolbar,
-              panel: AdminGridPanel,
-              filterPanel: AdminFilterPanel,
-              noRowsOverlay: AdminNoRowsOverlay,
-              loadingOverlay: AdminLoadingOverlay,
-            }}
-            slotProps={{
-              loadingOverlay: {
-                variant: "circular-progress",
-                noRowsVariant: "circular-progress",
-              },
-            }}
-            localeText={{
-              ...esES.components.MuiDataGrid.defaultProps.localeText,
-              noRowsLabel: emptyMessage,
-            }}
+        <Box sx={{ display: { xs: "none", sm: "block" } }}>
+          <FlatSurface
             sx={{
-              border: 0,
+              display: "flex",
+              flexDirection: "column",
+              minHeight: 320,
+              maxHeight: 680,
+              width: "100%",
               minWidth: 0,
-              bgcolor: "background.paper",
-              "--DataGrid-containerBackground": "var(--mui-palette-background-subtle)",
-              "& .MuiDataGrid-cell": { display: "flex", alignItems: "center" },
-              "& .MuiDataGrid-cell .MuiIconButton-root": {
-                width: 42,
-                height: 42,
-                "& .MuiSvgIcon-root": { fontSize: 24 },
-              },
-              "& .MuiDataGrid-columnHeaderTitle": { fontWeight: 600 },
-              "& .MuiDataGrid-footerContainer": { minHeight: 56 },
-              "& .MuiTablePagination-selectLabel, & .MuiTablePagination-input": {
-                display: "none",
-              },
-              "& .MuiTablePagination-toolbar": { px: { xs: 1, sm: 2 } },
-              "& .MuiTablePagination-actions .MuiIconButton-root": {
-                width: 32,
-                height: 32,
-                p: 0,
-                border: 0,
-                backgroundColor: "transparent",
-                "&:hover, &.Mui-disabled": { backgroundColor: "transparent" },
-                "& .MuiSvgIcon-root": { fontSize: 20 },
-              },
+              overflow: "hidden",
             }}
-          />
-        </FlatSurface>
+          >
+            <DataGrid<R>
+              {...gridProps}
+              rowHeight={72}
+              columnHeaderHeight={44}
+              hideFooter={hideFooter}
+              sx={desktopGridSx}
+            />
+          </FlatSurface>
+        </Box>
+
+        <Box sx={{ display: { xs: "block", sm: "none" }, minWidth: 0 }}>
+          <Stack spacing={1.5} sx={{ minWidth: 0 }}>
+            <FlatSurface
+              sx={{
+                width: "100%",
+                minWidth: 0,
+                overflow: "visible",
+                "& .MuiDataGrid-root": { height: "auto", minHeight: 0 },
+              }}
+            >
+              <DataGrid<R>
+                {...gridProps}
+                rowHeight={72}
+                columnHeaderHeight={44}
+                hideFooter
+                sx={{
+                  ...desktopGridSx,
+                  height: "auto",
+                  minHeight: 0,
+                  "& .MuiDataGrid-main, & .MuiDataGrid-footerContainer": {
+                    display: "none",
+                  },
+                }}
+              />
+            </FlatSurface>
+
+            {loading ? (
+              <FlatSurface padding="default">
+                <ContentState status="loading" label="Cargando datos" />
+              </FlatSurface>
+            ) : error ? null : rows.length === 0 ? (
+              <FlatSurface>
+                <ContentState status="empty" message={emptyMessage} />
+              </FlatSurface>
+            ) : (
+              <Stack component="ul" spacing={1.5} sx={{ listStyle: "none", p: 0, m: 0 }}>
+                {rows.map((row, index) => {
+                  const card = mobileCard(row);
+                  const id = getRowId
+                    ? getRowId(row)
+                    : ((row.id as string | number | undefined) ?? index);
+                  return (
+                    <Box component="li" key={id}>
+                      <Card
+                        component="article"
+                        variant="outlined"
+                        sx={{ borderRadius: 2 }}
+                      >
+                        <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
+                          <Stack spacing={1.5}>
+                            <Stack
+                              direction="row"
+                              spacing={1}
+                              alignItems="flex-start"
+                              justifyContent="space-between"
+                            >
+                              <Box sx={{ flex: 1, minWidth: 0 }}>
+                                <Typography
+                                  variant="subtitle1"
+                                  fontWeight={600}
+                                  sx={{ overflowWrap: "anywhere" }}
+                                >
+                                  {card.title}
+                                </Typography>
+                                {card.subtitle ? (
+                                  <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                    sx={{ overflowWrap: "anywhere" }}
+                                  >
+                                    {card.subtitle}
+                                  </Typography>
+                                ) : null}
+                              </Box>
+                              {card.status ? (
+                                <Box sx={{ flexShrink: 0 }}>{card.status}</Box>
+                              ) : null}
+                            </Stack>
+
+                            {card.fields?.length ? (
+                              <Box
+                                component="dl"
+                                sx={{
+                                  m: 0,
+                                  display: "grid",
+                                  gridTemplateColumns:
+                                    "repeat(auto-fit, minmax(min(100%, 130px), 1fr))",
+                                  gap: 1.5,
+                                }}
+                              >
+                                {card.fields.map(({ label, value }, fieldIndex) => (
+                                  <Box
+                                    key={`${label}-${fieldIndex}`}
+                                    sx={{ minWidth: 0 }}
+                                  >
+                                    <Typography
+                                      component="dt"
+                                      variant="caption"
+                                      color="text.secondary"
+                                    >
+                                      {label}
+                                    </Typography>
+                                    <Box
+                                      component="dd"
+                                      sx={{
+                                        m: 0,
+                                        typography: "body2",
+                                        overflowWrap: "anywhere",
+                                      }}
+                                    >
+                                      {value}
+                                    </Box>
+                                  </Box>
+                                ))}
+                              </Box>
+                            ) : null}
+
+                            {card.primaryAction || card.actions ? (
+                              <Stack
+                                direction="row"
+                                alignItems="center"
+                                justifyContent="space-between"
+                                spacing={1}
+                                sx={{ pt: 0.5 }}
+                              >
+                                {card.primaryAction ? (
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={card.primaryAction.onClick}
+                                  >
+                                    {card.primaryAction.label}
+                                  </Button>
+                                ) : (
+                                  <Box />
+                                )}
+                                {card.actions}
+                              </Stack>
+                            ) : null}
+                          </Stack>
+                        </CardContent>
+                      </Card>
+                    </Box>
+                  );
+                })}
+              </Stack>
+            )}
+
+            {!hideFooter ? (
+              <AdminTableFooter
+                page={pagination.page}
+                pageSize={pageSize}
+                total={pagination.total}
+                onPageChange={pagination.onPageChange}
+              />
+            ) : null}
+          </Stack>
+        </Box>
       </Stack>
     </GridControlsContext.Provider>
   );
 }
+
+const desktopGridSx = {
+  border: 0,
+  minWidth: 0,
+  bgcolor: "background.paper",
+  "--DataGrid-containerBackground": "var(--mui-palette-background-subtle)",
+  "& .MuiDataGrid-cell": { display: "flex", alignItems: "center" },
+  "& .MuiDataGrid-cell .MuiIconButton-root": {
+    width: 42,
+    height: 42,
+    "& .MuiSvgIcon-root": { fontSize: 24 },
+  },
+  "& .MuiDataGrid-columnHeaderTitle": { fontWeight: 600 },
+  "& .MuiDataGrid-footerContainer": { minHeight: 56 },
+  "& .MuiTablePagination-selectLabel, & .MuiTablePagination-input": {
+    display: "none",
+  },
+  "& .MuiTablePagination-toolbar": { px: { xs: 1, sm: 2 } },
+  "& .MuiTablePagination-actions .MuiIconButton-root": {
+    width: 32,
+    height: 32,
+    p: 0,
+    border: 0,
+    backgroundColor: "transparent",
+    "&:hover, &.Mui-disabled": { backgroundColor: "transparent" },
+    "& .MuiSvgIcon-root": { fontSize: 20 },
+  },
+};

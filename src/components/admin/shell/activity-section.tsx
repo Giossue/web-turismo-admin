@@ -229,6 +229,27 @@ export function ActivitySection({
           </Stack>
         </AdminGridFilterPanel>
       }
+      mobileCard={(item) => ({
+        title: actionLabel(item),
+        subtitle: typeLabels[item.type],
+        fields: [
+          {
+            label: "Registro",
+            value: (
+              <Stack spacing={0.25}>
+                <Typography variant="body2">{item.subject}</Typography>
+                {item.context ? (
+                  <Typography variant="caption" color="text.secondary">
+                    {contextLabels[item.context] ?? "Detalle"}
+                  </Typography>
+                ) : null}
+              </Stack>
+            ),
+          },
+          { label: "Responsable", value: item.actor },
+          { label: "Fecha y hora", value: formatDateTime(item.createdAt) },
+        ],
+      })}
     />
   );
 }

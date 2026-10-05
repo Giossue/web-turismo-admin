@@ -131,6 +131,31 @@ export function UsersSection({
         value: query,
         onChange: onQueryChange,
       }}
+      mobileCard={(user) => ({
+        title: user.name || "Sin nombre",
+        subtitle: user.email,
+        status: (
+          <StatusBadge
+            label={user.active ? "Activa" : "Inactiva"}
+            tone={user.active ? "success" : "default"}
+          />
+        ),
+        fields: [
+          {
+            label: "Roles",
+            value: user.roles.length ? (
+              <Stack direction="row" spacing={0.5} useFlexGap flexWrap="wrap">
+                {user.roles.map((role) => (
+                  <Chip key={role} label={roleLabels[role] ?? role} size="small" />
+                ))}
+              </Stack>
+            ) : (
+              "Sin rol asignado"
+            ),
+          },
+          { label: "Registrado", value: formatDate(user.createdAt) },
+        ],
+      })}
     />
   );
 }

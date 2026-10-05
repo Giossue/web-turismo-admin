@@ -627,6 +627,68 @@ export function CatalogManagement({
               {isEstablishments ? "Agregar tipo" : "Agregar opción"}
             </Button>
           }
+          mobileCard={(option) => ({
+            title: isEstablishments ? option.name : (option.displayName ?? option.name),
+            subtitle:
+              isEstablishments && !selectedActivity
+                ? (activityNameOf(option) ?? "—")
+                : undefined,
+            status: isEstablishments ? (
+              option.active === false ? (
+                <StatusBadge label="Inactivo" tone={activeTone(false)} />
+              ) : undefined
+            ) : (
+              <StatusBadge
+                label={activeLabel(option.active !== false)}
+                tone={activeTone(option.active !== false)}
+              />
+            ),
+            fields: isEstablishments
+              ? [
+                  {
+                    label: "Actividad",
+                    value: selectedActivity
+                      ? (activityNameOf(option) ?? "—")
+                      : "Todas las actividades",
+                  },
+                  { label: "Categorías", value: categoryCounts.get(option.id) ?? 0 },
+                ]
+              : option.code
+                ? [{ label: "Código", value: option.code }]
+                : [],
+            actions: (
+              <RecordActionsMenu
+                subject={option.displayName ?? option.name}
+                actions={[
+                  ...(isEstablishments
+                    ? [
+                        {
+                          label: "Ver categorías",
+                          icon: <VisibilityRounded fontSize="small" />,
+                          onClick: () => setTypeId(String(option.id)),
+                        },
+                      ]
+                    : []),
+                  {
+                    label: "Editar",
+                    icon: <EditRounded fontSize="small" />,
+                    onClick: () => openEdit(option),
+                  },
+                ]}
+                deletion={{
+                  subject: option.displayName ?? option.name,
+                  title: "Eliminar opción de catálogo",
+                  description:
+                    "Dejará de aparecer en el catálogo. Las fichas existentes y el historial se conservan.",
+                  onDelete: () => deleteAdminCatalog(token, visibleCatalog, option.id),
+                  queryKeys: [
+                    adminKeys.allCatalogs(),
+                    adminKeys.allNavigationSummaries(),
+                  ],
+                }}
+              />
+            ),
+          })}
         />
       </Stack>
 

@@ -473,6 +473,82 @@ export const EstablishmentManagement = forwardRef<
             }}
           />
         }
+        mobileCard={(item) => ({
+          title: item.nombreComercial,
+          subtitle: item.categoriaEtiqueta ?? item.categoria ?? undefined,
+          status: (
+            <StatusBadge
+              label={establishmentReviewStatusLabel(item.reviewStatus)}
+              tone={establishmentReviewStatusTone(item.reviewStatus)}
+            />
+          ),
+          fields: [
+            { label: "Localidad", value: `${item.localityName}, ${item.cantonName}` },
+            { label: "Actividad", value: item.actividad },
+            {
+              label: "Registro y RUC",
+              value: (
+                <Stack spacing={0.25}>
+                  <Typography variant="body2">
+                    {item.numeroRegistro ?? "Sin registro"}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    RUC: {item.ruc ?? "—"}
+                  </Typography>
+                </Stack>
+              ),
+            },
+          ],
+          actions: (
+            <RecordActionsMenu
+              subject={item.nombreComercial}
+              actions={[
+                {
+                  label: "Editar",
+                  icon: <EditRounded />,
+                  onClick: () => openEdit(item),
+                  disabled:
+                    !canManageStatus &&
+                    !["BORRADOR", "RECHAZADO"].includes(item.reviewStatus),
+                },
+                ...(!canManageStatus &&
+                ["BORRADOR", "RECHAZADO"].includes(item.reviewStatus)
+                  ? [
+                      {
+                        label: "Enviar a revisión",
+                        icon: <SendRounded />,
+                        onClick: () => submitReview(item.id),
+                        disabled: isSubmittingReview,
+                      },
+                    ]
+                  : []),
+              ]}
+              deletion={
+                canManageStatus
+                  ? {
+                      subject: item.nombreComercial,
+                      title: "Eliminar establecimiento",
+                      description:
+                        "Se retirará del Catastro y de la aplicación. Su historial se conserva.",
+                      onDelete: () => deleteAdminEstablishment(token, item.id),
+                      queryKeys: [
+                        adminKeys.allEstablishments(),
+                        adminKeys.summary(),
+                        adminKeys.allNavigationSummaries(),
+                      ],
+                      onDeleted: () =>
+                        setPage(
+                          pageAfterRemoval(
+                            page,
+                            establishmentsQuery.data?.items.length ?? 0,
+                          ),
+                        ),
+                    }
+                  : undefined
+              }
+            />
+          ),
+        })}
       />
 
       <Dialog

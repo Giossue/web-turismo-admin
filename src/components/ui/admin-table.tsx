@@ -87,7 +87,7 @@ export function AdminTable({
   );
 }
 
-function AdminTableFooter({
+export function AdminTableFooter({
   page,
   pageSize,
   total,
