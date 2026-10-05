@@ -162,15 +162,19 @@ export function CenterEditor({
 
   async function goNext() {
     if (activeSectionCode === null) return;
-    const fields = isNew ? CENTER_CREATE_FIELDS : CENTER_STEP_FIELDS[activeSectionCode];
+    // En una ficha nueva, «Siguiente» desde el primer paso la crea; en los demás
+    // pasos el autoguardado la crea en cuanto estén los datos obligatorios.
+    const creating = isNew && activeStep === 0;
+    const fields = creating
+      ? CENTER_CREATE_FIELDS
+      : CENTER_STEP_FIELDS[activeSectionCode];
     if (fields && !(await form.trigger([...fields], { shouldFocus: true }))) {
       onError(REQUIRED_FIELDS_MESSAGE);
       return;
     }
-    if (isNew) {
-      // La API asigna el código al crear; sin código no hay más pasos.
+    if (creating) {
       if (!(await autosave.flush({ force: true }))) return;
-    } else {
+    } else if (!isNew) {
       // Incluye valores importados que aún no se guardaron.
       void autosave.flush({ force: form.formState.isDirty });
     }
@@ -322,10 +326,7 @@ export function CenterEditor({
       <CenterWizardStepper
         steps={centerWizardSteps}
         activeStep={activeStep}
-        canNavigate={!isNew}
-        onSelect={(step) => {
-          if (step === 0 || !isNew) setActiveStep(step);
-        }}
+        onSelect={setActiveStep}
       />
 
       {activeSectionCode === "anexos" ? (

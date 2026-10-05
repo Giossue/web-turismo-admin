@@ -22,19 +22,14 @@ function stepStatus(completed: boolean, selected: boolean): string {
   return selected ? "Actual" : "Pendiente";
 }
 
-/**
- * Lista numerada de los apartados de la ficha. Solo el primero es accesible
- * mientras la ficha no tiene código (`canNavigate`).
- */
+/** Lista numerada de los apartados de la ficha; todos son navegables. */
 export function CenterWizardStepper({
   steps,
   activeStep,
-  canNavigate,
   onSelect,
 }: {
   steps: readonly WizardStep[];
   activeStep: number;
-  canNavigate: boolean;
   onSelect: (step: number) => void;
 }) {
   const isSummary = activeStep >= steps.length;
@@ -75,7 +70,7 @@ export function CenterWizardStepper({
             slotProps={{ select: { native: true } }}
           >
             {steps.map((step, index) => (
-              <option key={step.key} value={index} disabled={index > 0 && !canNavigate}>
+              <option key={step.key} value={index}>
                 {index + 1}. {step.title}
               </option>
             ))}
@@ -106,7 +101,7 @@ export function CenterWizardStepper({
                   type="button"
                   aria-label={`Sección ${index + 1}: ${step.title} (${status.toLocaleLowerCase()})`}
                   aria-current={selected ? "step" : undefined}
-                  disabled={index > 0 && !canNavigate}
+
                   onClick={() => onSelect(index)}
                   title={step.title}
                   sx={{
@@ -187,12 +182,6 @@ export function CenterWizardStepper({
             );
           })}
         </Box>
-        {canNavigate ? null : (
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
-            Completa los datos obligatorios de este paso y pulsa «Siguiente» para crear la
-            ficha; después podrás moverte entre todos los apartados.
-          </Typography>
-        )}
       </Box>
     </FlatSurface>
   );
