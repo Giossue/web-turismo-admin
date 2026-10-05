@@ -165,7 +165,10 @@ function isCoordinate(text: string, limit: number): boolean {
  */
 export function isReadyToCreate(values: CenterFormValues): boolean {
   return (
-    IDENTIFICATION_FIELDS.every((field) => values[field].trim() !== "") &&
+    IDENTIFICATION_FIELDS.every(
+      // La zona turística es opcional (no es un campo de la ficha MINTUR).
+      (field) => field === "touristZoneId" || values[field].trim() !== "",
+    ) &&
     values.name.trim().length <= CENTER_NAME_MAX_LENGTH &&
     isCoordinate(values.latitude, 90) &&
     isCoordinate(values.longitude, 180)

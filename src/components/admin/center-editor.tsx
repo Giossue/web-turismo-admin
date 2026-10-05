@@ -173,6 +173,11 @@ export function CenterEditor({
       return;
     }
     if (creating) {
+      // Sin este aviso, «Siguiente» no hacía nada visible si faltaba un dato.
+      if (!isReadyToCreate(form.getValues()) || !(await form.trigger())) {
+        onError(REQUIRED_FIELDS_MESSAGE);
+        return;
+      }
       if (!(await autosave.flush({ force: true }))) return;
     } else if (!isNew) {
       // Incluye valores importados que aún no se guardaron.
