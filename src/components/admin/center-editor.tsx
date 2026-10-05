@@ -181,6 +181,16 @@ export function CenterEditor({
     setActiveStep(activeStep + 1);
   }
 
+  /** Crea la ficha nueva con lo cargado; al crearse se suben las fotos importadas. */
+  async function createNow() {
+    if (!isReadyToCreate(form.getValues())) {
+      setActiveStep(0);
+      onError(REQUIRED_FIELDS_MESSAGE);
+      return;
+    }
+    if (!(await autosave.flush({ force: true }))) onError(REQUIRED_FIELDS_MESSAGE);
+  }
+
   async function submitForReview() {
     if (submittingReviewRef.current || centerSave.working || !canReview) return;
     submittingReviewRef.current = true;
@@ -299,7 +309,16 @@ export function CenterEditor({
               >
                 {fichaImport.uploadingPhotos ? "Subiendo…" : "Reintentar"}
               </Button>
-            ) : undefined
+            ) : (
+              <Button
+                color="inherit"
+                size="small"
+                disabled={centerSave.working}
+                onClick={() => void createNow()}
+              >
+                {centerSave.working ? "Guardando…" : "Guardar ficha"}
+              </Button>
+            )
           }
         >
           {fichaImport.photoUploadError ??
@@ -334,6 +353,7 @@ export function CenterEditor({
           token={token}
           target={{ kind: "center", code }}
           canEdit={canEdit}
+          pendingImports={fichaImport.uploadingPhotos ? [] : fichaImport.pendingPhotos}
           onNotice={onNotice}
           onError={onError}
         />

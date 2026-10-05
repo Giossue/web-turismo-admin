@@ -148,6 +148,7 @@ export function useFichaImport({
     warnings,
     dismissWarnings: () => setWarnings([]),
     sugerencias,
+    pendingPhotos,
     pendingPhotoCount: pendingPhotos.length,
     uploadingPhotos,
     photoUploadError,

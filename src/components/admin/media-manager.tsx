@@ -33,6 +33,7 @@ import {
   uploadAdminEstablishmentMedia,
   type AdminEstablishmentMediaItem,
   type AdminMediaItem,
+  type FichaImportPhoto,
 } from "@/lib/admin-api";
 import { mediaStateLabel, mediaStateTone } from "@/lib/admin-labels";
 import {
@@ -110,12 +111,15 @@ export function MediaManager({
   token,
   target,
   canEdit,
+  pendingImports = [],
   onNotice,
   onError,
 }: {
   token: string;
   target: MediaTarget;
   canEdit: boolean;
+  /** Fotos importadas de la ficha que se subirán cuando la ficha se guarde. */
+  pendingImports?: readonly FichaImportPhoto[];
   onNotice: (message: string) => void;
   onError: (message: string | null) => void;
 }) {
@@ -282,7 +286,37 @@ export function MediaManager({
         ) : mediaQuery.isLoading ? (
           <ContentState status="loading" label="Cargando multimedia" />
         ) : null}
-        {!mediaQuery.isLoading && !mediaQuery.error && items.length === 0 ? (
+        {pendingImports.map((photo) => (
+          <Stack
+            key={photo.nombre}
+            direction="row"
+            spacing={webTokens.spacing.control}
+            alignItems="center"
+          >
+            <Box
+              component="img"
+              src={`data:${photo.mimeType};base64,${photo.contenidoBase64}`}
+              alt={photo.nombre}
+              sx={{
+                width: 72,
+                height: 56,
+                objectFit: "cover",
+                borderRadius: `${webTokens.shape.radius}px`,
+              }}
+            />
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Typography noWrap>{photo.nombre}</Typography>
+              <Typography variant="caption" color="text.secondary">
+                Importada desde la ficha MINTUR
+              </Typography>
+            </Box>
+            <StatusBadge label="Se subirá al guardar" tone="warning" />
+          </Stack>
+        ))}
+        {!mediaQuery.isLoading &&
+        !mediaQuery.error &&
+        items.length === 0 &&
+        pendingImports.length === 0 ? (
           <ContentState status="empty" message="Aún no hay fotografías cargadas." />
         ) : null}
         {items.map((item) => (
