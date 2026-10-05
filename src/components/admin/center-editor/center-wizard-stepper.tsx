@@ -24,21 +24,26 @@ function stepStatus(completed: boolean, selected: boolean): string {
   return selected ? "Actual" : "Pendiente";
 }
 
-/** Lista numerada de los apartados de la ficha; todos son navegables. */
+/**
+ * Lista numerada de los apartados de la ficha; todos son navegables. Un paso
+ * está «Completado» solo si la ficha guardada tiene información en él (la
+ * misma regla que el resumen final), no por haberlo visitado.
+ */
 export function CenterWizardStepper({
   steps,
   activeStep,
+  completedKeys,
   onSelect,
 }: {
   steps: readonly WizardStep[];
   activeStep: number;
+  completedKeys: ReadonlySet<string>;
   onSelect: (step: number) => void;
 }) {
   const isSummary = activeStep >= steps.length;
   const currentIndex = Math.min(activeStep, steps.length - 1);
-  const progress = isSummary
-    ? 100
-    : Math.round((activeStep / Math.max(steps.length, 1)) * 100);
+  const completedCount = steps.filter((step) => completedKeys.has(step.key)).length;
+  const progress = Math.round((completedCount / Math.max(steps.length, 1)) * 100);
   return (
     <FlatSurface padding="compact">
       <Box component="nav" aria-label="Secciones de la ficha turística">
@@ -94,7 +99,7 @@ export function CenterWizardStepper({
           }}
         >
           {steps.map((step, index) => {
-            const completed = isSummary || index < activeStep;
+            const completed = completedKeys.has(step.key);
             const selected = !isSummary && index === activeStep;
             const status = stepStatus(completed, selected);
             return (

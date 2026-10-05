@@ -9,6 +9,7 @@ import {
   parsearFicha,
   validarArchivoFicha,
 } from "@/lib/ficha/parser";
+import { mapearSeccionesImportadas } from "@/lib/ficha/mapear-secciones";
 import { mapearSugerenciasSecciones } from "@/lib/ficha/sugerencias-secciones";
 import { resultadoParseoFichaSchema } from "@/lib/ficha/validacion";
 import { ApiError } from "@/lib/http";
@@ -114,6 +115,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       data: {
         formulario: mapearFichaAFormulario(resultado.datos, catalogosResueltos),
+        secciones: mapearSeccionesImportadas(
+          resultado.datos,
+          catalogos,
+          catalogosResueltos,
+        ),
         sugerenciasSecciones: mapearSugerenciasSecciones(
           resultado.datos,
           catalogosResueltos,

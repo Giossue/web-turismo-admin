@@ -7,11 +7,10 @@ import type { FichaExtraida } from "./tipos";
  * usuario decide si las aplica con el botón "Cargar desde la ficha" de cada
  * paso — nunca se escriben solas.
  *
- * Por ahora solo cubre "Accesibilidad y conectividad" (localidad cercana +
- * distancia, que alimentan `centro_localidad_cercana` para cruzar con el
- * catastro de esa localidad). El resto de las secciones ya extraídas
- * (políticas, promoción, visitantes, recurso humano, planta, conservación,
- * higiene-seguridad) quedan pendientes de este mismo tratamiento.
+ * Cubre "Accesibilidad y conectividad" (localidad cercana + distancia, que
+ * alimentan `centro_localidad_cercana`). El contenido completo de los
+ * apartados se importa y guarda con `mapearSeccionesImportadas`
+ * (`mapear-secciones.ts`).
  */
 export type SugerenciasSecciones = {
   accesibilidad: {

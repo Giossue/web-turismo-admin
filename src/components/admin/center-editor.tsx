@@ -99,6 +99,12 @@ export function CenterEditor({
   const state = detail?.status.code ?? "BORRADOR";
   const canEdit = isNew || EDITABLE_STATES.has(state);
   const canReview = !isNew && state === "BORRADOR";
+  // Misma fuente que el resumen final (`CenterSummaryStep`).
+  const savedSections = (detail?.draft ?? detail?.published)?.sections;
+  const completedSectionCodes = useMemo(
+    () => new Set(Object.keys(savedSections ?? {})),
+    [savedSections],
+  );
   const activeSectionCode =
     activeStep < SUMMARY_STEP ? centerSectionDefinitions[activeStep].code : null;
 
@@ -143,15 +149,30 @@ export function CenterEditor({
     onError,
   });
   const uploadImportedPhotos = fichaImport.uploadImportedPhotos;
+  const saveImportedSections = fichaImport.saveImportedSections;
 
   const handleDetailChanged = useCallback(
     (saved: AdminCenterDetail) => {
       queryClient.setQueryData(adminKeys.center(saved.code), saved);
       onSaved(saved);
-      void uploadImportedPhotos(saved.code);
     },
-    [onSaved, queryClient, uploadImportedPhotos],
+    [onSaved, queryClient],
   );
+
+  // En cuanto la ficha tiene código (al crearla o al importar sobre una
+  // existente) se suben las fotos y se guardan los apartados importados.
+  const { pendingPhotoCount, pendingSectionCount } = fichaImport;
+  useEffect(() => {
+    if (!code) return;
+    if (pendingPhotoCount > 0) void uploadImportedPhotos(code);
+    if (pendingSectionCount > 0) void saveImportedSections(code);
+  }, [
+    code,
+    pendingPhotoCount,
+    pendingSectionCount,
+    saveImportedSections,
+    uploadImportedPhotos,
+  ]);
   const notifyCoordinatesPicked = useCallback(
     () => onNotice("Coordenadas seleccionadas en el mapa."),
     [onNotice],
@@ -371,6 +392,7 @@ export function CenterEditor({
       <CenterWizardStepper
         steps={centerWizardSteps}
         activeStep={activeStep}
+        completedKeys={completedSectionCodes}
         onSelect={setActiveStep}
       />
 

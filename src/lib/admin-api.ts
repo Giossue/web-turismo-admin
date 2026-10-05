@@ -1,5 +1,6 @@
 import type { CenterSectionCode, SectionProgress } from "./center-sections/definitions";
 import type { mapearFichaAFormulario } from "./ficha/mapear-formulario";
+import type { SeccionesImportadas } from "./ficha/mapear-secciones";
 import type { SugerenciasSecciones } from "./ficha/sugerencias-secciones";
 import { errorMessage } from "./errors";
 import { ApiError, apiEndpoint, sendApiRequest, toApiError, toQueryString } from "./http";
@@ -456,6 +457,8 @@ export type FichaImportPhoto = {
 
 type FichaImportResult = {
   formulario: ReturnType<typeof mapearFichaAFormulario>;
+  /** Apartados del asistente ya convertidos al contenido que guarda la API. */
+  secciones?: SeccionesImportadas;
   sugerenciasSecciones: SugerenciasSecciones;
   advertencias: string[];
   fotos: FichaImportPhoto[];
