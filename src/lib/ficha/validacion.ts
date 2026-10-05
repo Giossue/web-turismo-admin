@@ -165,8 +165,8 @@ export const fichaImagenAnexoSchema = z.object({
 
 export const fichaImagenAdjuntaSchema = z.object({
   nombre: z.string(),
-  extension: z.enum(["png", "jpeg", "webp"]),
-  mimeType: z.enum(["image/png", "image/jpeg", "image/webp"]),
+  extension: z.enum(["png", "jpeg"]),
+  mimeType: z.enum(["image/png", "image/jpeg"]),
   tamanoBytes: z.number().int().positive(),
   contenidoBase64: z.string().min(1),
 });

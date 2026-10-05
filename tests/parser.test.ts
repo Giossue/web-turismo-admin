@@ -74,7 +74,7 @@ describe("parsearFicha — casos de la sección 8 del plan", () => {
     expect(imagenesAdjuntas).toHaveLength(3);
 
     for (const imagen of imagenesAdjuntas) {
-      expect(["image/png", "image/jpeg", "image/webp"]).toContain(imagen.mimeType);
+      expect(["image/png", "image/jpeg"]).toContain(imagen.mimeType);
       expect(Buffer.from(imagen.contenidoBase64, "base64")).toHaveLength(
         imagen.tamanoBytes,
       );

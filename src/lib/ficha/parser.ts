@@ -50,7 +50,7 @@ import type {
 
 const EXTENSIONES_PERMITIDAS = new Set(["xlsx", "xlsm"]);
 export const TAMANO_MAXIMO_BYTES = 20 * 1024 * 1024;
-const TAMANO_MAXIMO_IMAGEN_BYTES = 10 * 1024 * 1024;
+const TAMANO_MAXIMO_IMAGEN_BYTES = 5 * 1024 * 1024;
 
 export class FichaInvalidaError extends Error {}
 
@@ -542,9 +542,7 @@ function leerImagenesAnexos(
         ? "image/png"
         : archivo.extension === "jpeg"
           ? "image/jpeg"
-          : archivo.extension === "webp"
-            ? "image/webp"
-            : null;
+          : null;
     if (!mimeType) {
       advertencias.push(
         `La imagen ${metadata.length} de los anexos tiene un formato no compatible; no se adjuntó.`,
@@ -555,7 +553,7 @@ function leerImagenesAnexos(
       advertencias.push(
         tamanoBytes === 0
           ? `No se pudo extraer la imagen ${metadata.length} de los anexos.`
-          : `La imagen ${metadata.length} de los anexos supera el límite de 10 MB y no se adjuntó.`,
+          : `La imagen ${metadata.length} de los anexos supera el límite de 5 MB y no se adjuntó.`,
       );
       continue;
     }

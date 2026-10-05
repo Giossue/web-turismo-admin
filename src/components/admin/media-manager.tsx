@@ -54,7 +54,10 @@ type MediaListItem = AdminEstablishmentMediaItem &
 export type MediaTarget =
   { kind: "center"; code: string | null } | { kind: "establishment"; id: number | null };
 
-const PHOTO_ACCEPT = "image/jpeg,image/png,image/webp";
+const PHOTO_ACCEPT = "image/jpeg,image/png";
+const PHOTO_TYPES = new Set(PHOTO_ACCEPT.split(","));
+/** Igual que `MEDIA_MAX_IMAGE_BYTES` de la API; se valida antes de subir. */
+const PHOTO_MAX_BYTES = 5 * 1024 * 1024;
 
 type MediaTypeOption = {
   value: MediaTypeCode;
@@ -151,6 +154,11 @@ export function MediaManager({
 
   async function upload(file: File) {
     if (!ownerId) return;
+    if (!PHOTO_TYPES.has(file.type) || file.size > PHOTO_MAX_BYTES) {
+      onError("La fotografía debe ser JPEG o PNG y pesar como máximo 5 MB.");
+      if (fileInput.current) fileInput.current.value = "";
+      return;
+    }
     setWorking(true);
     onError(null);
     try {
@@ -220,7 +228,7 @@ export function MediaManager({
               ? "Fotografías del centro"
               : "Fotografías del establecimiento"
           }
-          description="Sube fotografías JPEG, PNG o WebP de hasta 10 MB."
+          description="Sube fotografías JPEG o PNG de hasta 5 MB. Se recortan a 4:3 y se optimizan en WebP automáticamente."
         />
         <Stack
           direction={{ xs: "column", md: "row" }}
