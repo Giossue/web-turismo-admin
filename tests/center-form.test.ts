@@ -249,7 +249,9 @@ describe("isReadyToCreate", () => {
 
   test("exige identificación completa y coordenadas válidas", () => {
     expect(isReadyToCreate(complete)).toBe(true);
-    expect(isReadyToCreate({ ...complete, touristZoneId: "" })).toBe(false);
+    // La zona turística es opcional.
+    expect(isReadyToCreate({ ...complete, touristZoneId: "" })).toBe(true);
+    expect(isReadyToCreate({ ...complete, parishId: "" })).toBe(false);
     expect(isReadyToCreate({ ...complete, latitude: "" })).toBe(false);
     expect(isReadyToCreate({ ...complete, longitude: "-181" })).toBe(false);
     expect(isReadyToCreate({ ...complete, name: "x".repeat(181) })).toBe(false);
