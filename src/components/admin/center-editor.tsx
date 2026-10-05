@@ -215,28 +215,34 @@ export function CenterEditor({
           </Button>
         }
         actions={[
-          <Button
-            key="template"
-            component="a"
-            href="/templates/ficha-mintur-vacia.xlsm"
-            download="Ficha_MINTUR_vacia.xlsm"
-            variant="outlined"
-            startIcon={<DownloadRounded />}
+          <Stack
+            key="ficha-import-actions"
+            direction="row"
+            spacing={webTokens.spacing.inline}
+            useFlexGap
+            flexWrap="wrap"
           >
-            Descargar plantilla vacía
-          </Button>,
-          canEdit ? (
+            {canEdit ? (
+              <Button
+                type="button"
+                variant="outlined"
+                startIcon={<CloudUploadRounded />}
+                onClick={() => importInputRef.current?.click()}
+                disabled={fichaImport.importing || fichaImport.uploadingPhotos}
+              >
+                {fichaImport.importing ? "Importando…" : "Importar ficha (.xlsx / .xlsm)"}
+              </Button>
+            ) : null}
             <Button
-              key="import"
-              type="button"
+              component="a"
+              href="/templates/ficha-mintur-vacia.xlsm"
+              download="Ficha_MINTUR_vacia.xlsm"
               variant="outlined"
-              startIcon={<CloudUploadRounded />}
-              onClick={() => importInputRef.current?.click()}
-              disabled={fichaImport.importing || fichaImport.uploadingPhotos}
+              startIcon={<DownloadRounded />}
             >
-              {fichaImport.importing ? "Importando…" : "Importar ficha (.xlsx / .xlsm)"}
+              Descargar plantilla vacía
             </Button>
-          ) : null,
+          </Stack>,
           canReview ? (
             <Button
               key="review"

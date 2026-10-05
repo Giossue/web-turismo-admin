@@ -176,9 +176,9 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
         <Stack spacing={webTokens.spacing.section}>
           {!editorMode ? (
             <Stack
-              direction="row"
+              direction={{ xs: "column", md: "row" }}
               alignItems="flex-start"
-              spacing={webTokens.spacing.control}
+              spacing={{ xs: webTokens.spacing.inline, md: webTokens.spacing.control }}
               useFlexGap
             >
               <Tooltip title="Abrir menú">
@@ -190,7 +190,7 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
                   <MenuRounded />
                 </IconButton>
               </Tooltip>
-              <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Box sx={{ flex: 1, minWidth: 0, width: "100%" }}>
                 <PageHeader
                   title={meta.title}
                   description={meta.description}
