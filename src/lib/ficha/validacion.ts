@@ -422,6 +422,8 @@ export const fichaExtraidaSchema = z.object({
   planta: fichaPlantaSchema,
   conservacion: fichaConservacionSchema,
   higieneSeguridad: fichaHigieneSeguridadSchema,
+  /** Hoja "Validación-GAD": quien valida cuando el GAD no levantó la ficha. */
+  validacionGad: fichaResponsableFirmaSchema.nullable(),
 });
 
 export const resultadoParseoFichaSchema = z.object({

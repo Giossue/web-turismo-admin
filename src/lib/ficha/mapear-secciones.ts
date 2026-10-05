@@ -536,11 +536,12 @@ function higiene(ficha: Ficha, catalogos: AdminCatalogs): SectionFormValues {
 
   const radio = datos.radioPortatil;
   const algunaRadio = radio.usoVisitante || radio.usoInterno || radio.usoEmergencia;
+  // Casillas de la ficha: sin marcar es "No" (publicar exige SI o NO).
   valores.hygieneRadios = {
-    available: algunaRadio ? "SI" : EMPTY_RESPONSE,
-    visitorUse: algunaRadio ? respuesta(radio.usoVisitante) : EMPTY_RESPONSE,
-    internalUse: algunaRadio ? respuesta(radio.usoInterno) : EMPTY_RESPONSE,
-    emergencyUse: algunaRadio ? respuesta(radio.usoEmergencia) : EMPTY_RESPONSE,
+    available: algunaRadio ? "SI" : "NO",
+    visitorUse: radio.usoVisitante ? "SI" : "NO",
+    internalUse: radio.usoInterno ? "SI" : "NO",
+    emergencyUse: radio.usoEmergencia ? "SI" : "NO",
     quantity: "",
     observation: texto(datos.observacionRadioPortatil).slice(0, 1_000),
   };
@@ -739,20 +740,149 @@ function anexos(ficha: Ficha, catalogos: AdminCatalogs): SectionFormValues {
         observation: "",
       };
     });
+  const gad = ficha.validacionGad;
+  if (gad?.nombre) {
+    const email = texto(gad.email);
+    // La hoja trae la declaración "He revisado y estoy de acuerdo…" firmada.
+    valores.gadValidation = {
+      acceptance: "SI",
+      name: texto(gad.nombre).slice(0, 180),
+      institution: texto(gad.institucion).slice(0, 180),
+      position: texto(gad.cargo).slice(0, 180),
+      phone: texto(gad.telefono).slice(0, 180),
+      email: /^\S+@\S+\.\S+$/.test(email) ? email : "",
+      date: gad.fecha ?? "",
+      observation: "",
+    };
+  }
   return valores;
+}
+
+/**
+ * Publicar exige tipos del catálogo en estos bloques: lo que no se pudo
+ * catalogar se quita (con aviso) para que no bloquee la publicación, y se
+ * descartan duplicados del mismo tipo y ámbito.
+ */
+function depurarParaPublicar(
+  valores: Partial<Record<CenterSectionCode, SectionFormValues>>,
+  advertencias: string[],
+) {
+  const filtrar = <T>(
+    registros: T[],
+    catalogado: (registro: T) => boolean,
+    nombre: (registro: T) => string,
+    bloque: string,
+    clave?: (registro: T) => string,
+  ): T[] => {
+    const descartados: string[] = [];
+    const vistos = new Set<string>();
+    const resultado = registros.filter((registro) => {
+      if (!catalogado(registro)) {
+        descartados.push(nombre(registro));
+        return false;
+      }
+      const llave = clave?.(registro);
+      if (llave === undefined) return true;
+      if (vistos.has(llave)) return false;
+      vistos.add(llave);
+      return true;
+    });
+    if (descartados.length > 0) {
+      advertencias.push(
+        `${bloque}: no se importó ${[...new Set(descartados)].map((item) => `«${item}»`).join(", ")} porque no existe en el catálogo. Agrégalo a mano si corresponde.`,
+      );
+    }
+    return resultado;
+  };
+
+  const acceso = valores.accesibilidad;
+  if (acceso) {
+    acceso.accessibilityRoads = filtrar(
+      acceso.accessibilityRoads,
+      (via) => via.roadTypeId !== "",
+      (via) => via.typeLabel,
+      "Vías de acceso",
+    );
+    acceso.accessibilityTransportTypes = filtrar(
+      acceso.accessibilityTransportTypes,
+      (transporte) => transporte.typeId !== "",
+      (transporte) => transporte.label,
+      "Tipos de transporte",
+    );
+    acceso.accessibilityCriteria = filtrar(
+      acceso.accessibilityCriteria,
+      (criterio) => criterio.criterionId !== "",
+      (criterio) => criterio.label,
+      "Criterios de accesibilidad",
+    );
+  }
+  const planta = valores.planta;
+  if (planta) {
+    planta.plant = filtrar(
+      planta.plant,
+      (registro) => registro.typeId !== "",
+      (registro) => registro.typeLabel,
+      "Planta turística",
+      (registro) => `${registro.scope}:${registro.typeId}`,
+    );
+    planta.facilityDetails = filtrar(
+      planta.facilityDetails,
+      (facilidad) => facilidad.typeId !== "",
+      (facilidad) => facilidad.typeLabel,
+      "Facilidades",
+    );
+    planta.complementaryServices = filtrar(
+      planta.complementaryServices,
+      (servicio) => servicio.typeId !== "",
+      (servicio) => servicio.typeLabel,
+      "Servicios complementarios",
+      (servicio) => `${servicio.scope}:${servicio.typeId}`,
+    );
+  }
+  const conservacion = valores.conservacion;
+  if (conservacion) {
+    conservacion.conservationFactors = filtrar(
+      conservacion.conservationFactors,
+      (factor) => factor.factorId !== "",
+      (factor) => factor.name,
+      "Factores de alteración",
+      (factor) => `${factor.component}:${factor.factorId}`,
+    );
+  }
+  const higiene = valores["higiene-seguridad"];
+  if (higiene) {
+    higiene.hygieneEntries = filtrar(
+      higiene.hygieneEntries,
+      (entrada) => entrada.typeId !== "",
+      (entrada) => entrada.name,
+      "Higiene y seguridad",
+      (entrada) => `${entrada.kind}:${entrada.scope}:${entrada.typeId}`,
+    );
+  }
+  const anexos = valores.anexos;
+  if (anexos) {
+    anexos.annexResponsibles = filtrar(
+      anexos.annexResponsibles,
+      (responsable) => responsable.typeId !== "",
+      (responsable) => responsable.name,
+      "Responsables de la ficha",
+    );
+  }
 }
 
 /**
  * Convierte los apartados extraídos de la ficha MINTUR en el contenido que
  * guarda la API para cada apartado del asistente. Las opciones se buscan en
  * los catálogos por nombre; lo que no coincide se conserva como texto libre
+ * salvo en los bloques que publicar exige catalogados (ver `depurarParaPublicar`)
  * (la API acepta tipo catalogado o descripción manual), nunca se descarta.
  */
 export function mapearSeccionesImportadas(
   ficha: Ficha,
   catalogos: AdminCatalogs,
   resueltos: CatalogosResueltos,
-): SeccionesImportadas {
+): { secciones: SeccionesImportadas; advertencias: string[] } {
+  const advertencias: string[] = [];
   const valores: Partial<Record<CenterSectionCode, SectionFormValues>> = {
     accesibilidad: accesibilidad(ficha, catalogos, resueltos),
     planta: planta(ficha, catalogos),
@@ -764,10 +894,12 @@ export function mapearSeccionesImportadas(
     "recurso-humano": recursoHumano(ficha, catalogos),
     anexos: anexos(ficha, catalogos),
   };
-  return Object.fromEntries(
+  depurarParaPublicar(valores, advertencias);
+  const secciones: SeccionesImportadas = Object.fromEntries(
     Object.entries(valores).map(([code, values]) => [
       code,
       toSectionContent(code as CenterSectionCode, values),
     ]),
   );
+  return { secciones, advertencias };
 }

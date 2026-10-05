@@ -30,7 +30,7 @@ const resueltos = { localidadId: { id: 9, advertencia: null } } as CatalogosResu
 
 describe("mapearSeccionesImportadas", () => {
   test("genera los nueve apartados que la importación antes dejaba vacíos", async () => {
-    const secciones = mapearSeccionesImportadas(
+    const { secciones } = mapearSeccionesImportadas(
       await datosFixture(),
       catalogos,
       resueltos,
@@ -54,7 +54,7 @@ describe("mapearSeccionesImportadas", () => {
   });
 
   test("usa la localidad resuelta y conserva las políticas en el orden de la ficha", async () => {
-    const secciones = mapearSeccionesImportadas(
+    const { secciones } = mapearSeccionesImportadas(
       await datosFixture(),
       catalogos,
       resueltos,
@@ -69,18 +69,16 @@ describe("mapearSeccionesImportadas", () => {
     ]);
   });
 
-  test("lo que no está en el catálogo se guarda como texto libre, nunca se pierde", async () => {
-    const secciones = mapearSeccionesImportadas(
+  test("descarta con aviso lo que publicar exige catalogado", async () => {
+    const { secciones, advertencias } = mapearSeccionesImportadas(
       await datosFixture(),
       catalogos,
       resueltos,
     );
-    const planta = secciones.planta?.plant as Array<{
-      typeId: number | null;
-      typeLabel: string;
-    }>;
-    for (const registro of planta) {
-      expect(registro.typeId !== null || registro.typeLabel.length > 0).toBe(true);
-    }
+    const planta = secciones.planta?.plant as Array<{ typeId: number | null }>;
+    expect(planta.every((registro) => registro.typeId !== null)).toBe(true);
+    expect(advertencias.some((aviso) => aviso.startsWith("Planta turística:"))).toBe(
+      true,
+    );
   });
 });

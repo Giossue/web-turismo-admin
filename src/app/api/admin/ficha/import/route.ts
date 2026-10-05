@@ -112,14 +112,15 @@ export async function POST(request: NextRequest) {
   // claro, no una respuesta vacía.
   try {
     const catalogosResueltos = resolverCatalogosFicha(resultado.datos, catalogos);
+    const apartados = mapearSeccionesImportadas(
+      resultado.datos,
+      catalogos,
+      catalogosResueltos,
+    );
     return NextResponse.json({
       data: {
         formulario: mapearFichaAFormulario(resultado.datos, catalogosResueltos),
-        secciones: mapearSeccionesImportadas(
-          resultado.datos,
-          catalogos,
-          catalogosResueltos,
-        ),
+        secciones: apartados.secciones,
         sugerenciasSecciones: mapearSugerenciasSecciones(
           resultado.datos,
           catalogosResueltos,
@@ -127,6 +128,7 @@ export async function POST(request: NextRequest) {
         advertencias: [
           ...resultado.advertencias,
           ...advertenciasDeCatalogos(catalogosResueltos),
+          ...apartados.advertencias,
         ],
         fotos: resultado.imagenesAdjuntas,
       },

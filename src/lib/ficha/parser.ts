@@ -57,6 +57,7 @@ export class FichaInvalidaError extends Error {}
 const HOJA_PRINCIPAL = "Ficha_Jerarquia";
 const HOJA_ACCESIBILIDAD = "ficha_Accesibilidad";
 const HOJA_RESUMEN = "RESUMEN DE RESULTADOS";
+const HOJA_VALIDACION_GAD = "Validación-GAD";
 
 const CODIGOS_COLUMNAS = [
   "F",
@@ -440,8 +441,32 @@ function leerResponsable(
     cargo: leerTextoOpcional(worksheet, columnas.cargo),
     email: leerTextoOpcional(worksheet, columnas.email),
     telefono: leerTextoOpcional(worksheet, columnas.telefono),
-    fecha: fechaDesdeSerial(leerCelda(worksheet, columnas.fecha)),
+    fecha: leerFecha(worksheet, columnas.fecha),
   };
+}
+
+/** Fecha como `AAAA-MM-DD`, tanto si la celda es fecha de Excel como serial numérico. */
+function leerFecha(worksheet: ExcelJS.Worksheet, ref: string): string | null {
+  const valor = worksheet.getCell(ref).value;
+  if (valor instanceof Date) {
+    return Number.isNaN(valor.getTime()) ? null : valor.toISOString().slice(0, 10);
+  }
+  return fechaDesdeSerial(leerCelda(worksheet, ref));
+}
+
+/** Datos de quien firmó la hoja "Validación-GAD" (vacía si el GAD levantó la ficha). */
+function leerValidacionGad(workbook: ExcelJS.Workbook): FichaResponsableFirma | null {
+  const worksheet = workbook.getWorksheet(HOJA_VALIDACION_GAD);
+  if (!worksheet) return null;
+  const firma = leerResponsable(worksheet, {
+    nombre: "B17",
+    institucion: "B19",
+    cargo: "B21",
+    email: "D22",
+    telefono: "G17",
+    fecha: "G21",
+  });
+  return firma.nombre ? firma : null;
 }
 
 function leerResumenValoracion(workbook: ExcelJS.Workbook): FichaResumenValoracion {
@@ -636,6 +661,7 @@ export async function parsearFicha(
         fecha: "S331",
       }),
     },
+    validacionGad: leerValidacionGad(workbook),
     resumenValoracion: leerResumenValoracion(workbook),
     accesibilidadDetalle: leerAccesibilidadDetalle(workbook),
     imagenes: imagenesAnexos.metadata,
