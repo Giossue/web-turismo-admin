@@ -23,7 +23,6 @@ import { useEffect, useRef, useState } from "react";
 
 import { FlatSurface } from "@/components/ui/flat-surface";
 import { ContentState } from "@/components/ui/content-state";
-import { SelectField } from "@/components/ui/form/select-field";
 import { LoadingSpinner } from "@/components/ui/loading-state";
 import { SectionHeader } from "@/components/ui/section-header";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -57,14 +56,8 @@ export type MediaTarget =
 
 const PHOTO_ACCEPT = "image/jpeg,image/png,image/webp";
 
-const IMAGE_OR_PDF = "image/jpeg,image/png,image/webp,application/pdf";
-const PDF_OR_IMAGE = "application/pdf,image/jpeg,image/png,image/webp";
-
 type MediaTypeOption = {
   value: MediaTypeCode;
-  label: string;
-  /** Tipos MIME aceptados por el selector de archivos. */
-  accept: string;
   /** Mensajes al eliminar un archivo de este tipo. */
   removed: string;
   removeError: string;
@@ -73,43 +66,31 @@ type MediaTypeOption = {
 const MEDIA_TYPE_OPTIONS: readonly MediaTypeOption[] = [
   {
     value: "FOTOGRAFIA",
-    label: "Fotografía",
-    accept: IMAGE_OR_PDF,
     removed: "Fotografía eliminada.",
     removeError: "No se pudo eliminar la fotografía.",
   },
   {
     value: "VIDEO",
-    label: "Video",
-    accept: "video/mp4,video/webm",
     removed: "Video eliminado.",
     removeError: "No se pudo eliminar el video.",
   },
   {
     value: "AUDIO",
-    label: "Audio",
-    accept: "audio/mpeg,audio/mp4,audio/wav,audio/ogg",
     removed: "Audio eliminado.",
     removeError: "No se pudo eliminar el audio.",
   },
   {
     value: "MAPA",
-    label: "Mapa",
-    accept: IMAGE_OR_PDF,
     removed: "Mapa eliminado.",
     removeError: "No se pudo eliminar el mapa.",
   },
   {
     value: "PLAN_CONTINGENCIA",
-    label: "Plan de contingencia",
-    accept: PDF_OR_IMAGE,
     removed: "Plan de contingencia eliminado.",
     removeError: "No se pudo eliminar el plan de contingencia.",
   },
   {
     value: "OTRO",
-    label: "Otro anexo",
-    accept: PDF_OR_IMAGE,
     removed: "Anexo eliminado.",
     removeError: "No se pudo eliminar el anexo.",
   },
@@ -139,10 +120,8 @@ export function MediaManager({
   const queryClient = useQueryClient();
   const [description, setDescription] = useState("");
   const [sourceAuthor, setSourceAuthor] = useState("");
-  const [typeCode, setTypeCode] = useState<MediaTypeCode>("FOTOGRAFIA");
   const [working, setWorking] = useState(false);
   const [pendingRemoval, setPendingRemoval] = useState<MediaListItem | null>(null);
-  const photosOnly = target.kind === "establishment";
   const ownerId = target.kind === "center" ? target.code : target.id;
   const mediaKey =
     target.kind === "center"
@@ -164,8 +143,6 @@ export function MediaManager({
     error: Error | null;
     isLoading: boolean;
   } = target.kind === "center" ? centerQuery : establishmentQuery;
-  const effectiveType: MediaTypeCode = photosOnly ? "FOTOGRAFIA" : typeCode;
-
   useEffect(() => {
     if (mediaQuery.error) {
       onError(errorMessage(mediaQuery.error, "No se pudo cargar la multimedia."));
@@ -179,7 +156,7 @@ export function MediaManager({
     try {
       if (target.kind === "center" && target.code) {
         await uploadAdminCenterMedia(token, target.code, file, {
-          typeCode,
+          typeCode: "FOTOGRAFIA",
           description,
           sourceAuthor,
         });
@@ -196,19 +173,12 @@ export function MediaManager({
         queryClient.invalidateQueries({ queryKey: adminKeys.allNavigationSummaries() }),
       ]);
       onNotice(
-        photosOnly
-          ? "Fotografía cargada."
-          : "Archivo cargado. Quedará pendiente hasta publicar la ficha.",
+        target.kind === "center"
+          ? "Fotografía cargada. Quedará pendiente hasta publicar la ficha."
+          : "Fotografía cargada.",
       );
     } catch (cause) {
-      onError(
-        errorMessage(
-          cause,
-          photosOnly
-            ? "No se pudo cargar la fotografía."
-            : "No se pudo cargar el archivo multimedia.",
-        ),
-      );
+      onError(errorMessage(cause, "No se pudo cargar la fotografía."));
     } finally {
       setWorking(false);
       if (fileInput.current) fileInput.current.value = "";
@@ -246,34 +216,18 @@ export function MediaManager({
         <SectionHeader
           icon={<PhotoLibraryRounded />}
           title={
-            photosOnly ? "Fotografías del establecimiento" : "Archivos institucionales"
+            target.kind === "center"
+              ? "Fotografías del centro"
+              : "Fotografías del establecimiento"
           }
-          description={
-            photosOnly
-              ? "Sube fotografías JPEG, PNG o WebP de hasta 10 MB."
-              : "Sube fotografías, multimedia o anexos documentales. Las imágenes tienen límite de 10 MB y el resto de archivos de 50 MB."
-          }
+          description="Sube fotografías JPEG, PNG o WebP de hasta 10 MB."
         />
         <Stack
           direction={{ xs: "column", md: "row" }}
           spacing={webTokens.spacing.control}
         >
-          {photosOnly ? null : (
-            <SelectField
-              id="media-type"
-              label="Tipo de archivo"
-              value={typeCode}
-              options={MEDIA_TYPE_OPTIONS}
-              onChange={(value) => {
-                if (value) setTypeCode(value);
-              }}
-              disabled={!canEdit || !ownerId || working}
-            />
-          )}
           <TextField
-            label={
-              photosOnly ? "Descripción de la fotografía" : "Descripción del archivo"
-            }
+            label="Descripción de la fotografía"
             slotProps={{ htmlInput: { maxLength: 2000 } }}
             value={description}
             onChange={(event) => setDescription(event.target.value)}
@@ -292,7 +246,7 @@ export function MediaManager({
             ref={fileInput}
             hidden
             type="file"
-            accept={photosOnly ? PHOTO_ACCEPT : mediaTypeOption(effectiveType).accept}
+            accept={PHOTO_ACCEPT}
             onChange={(event) => {
               const file = event.target.files?.[0];
               if (file) void upload(file);
@@ -312,11 +266,7 @@ export function MediaManager({
             disabled={!canEdit || !ownerId || working}
             sx={{ minWidth: 180 }}
           >
-            {working
-              ? "Procesando…"
-              : photosOnly
-                ? "Seleccionar fotografía"
-                : "Seleccionar archivo"}
+            {working ? "Procesando…" : "Seleccionar fotografía"}
           </Button>
         </Stack>
         {mediaQuery.error ? (
@@ -325,14 +275,7 @@ export function MediaManager({
           <ContentState status="loading" label="Cargando multimedia" />
         ) : null}
         {!mediaQuery.isLoading && !mediaQuery.error && items.length === 0 ? (
-          <ContentState
-            status="empty"
-            message={
-              photosOnly
-                ? "Aún no hay fotografías cargadas."
-                : "Aún no hay archivos multimedia cargados."
-            }
-          />
+          <ContentState status="empty" message="Aún no hay fotografías cargadas." />
         ) : null}
         {items.map((item) => (
           <Stack key={item.id} spacing={webTokens.spacing.inline}>
