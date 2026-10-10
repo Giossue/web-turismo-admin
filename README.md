@@ -126,6 +126,16 @@ incompletas o fuera de rango, abre en Guaranda y requiere seleccionar un punto a
 de confirmar. **Usar esta ubicación** actualiza únicamente latitud y longitud en el
 formulario; **Cancelar** conserva sus valores anteriores.
 
+El selector ofrece **Ubicación del dispositivo**, que solicita el permiso del navegador
+solo al pulsarlo y requiere HTTPS o localhost. Espera hasta 20 segundos una lectura nueva
+con precisión reportada de 100 m o menos antes de marcarla y centrar el mapa. Descarta
+posiciones antiguas o aproximadas, y detiene la solicitud al obtener un punto válido,
+seleccionar manualmente o cerrar el diálogo. Las coordenadas solo pasan al formulario
+al confirmar. Cambiar a otra pestaña también detiene la solicitud. No muestra la tarjeta
+informativa inferior ni consulta servicios de geolocalización por IP. La API del navegador
+no permite identificar si la lectura procede de GPS, Wi-Fi u otra fuente; la precisión
+reportada no garantiza su origen.
+
 Las tablas de Centros turísticos, Catastro, Opiniones y Catálogos ofrecen **Eliminar**
 al administrador, con confirmación del registro. La eliminación retira el registro del
 panel y de la aplicación, conserva sus relaciones e historial y es distinta de la

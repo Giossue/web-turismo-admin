@@ -1,7 +1,7 @@
 "use client";
 
 import CloseRounded from "@mui/icons-material/CloseRounded";
-import LocationOnRounded from "@mui/icons-material/LocationOnRounded";
+import MyLocationRounded from "@mui/icons-material/MyLocationRounded";
 import {
   Alert,
   Box,
@@ -16,8 +16,10 @@ import {
   useTheme,
 } from "@mui/material";
 import * as maplibregl from "maplibre-gl";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
+import { LoadingSpinner } from "@/components/ui/loading-state";
+import { requestPreciseDeviceLocation } from "@/lib/device-location";
 import { readMapCoordinate, type MapCoordinate } from "@/lib/map-coordinates";
 
 const mapStyleUrl =
@@ -56,6 +58,28 @@ export function CoordinatePickerDialog({
   );
   const [coordinate, setCoordinate] = useState<MapCoordinate | null>(initialCoordinate);
   const [mapError, setMapError] = useState<string | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [locating, setLocating] = useState(false);
+  const mapRef = useRef<maplibregl.Map | null>(null);
+  const markerRef = useRef<maplibregl.Marker | null>(null);
+  const cancelLocationRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    const stopRequest = () => {
+      cancelLocationRef.current?.();
+      cancelLocationRef.current = null;
+    };
+    const stopWhenHidden = () => {
+      if (!document.hidden) return;
+      stopRequest();
+      setLocating(false);
+    };
+    document.addEventListener("visibilitychange", stopWhenHidden);
+    return () => {
+      document.removeEventListener("visibilitychange", stopWhenHidden);
+      stopRequest();
+    };
+  }, []);
 
   useEffect(() => {
     if (!container) return;
@@ -69,20 +93,12 @@ export function CoordinatePickerDialog({
       zoom: initialCoordinate ? 16 : 13,
       attributionControl: {},
     });
-    let marker: maplibregl.Marker | null = null;
-
-    const setMarker = (longitude: number, latitude: number) => {
-      marker?.remove();
-      marker = new maplibregl.Marker({ color: markerColor })
-        .setLngLat([longitude, latitude])
-        .addTo(map);
-    };
-
-    if (initialCoordinate) {
-      setMarker(initialCoordinate.longitude, initialCoordinate.latitude);
-    }
+    mapRef.current = map;
     map.on("click", (event) => {
-      setMarker(event.lngLat.lng, event.lngLat.lat);
+      cancelLocationRef.current?.();
+      cancelLocationRef.current = null;
+      setLocating(false);
+      setLocationError(null);
       setCoordinate({ latitude: event.lngLat.lat, longitude: event.lngLat.lng });
     });
     map.on("error", () => {
@@ -94,24 +110,84 @@ export function CoordinatePickerDialog({
 
     return () => {
       cancelAnimationFrame(resizeFrame);
-      marker?.remove();
+      markerRef.current?.remove();
+      markerRef.current = null;
+      mapRef.current = null;
       map.remove();
     };
-  }, [container, initialCoordinate, markerColor]);
+  }, [container, initialCoordinate]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !coordinate) return;
+    const marker = new maplibregl.Marker({ color: markerColor })
+      .setLngLat([coordinate.longitude, coordinate.latitude])
+      .addTo(map);
+    markerRef.current = marker;
+    return () => {
+      marker.remove();
+      if (markerRef.current === marker) markerRef.current = null;
+    };
+  }, [container, coordinate, markerColor]);
+
+  function close() {
+    cancelLocationRef.current?.();
+    cancelLocationRef.current = null;
+    onClose();
+  }
+
+  function locateDevice() {
+    if (cancelLocationRef.current) return;
+    setLocationError(null);
+    if (!window.isSecureContext) {
+      setLocationError(
+        "Abre el panel con una conexión HTTPS para solicitar la ubicación del dispositivo.",
+      );
+      return;
+    }
+    if (!navigator.geolocation) {
+      setLocationError(
+        "Este navegador no permite solicitar la ubicación. Selecciona el punto en el mapa.",
+      );
+      return;
+    }
+    setLocating(true);
+    let completed = false;
+    const cancel = requestPreciseDeviceLocation(
+      navigator.geolocation,
+      (nextCoordinate) => {
+        completed = true;
+        cancelLocationRef.current = null;
+        setLocating(false);
+        setCoordinate(nextCoordinate);
+        mapRef.current?.jumpTo({
+          center: [nextCoordinate.longitude, nextCoordinate.latitude],
+          zoom: 16,
+        });
+      },
+      (message) => {
+        completed = true;
+        cancelLocationRef.current = null;
+        setLocating(false);
+        setLocationError(message);
+      },
+    );
+    if (!completed) cancelLocationRef.current = cancel;
+  }
 
   return (
     <Dialog
       aria-labelledby="coordinate-picker-title"
       fullWidth
       maxWidth="lg"
-      onClose={onClose}
+      onClose={close}
       open
     >
       <DialogTitle id="coordinate-picker-title" sx={{ pr: 7 }}>
         Seleccionar ubicación
         <IconButton
           aria-label="Cerrar selector de ubicación"
-          onClick={onClose}
+          onClick={close}
           sx={{ position: "absolute", right: 12, top: 12 }}
         >
           <CloseRounded />
@@ -119,10 +195,34 @@ export function CoordinatePickerDialog({
       </DialogTitle>
       <DialogContent dividers>
         <Stack spacing={2}>
-          <Typography color="text.secondary" variant="body2">
-            Haz clic en el mapa para marcar el punto exacto. Solo se guardarán la latitud
-            y la longitud seleccionadas.
-          </Typography>
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            alignItems={{ xs: "stretch", sm: "center" }}
+            gap={2}
+          >
+            <Typography color="text.secondary" variant="body2" sx={{ flex: 1 }}>
+              Marca un punto en el mapa o solicita la ubicación actual del dispositivo.
+              Solo se guardarán la latitud y la longitud al confirmar.
+            </Typography>
+            <Button
+              type="button"
+              variant="outlined"
+              onClick={locateDevice}
+              disabled={locating || !container}
+              aria-busy={locating}
+              startIcon={
+                locating ? (
+                  <LoadingSpinner label="Buscando ubicación" size={18} color="inherit" />
+                ) : (
+                  <MyLocationRounded />
+                )
+              }
+              sx={{ flexShrink: 0 }}
+            >
+              {locating ? "Buscando ubicación…" : "Ubicación del dispositivo"}
+            </Button>
+          </Stack>
+          {locationError ? <Alert severity="warning">{locationError}</Alert> : null}
           <Box
             role="region"
             aria-label="Mapa para seleccionar coordenadas"
@@ -138,17 +238,12 @@ export function CoordinatePickerDialog({
             }}
           />
           {mapError ? <Alert severity="warning">{mapError}</Alert> : null}
-          <Alert icon={<LocationOnRounded />} severity={coordinate ? "success" : "info"}>
-            {coordinate
-              ? `Latitud ${coordinate.latitude.toFixed(6)} · Longitud ${coordinate.longitude.toFixed(6)}`
-              : "Selecciona un punto en el mapa para continuar."}
-          </Alert>
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Cancelar</Button>
+        <Button onClick={close}>Cancelar</Button>
         <Button
-          disabled={!coordinate}
+          disabled={!coordinate || locating}
           onClick={() => coordinate && onConfirm(coordinate)}
           variant="contained"
         >
