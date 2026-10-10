@@ -24,7 +24,14 @@ import {
 } from "@mui/material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { GridColDef } from "@mui/x-data-grid";
-import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 
 import { ADMIN_TABLE_PAGE_SIZE } from "@/components/ui/admin-table";
 import { AdminDataGrid } from "@/components/ui/admin-data-grid";
@@ -196,10 +203,12 @@ export function CatalogManagement({
   token,
   onNotice,
   onError,
+  renderHeader,
 }: {
   token: string;
   onNotice: (message: string) => void;
   onError: (message: string | null) => void;
+  renderHeader: (actions: ReactNode) => ReactNode;
 }) {
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<CatalogTabKey>("ACCESSIBILITY");
@@ -522,7 +531,7 @@ export function CatalogManagement({
     }
   }
 
-  return (
+  const content = (
     <Stack spacing={webTokens.spacing.control}>
       <Tabs
         value={selected}
@@ -611,21 +620,6 @@ export function CatalogManagement({
                 />
               </Box>
             ) : undefined
-          }
-          toolbarActions={
-            <Button
-              variant="contained"
-              startIcon={<AddRounded />}
-              onClick={() => openCreate()}
-              disabled={
-                catalogsQuery.isLoading ||
-                Boolean(catalogsQuery.error) ||
-                (isEstablishments &&
-                  !establishmentActivities?.some((option) => option.active !== false))
-              }
-            >
-              {isEstablishments ? "Agregar tipo" : "Agregar opción"}
-            </Button>
           }
           mobileCard={(option) => ({
             title: isEstablishments ? option.name : (option.displayName ?? option.name),
@@ -913,5 +907,26 @@ export function CatalogManagement({
         </DialogActions>
       </Dialog>
     </Stack>
+  );
+
+  return (
+    <>
+      {renderHeader(
+        <Button
+          variant="contained"
+          startIcon={<AddRounded />}
+          onClick={() => openCreate()}
+          disabled={
+            catalogsQuery.isLoading ||
+            Boolean(catalogsQuery.error) ||
+            (isEstablishments &&
+              !establishmentActivities?.some((option) => option.active !== false))
+          }
+        >
+          {isEstablishments ? "Agregar tipo" : "Agregar opción"}
+        </Button>,
+      )}
+      {content}
+    </>
   );
 }

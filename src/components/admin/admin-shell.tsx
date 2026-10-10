@@ -5,7 +5,7 @@ import DownloadRounded from "@mui/icons-material/DownloadRounded";
 import MenuRounded from "@mui/icons-material/MenuRounded";
 import { Box, Button, IconButton, Stack, Tooltip } from "@mui/material";
 import { useQueryClient } from "@tanstack/react-query";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, type ReactNode } from "react";
 
 import {
   AdminFeedbackProvider,
@@ -147,6 +147,28 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
       </Button>
     ) : undefined;
 
+  const renderHeader = (actions?: ReactNode) => (
+    <Stack
+      direction={{ xs: "column", md: "row" }}
+      alignItems="flex-start"
+      spacing={{ xs: webTokens.spacing.inline, md: webTokens.spacing.control }}
+      useFlexGap
+    >
+      <Tooltip title="Abrir menú">
+        <IconButton
+          onClick={() => setDrawerOpen(true)}
+          aria-label="Abrir menú"
+          sx={{ display: { xs: "inline-flex", md: "none" }, flexShrink: 0 }}
+        >
+          <MenuRounded />
+        </IconButton>
+      </Tooltip>
+      <Box sx={{ flex: 1, minWidth: 0, width: "100%" }}>
+        <PageHeader title={meta.title} description={meta.description} actions={actions} />
+      </Box>
+    </Stack>
+  );
+
   return (
     <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: "background.default" }}>
       {!editorMode ? (
@@ -173,32 +195,16 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
           minWidth: 0,
         }}
       >
-        <Stack spacing={webTokens.spacing.section}>
-          {!editorMode ? (
-            <Stack
-              direction={{ xs: "column", md: "row" }}
-              alignItems="flex-start"
-              spacing={{ xs: webTokens.spacing.inline, md: webTokens.spacing.control }}
-              useFlexGap
-            >
-              <Tooltip title="Abrir menú">
-                <IconButton
-                  onClick={() => setDrawerOpen(true)}
-                  aria-label="Abrir menú"
-                  sx={{ display: { xs: "inline-flex", md: "none" }, flexShrink: 0 }}
-                >
-                  <MenuRounded />
-                </IconButton>
-              </Tooltip>
-              <Box sx={{ flex: 1, minWidth: 0, width: "100%" }}>
-                <PageHeader
-                  title={meta.title}
-                  description={meta.description}
-                  actions={headerAction}
-                />
-              </Box>
-            </Stack>
-          ) : null}
+        <Stack
+          spacing={webTokens.spacing.section}
+          sx={(theme) => ({
+            width: "100%",
+            maxWidth: theme.breakpoints.values[webTokens.layout.contentMaxWidth],
+            mx: "auto",
+            minWidth: 0,
+          })}
+        >
+          {!editorMode && section !== "catalogs" ? renderHeader(headerAction) : null}
           {section === "summary" ? <SummarySection token={token} /> : null}
           {section === "review" ? (
             <ReviewSection
@@ -268,6 +274,7 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
               token={token}
               onNotice={feedback.showNotice}
               onError={feedback.showError}
+              renderHeader={renderHeader}
             />
           ) : null}
           {section === "users" ? (

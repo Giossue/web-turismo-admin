@@ -3,6 +3,9 @@
 Portal administrativo de Turismo Vinculación con acceso directo al login. La app móvil
 es el único cliente para turistas; este repositorio no contiene una versión web turística.
 
+Todas las secciones del panel y el editor de fichas comparten contenido centrado con un
+ancho máximo de 1200 px, márgenes laterales adaptables y espacio interior para móvil.
+
 ## Arranque local
 
 Para abrir la app Android y el admin al mismo tiempo en Kitty desde este repositorio:
@@ -140,6 +143,12 @@ el estado de dominio y las consultas existentes de la API, con un panel personal
 Referencia: [filtrado de MUI X v8](https://v8.mui.com/x/react-data-grid/filtering/).
 
 ### Catálogos de tipos y categorías
+
+La acción de creación se muestra en la esquina superior derecha del encabezado de
+**Catálogos**, como en Centros turísticos y Catastro. Las pestañas Accesibilidad,
+Actividades de fichas y Facilidades ofrecen **Agregar opción**; Tipos y categorías
+ofrece **Agregar tipo**. El botón conserva los estados de carga y disponibilidad del
+catálogo seleccionado.
 
 La pestaña **Tipos y categorías** muestra una tabla de tipos de establecimiento con el
 filtro opcional **Actividad** y la acción **Agregar tipo**. Al consultar todas las actividades,
