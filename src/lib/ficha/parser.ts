@@ -1,4 +1,7 @@
 import ExcelJS from "exceljs";
+import { FichaInvalidaError, validarArchivoFicha } from "./archivo";
+import { prepararExcelSeguro } from "./zip-seguro";
+export { FichaInvalidaError, TAMANO_MAXIMO_BYTES, validarArchivoFicha } from "./archivo";
 
 import { cargarCasillasFormulario } from "./controles-formulario";
 import {
@@ -48,11 +51,9 @@ import type {
   ResultadoParseoFicha,
 } from "./tipos";
 
-const EXTENSIONES_PERMITIDAS = new Set(["xlsx", "xlsm"]);
-export const TAMANO_MAXIMO_BYTES = 20 * 1024 * 1024;
 const TAMANO_MAXIMO_IMAGEN_BYTES = 5 * 1024 * 1024;
-
-export class FichaInvalidaError extends Error {}
+const MAX_IMAGENES_ANEXOS = 20;
+const MAX_TOTAL_IMAGENES_BYTES = 20 * 1024 * 1024;
 
 const HOJA_PRINCIPAL = "Ficha_Jerarquia";
 const HOJA_ACCESIBILIDAD = "ficha_Accesibilidad";
@@ -78,33 +79,6 @@ const CODIGOS_COLUMNAS = [
   "U",
   "V",
 ] as const;
-
-/**
- * Valida extensión y tamaño antes de leer el contenido del archivo. Lanza
- * `FichaInvalidaError` con un mensaje para la persona usuaria.
- */
-export function validarArchivoFicha(nombreArchivo: string, tamanoBytes: number): void {
-  validarExtension(nombreArchivo);
-  if (tamanoBytes > TAMANO_MAXIMO_BYTES) {
-    throw new FichaInvalidaError(
-      `El archivo pesa más de ${TAMANO_MAXIMO_BYTES / (1024 * 1024)} MB.`,
-    );
-  }
-}
-
-function validarExtension(nombreArchivo: string): void {
-  const extension = nombreArchivo.split(".").pop()?.toLowerCase() ?? "";
-  if (extension === "xls" || extension === "ods") {
-    throw new FichaInvalidaError(
-      `Formato "${extension}" no soportado. Guárdalo como .xlsx e inténtalo de nuevo.`,
-    );
-  }
-  if (!EXTENSIONES_PERMITIDAS.has(extension)) {
-    throw new FichaInvalidaError(
-      `Formato "${extension || "desconocido"}" no soportado. Solo se aceptan archivos .xlsx o .xlsm.`,
-    );
-  }
-}
 
 async function abrirLibro(buffer: ArrayBuffer): Promise<ExcelJS.Workbook> {
   const workbook = new ExcelJS.Workbook();
@@ -542,6 +516,7 @@ function leerImagenesAnexos(
     ).media ?? [];
   const metadata: FichaImagenAnexo[] = [];
   const adjuntas: FichaImagenAdjunta[] = [];
+  let totalAdjuntas = 0;
 
   for (const imagen of worksheet.getImages()) {
     const row = imagen.range.tl.nativeRow;
@@ -549,6 +524,10 @@ function leerImagenesAnexos(
     // La hoja usa las filas 304–320 como espacio de fotografías de anexos.
     // Se ignoran logos y firmas colocados en otras hojas o secciones.
     if (row < 303 || row > 319 || column < 1 || column > 21) continue;
+    if (metadata.length >= MAX_IMAGENES_ANEXOS) {
+      advertencias.push("Solo se extraen las primeras 20 fotografías de los anexos.");
+      break;
+    }
 
     const archivo = media[Number(imagen.imageId)];
     if (!archivo || archivo.type !== "image") {
@@ -574,14 +553,33 @@ function leerImagenesAnexos(
       );
       continue;
     }
-    if (tamanoBytes === 0 || tamanoBytes > TAMANO_MAXIMO_IMAGEN_BYTES) {
+    if (
+      tamanoBytes === 0 ||
+      tamanoBytes > TAMANO_MAXIMO_IMAGEN_BYTES ||
+      totalAdjuntas + tamanoBytes > MAX_TOTAL_IMAGENES_BYTES
+    ) {
       advertencias.push(
         tamanoBytes === 0
           ? `No se pudo extraer la imagen ${metadata.length} de los anexos.`
-          : `La imagen ${metadata.length} de los anexos supera el límite de 5 MB y no se adjuntó.`,
+          : `La imagen ${metadata.length} supera el límite de 5 MB por fotografía o de 20 MB en total y no se adjuntó.`,
       );
       continue;
     }
+    const contenido = archivo.buffer!;
+    const firmaValida =
+      mimeType === "image/png"
+        ? contenido.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
+        : contenido.length >= 3 &&
+          contenido[0] === 255 &&
+          contenido[1] === 216 &&
+          contenido[2] === 255;
+    if (!firmaValida) {
+      advertencias.push(
+        `La imagen ${metadata.length} no coincide con su formato y no se adjuntó.`,
+      );
+      continue;
+    }
+    totalAdjuntas += tamanoBytes;
 
     adjuntas.push({
       nombre,
@@ -607,7 +605,7 @@ export async function parsearFicha(
 ): Promise<ResultadoParseoFicha> {
   validarArchivoFicha(nombreArchivo, buffer.byteLength);
 
-  const workbook = await abrirLibro(buffer);
+  const workbook = await abrirLibro(await prepararExcelSeguro(buffer));
   const worksheet = validarPlantilla(workbook);
 
   const advertencias: string[] = [];

@@ -467,14 +467,18 @@ type FichaImportResult = {
 type AdminAccessTokenRefresh = (expiredToken: string) => Promise<string | null>;
 
 let adminAccessTokenRefresh: AdminAccessTokenRefresh | null = null;
+let adminSessionGeneration: (() => number) | undefined;
 
 export function registerAdminAccessTokenRefresh(
   refresh: AdminAccessTokenRefresh,
+  getGeneration?: () => number,
 ): () => void {
   adminAccessTokenRefresh = refresh;
+  adminSessionGeneration = getGeneration;
   return () => {
     if (adminAccessTokenRefresh === refresh) {
       adminAccessTokenRefresh = null;
+      adminSessionGeneration = undefined;
     }
   };
 }
@@ -493,6 +497,13 @@ async function authorizedRequest<T>(
   fallbackMessage = ADMIN_API_FALLBACK_MESSAGE,
   retryAfterRefresh = true,
 ): Promise<T> {
+  const session = adminSessionGeneration;
+  const generation = session?.();
+  const assertSameSession = () => {
+    if (session !== adminSessionGeneration || generation !== session?.()) {
+      throw new ApiError("La sesión cambió mientras se completaba la solicitud.", 401);
+    }
+  };
   const headers = new Headers(init.headers);
   headers.set("Authorization", `Bearer ${token}`);
   const result = await sendApiRequest<T>(url, {
@@ -501,8 +512,11 @@ async function authorizedRequest<T>(
     credentials: "include",
   });
 
+  assertSameSession();
+
   if (result.response.status === 401 && retryAfterRefresh && adminAccessTokenRefresh) {
     const nextToken = await adminAccessTokenRefresh(token).catch(() => null);
+    assertSameSession();
     if (nextToken && nextToken !== token) {
       return authorizedRequest(url, nextToken, init, fallbackMessage, false);
     }
@@ -735,9 +749,16 @@ export async function setAdminEstablishmentActive(
   );
 }
 
-export async function getAdminCatalogs(token: string, includeInactive = false) {
+export async function getAdminCatalogs(
+  token: string,
+  includeInactive = false,
+  signal?: AbortSignal,
+) {
   const query = toQueryString({ includeInactive: includeInactive || undefined });
-  return get<AdminCatalogs>(`/admin/catalogs${query}`, token);
+  return authorizedRequest<AdminCatalogs>(apiEndpoint(`/admin/catalogs${query}`), token, {
+    cache: "no-store",
+    signal,
+  });
 }
 
 export async function updateAdminCatalog(

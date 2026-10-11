@@ -15,6 +15,7 @@ import {
   type GridValidRowModel,
 } from "@mui/x-data-grid";
 import { esES } from "@mui/x-data-grid/locales";
+import { useCspNonce } from "@/lib/csp-nonce";
 
 import {
   ADMIN_TABLE_PAGE_SIZE,
@@ -182,6 +183,7 @@ export function AdminDataGrid<R extends GridValidRowModel>({
   hideFooter = false,
   mobileCard,
 }: AdminDataGridProps<R>) {
+  const nonce = useCspNonce();
   const pageSize = pagination.pageSize ?? ADMIN_TABLE_PAGE_SIZE;
   // Una consulta de otra página no debe reiniciar el grid mientras llega su total.
   const [knownTotal, setKnownTotal] = useState(pagination.total);
@@ -267,6 +269,7 @@ export function AdminDataGrid<R extends GridValidRowModel>({
           >
             <DataGrid<R>
               {...gridProps}
+              nonce={nonce}
               rowHeight={72}
               columnHeaderHeight={44}
               hideFooter={hideFooter}
@@ -287,6 +290,7 @@ export function AdminDataGrid<R extends GridValidRowModel>({
             >
               <DataGrid<R>
                 {...gridProps}
+                nonce={nonce}
                 rowHeight={72}
                 columnHeaderHeight={44}
                 hideFooter

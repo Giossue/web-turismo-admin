@@ -6,7 +6,7 @@ const DEFAULT_API_URL = "http://localhost:3000/api/v1";
  * que debe usarse para construir enlaces que se renderizan en la interfaz
  * (por ejemplo, descargas de multimedia): es idéntica en servidor y cliente.
  */
-export const publicApiUrl = process.env.NEXT_PUBLIC_TURISMO_API_URL ?? DEFAULT_API_URL;
+export const publicApiUrl = process.env.NEXT_PUBLIC_TURISMO_API_URL || DEFAULT_API_URL;
 
 /**
  * URL base de la API NestJS para el entorno que ejecuta la solicitud: en el
@@ -16,7 +16,7 @@ export const publicApiUrl = process.env.NEXT_PUBLIC_TURISMO_API_URL ?? DEFAULT_A
  */
 export function getApiUrl(): string {
   if (typeof window === "undefined") {
-    return process.env.TURISMO_API_URL ?? publicApiUrl;
+    return process.env.TURISMO_API_URL || publicApiUrl;
   }
   return publicApiUrl;
 }

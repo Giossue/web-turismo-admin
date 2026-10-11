@@ -18,6 +18,15 @@ hojas auxiliares; elimina los datos del archivo de ejemplo y sus fotografías y 
 - `.xlsx` y `.xlsm` (el mismo formato OOXML, generado desde Excel o LibreOffice).
 - `.xls` y `.ods` se rechazan con el mensaje "guárdalo como .xlsx".
 - Tamaño máximo: 20 MB.
+- El ZIP se valida antes de abrir el libro: hasta 2048 entradas, 16 MiB por entrada,
+  64 MiB descomprimidos y relación de compresión máxima 200:1. Se cuentan los bytes
+  reales durante la descompresión; declarar un tamaño falso no elude estos límites.
+- Se limitan las estructuras XML y las hojas a 4096 filas, 256 columnas y 300 000 celdas
+  en el conjunto del libro. Las macros de `.xlsm` nunca se ejecutan.
+- La API confirma identidad y rol antes de leer el cuerpo. Hay hasta dos importaciones
+  simultáneas y doce intentos por cuenta y minuto, por proceso del portal.
+- La carga tiene un plazo de 30 segundos y el análisis se ejecuta en un worker de Node
+  con un plazo de 15 segundos y límites de heap. Los rechazos no guardan datos.
 - El archivo debe tener la hoja `Ficha_Jerarquia` con `B1` conteniendo "JERARQUIZACIÓN" y `B5`
   igual a "1.1 Nombre del Atractivo Turístico"; si no, se rechaza como plantilla no reconocida.
 
@@ -53,9 +62,10 @@ hojas auxiliares; elimina los datos del archivo de ejemplo y sus fotografías y 
   contingencia.
 - **Descripción** del atractivo.
 - **Firmas de responsabilidad** (elaborado/validado/aprobado).
-- **Fotos de anexos**: detecta imágenes PNG, JPEG o WebP colocadas en las filas 304–320 de
+- **Fotos de anexos**: detecta imágenes PNG o JPEG colocadas en las filas 304–320 de
   `Ficha_Jerarquia`, las muestra como pendientes y las carga al centro luego de guardar. Se
-  omiten imágenes decorativas y firmas ubicadas fuera de ese bloque; el límite es 10 MB por foto.
+  omiten imágenes decorativas y firmas ubicadas fuera de ese bloque. Se verifica la firma
+  binaria y se admiten hasta veinte fotos, 5 MiB por foto y 20 MiB en total.
 - **Hoja `ficha_Accesibilidad`**: el detalle de criterios SI/NO por categoría de discapacidad
   (se muestra como referencia; el mapeo a los criterios del formulario de accesibilidad
   detallada es un trabajo posterior).

@@ -1,0 +1,8 @@
+node_modules/
+.next/
+.runtime/
+public/maplibre/
+playwright-report/
+test-results/
+patches/
+coverage/

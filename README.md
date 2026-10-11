@@ -57,7 +57,11 @@ institucional. Si ya tienes una sesión válida, se abre directamente el panel. 
 con una cuenta institucional creada en la API. El portal queda excluido del rastreo de
 buscadores. El navegador solo recibe un access token en memoria y mantiene el refresh token en
 una cookie HttpOnly. Al recargar, el panel llama a `/auth/refresh` para reconstruir la
-sesión sin usar `localStorage`.
+sesión. `localStorage` conserva el estado de cierre, las preferencias visuales y las fechas
+de lectura de avisos por cuenta; nunca guarda tokens, contraseñas ni el perfil de la cuenta.
+Cerrar sesión invalida las consultas y
+se comunica a las otras pestañas. Si la API no confirma la revocación, se muestra un error,
+se mantiene bloqueada la restauración y se ofrece **Reintentar cierre de sesión**.
 El diseño adapta las plantillas oficiales de MUI
 [Sign-in](https://mui.com/material-ui/getting-started/templates/sign-in/) para el login y
 [Dashboard](https://mui.com/material-ui/getting-started/templates/dashboard/) para el panel,
@@ -228,11 +232,21 @@ puerto de contenedor `3000` y estos valores de build/runtime:
 ```text
 TURISMO_API_URL=https://api.maps.devs-ueb.tech/api/v1
 NEXT_PUBLIC_TURISMO_API_URL=https://api.maps.devs-ueb.tech/api/v1
+NEXT_PUBLIC_TILESERVER_STYLE_URL=https://maps.devs-ueb.tech/styles/basic-preview/style.json
 ```
 
 `NEXT_PUBLIC_TURISMO_API_URL` debe estar disponible como argumento de build porque Next.js
 lo incorpora al bundle del navegador. `TURISMO_API_URL` también debe quedar como variable
 de runtime para las solicitudes realizadas desde el servidor.
+
+El contenedor ejecuta Node con el usuario `node`. El contexto excluye `.env` y `.env.*`;
+configura los valores desde Dokploy. Las variables `NEXT_PUBLIC_*` son públicas. La CSP
+permite conexiones a los orígenes configurados de la API y del mapa. Usa HTTPS en el
+despliegue; el portal incorpora HSTS, protección contra marcos y nonces por respuesta para
+los scripts y estilos de Next.js/MUI. Las páginas administrativas usan renderizado dinámico
+y `Cache-Control: private, no-store`.
+
+Los controles y sus límites están en [docs/security/controles.md](docs/security/controles.md).
 
 ## Verificación
 
@@ -240,6 +254,13 @@ de runtime para las solicitudes realizadas desde el servidor.
 bun run format
 bun run lint
 bun run typecheck
-bun test
+bun run test
 bun run build
+bun run test:browser
 ```
+
+`bun run verify` agrupa formato, lint, tipos, pruebas de Bun y build. `bun run test` compila
+primero el worker de importación. Las pruebas de navegador usan el build de producción,
+una API simulada y los puertos locales 4317/4318; requieren `bunx playwright install chromium`.
+Ejecuta también `bun audit --json` al actualizar dependencias y revisa la nota del parche
+de `braces` en la documentación de seguridad.

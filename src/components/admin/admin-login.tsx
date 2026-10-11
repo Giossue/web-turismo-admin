@@ -16,7 +16,7 @@ import { type FormEvent, useRef, useState } from "react";
 import { useAdminAuth } from "@/lib/auth";
 
 export function AdminLogin() {
-  const { error, login } = useAdminAuth();
+  const { error, login, logout, loggingOut, logoutPending } = useAdminAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [pending, setPending] = useState(false);
@@ -89,6 +89,11 @@ export function AdminLogin() {
           aria-describedby="login-description"
         >
           {error ? <Alert severity="error">{error}</Alert> : null}
+          {logoutPending ? (
+            <Button onClick={() => void logout()} disabled={loggingOut}>
+              {loggingOut ? "Cerrando sesión…" : "Reintentar cierre de sesión"}
+            </Button>
+          ) : null}
           <FormControl fullWidth>
             <FormLabel htmlFor="email" sx={{ mb: 1 }}>
               Correo institucional
@@ -122,7 +127,12 @@ export function AdminLogin() {
               slotProps={{ htmlInput: { minLength: 8 } }}
             />
           </FormControl>
-          <Button type="submit" variant="contained" fullWidth disabled={pending}>
+          <Button
+            type="submit"
+            variant="contained"
+            fullWidth
+            disabled={pending || logoutPending || loggingOut}
+          >
             {pending ? "Validando…" : "Iniciar sesión"}
           </Button>
         </Stack>

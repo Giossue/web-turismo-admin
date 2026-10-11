@@ -6,13 +6,20 @@ import { mapearFichaAFormulario } from "@/lib/ficha/mapear-formulario";
 import {
   FichaInvalidaError,
   TAMANO_MAXIMO_BYTES,
-  parsearFicha,
   validarArchivoFicha,
-} from "@/lib/ficha/parser";
+} from "@/lib/ficha/archivo";
+import { ImportAdmission } from "@/lib/ficha/admission";
+import { leerCuerpoLimitado } from "@/lib/ficha/cuerpo-limitado";
+import { parsearFichaAislada } from "@/lib/ficha/import-worker";
 import { mapearSeccionesImportadas } from "@/lib/ficha/mapear-secciones";
 import { mapearSugerenciasSecciones } from "@/lib/ficha/sugerencias-secciones";
 import { resultadoParseoFichaSchema } from "@/lib/ficha/validacion";
-import { ApiError } from "@/lib/http";
+import { ApiError, apiEndpoint, sendApiRequest, toApiError } from "@/lib/http";
+
+export const runtime = "nodejs";
+export const maxDuration = 60;
+const admission = new ImportAdmission();
+const headersPrivados = { "Cache-Control": "private, no-store" };
 
 /** Holgura para los encabezados y separadores de multipart/form-data. */
 const MARGEN_MULTIPART_BYTES = 64 * 1024;
@@ -20,7 +27,15 @@ const TAMANO_MAXIMO_CUERPO = TAMANO_MAXIMO_BYTES + MARGEN_MULTIPART_BYTES;
 const MENSAJE_ARCHIVO_GRANDE = `El archivo pesa más de ${TAMANO_MAXIMO_BYTES / (1024 * 1024)} MB.`;
 
 function respuestaError(message: string, status: number): NextResponse {
-  return NextResponse.json({ error: { message } }, { status });
+  return NextResponse.json({ error: { message } }, { status, headers: headersPrivados });
+}
+function respuestaLimite() {
+  const response = respuestaError(
+    "Hay demasiadas importaciones en curso. Espera un minuto e intenta de nuevo.",
+    429,
+  );
+  response.headers.set("Retry-After", "60");
+  return response;
 }
 
 /**
@@ -50,10 +65,45 @@ export async function POST(request: NextRequest) {
   if (Number.isFinite(declaredLength) && declaredLength > TAMANO_MAXIMO_CUERPO) {
     return respuestaError(MENSAJE_ARCHIVO_GRANDE, 413);
   }
+  const liberar = admission.reservar();
+  if (!liberar) return respuestaLimite();
+  try {
+    return await importarFicha(request, token);
+  } catch (error) {
+    if (error instanceof ApiError) return respuestaError(error.message, error.status);
+    return respuestaError("No se pudo completar la importación. Intenta de nuevo.", 500);
+  } finally {
+    liberar();
+  }
+}
+
+async function importarFicha(request: NextRequest, token: string) {
+  const apiSignal = AbortSignal.any([request.signal, AbortSignal.timeout(5_000)]);
 
   let catalogos: AdminCatalogs;
   try {
-    catalogos = await getAdminCatalogs(token);
+    const sesion = await sendApiRequest<{ user?: { id?: number; roles?: string[] } }>(
+      apiEndpoint("/auth/me"),
+      {
+        headers: { authorization: `Bearer ${token}` },
+        cache: "no-store",
+        signal: apiSignal,
+      },
+    );
+    if (!sesion.response.ok)
+      throw toApiError(sesion, "La sesión institucional no es válida.");
+    const user = sesion.body?.data?.user;
+    if (
+      !user ||
+      !Number.isSafeInteger(user.id) ||
+      user.id! <= 0 ||
+      !Array.isArray(user.roles) ||
+      !user.roles.some((r) => r === "ADMINISTRADOR" || r === "AGENTE_TURISTICO")
+    ) {
+      return respuestaError("La cuenta no tiene permiso para importar fichas.", 403);
+    }
+    if (!admission.admitirUsuario(user.id!)) return respuestaLimite();
+    catalogos = await getAdminCatalogs(token, false, apiSignal);
   } catch (error) {
     if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
       return respuestaError(error.message, error.status);
@@ -65,7 +115,11 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const cuerpo = await leerCuerpoLimitado(request, TAMANO_MAXIMO_CUERPO);
+  const cuerpo = await leerCuerpoLimitado(
+    request,
+    TAMANO_MAXIMO_CUERPO,
+    AbortSignal.any([request.signal, AbortSignal.timeout(30_000)]),
+  );
   if (cuerpo === null) return respuestaError(MENSAJE_ARCHIVO_GRANDE, 413);
 
   let formData: FormData;
@@ -88,12 +142,16 @@ export async function POST(request: NextRequest) {
   let resultado;
   try {
     validarArchivoFicha(file.name, file.size);
-    resultado = await parsearFicha(await file.arrayBuffer(), file.name);
+    resultado = await parsearFichaAislada(
+      await file.arrayBuffer(),
+      file.name,
+      request.signal,
+    );
   } catch (error) {
     if (error instanceof FichaInvalidaError) {
       return respuestaError(error.message, 422);
     }
-    return respuestaErrorInesperado(error, "al leer la ficha");
+    return respuestaErrorInesperado("al leer la ficha");
   }
 
   const validado = resultadoParseoFichaSchema.safeParse(resultado);
@@ -117,60 +175,31 @@ export async function POST(request: NextRequest) {
       catalogos,
       catalogosResueltos,
     );
-    return NextResponse.json({
-      data: {
-        formulario: mapearFichaAFormulario(resultado.datos, catalogosResueltos),
-        secciones: apartados.secciones,
-        sugerenciasSecciones: mapearSugerenciasSecciones(
-          resultado.datos,
-          catalogosResueltos,
-        ),
-        advertencias: [
-          ...resultado.advertencias,
-          ...advertenciasDeCatalogos(catalogosResueltos),
-          ...apartados.advertencias,
-        ],
-        fotos: resultado.imagenesAdjuntas,
+    return NextResponse.json(
+      {
+        data: {
+          formulario: mapearFichaAFormulario(resultado.datos, catalogosResueltos),
+          secciones: apartados.secciones,
+          sugerenciasSecciones: mapearSugerenciasSecciones(
+            resultado.datos,
+            catalogosResueltos,
+          ),
+          advertencias: [
+            ...resultado.advertencias,
+            ...advertenciasDeCatalogos(catalogosResueltos),
+            ...apartados.advertencias,
+          ],
+          fotos: resultado.imagenesAdjuntas,
+        },
       },
-    });
-  } catch (error) {
-    return respuestaErrorInesperado(error, "al resolver los catálogos de la ficha");
+      { headers: headersPrivados },
+    );
+  } catch {
+    return respuestaErrorInesperado("al resolver los catálogos de la ficha");
   }
 }
-
-/**
- * Lee el cuerpo sin superar `limite` bytes (también si no hay
- * `Content-Length` o es falso). Devuelve `null` si lo supera.
- */
-async function leerCuerpoLimitado(
-  request: NextRequest,
-  limite: number,
-): Promise<Uint8Array<ArrayBuffer> | null> {
-  if (!request.body) return new Uint8Array();
-  const reader = request.body.getReader();
-  const partes: Uint8Array[] = [];
-  let total = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    total += value.byteLength;
-    if (total > limite) {
-      await reader.cancel();
-      return null;
-    }
-    partes.push(value);
-  }
-  const cuerpo = new Uint8Array(total);
-  let desplazamiento = 0;
-  for (const parte of partes) {
-    cuerpo.set(parte, desplazamiento);
-    desplazamiento += parte.byteLength;
-  }
-  return cuerpo;
-}
-
-function respuestaErrorInesperado(error: unknown, contexto: string): NextResponse {
-  console.error(`Error inesperado ${contexto}:`, error);
+function respuestaErrorInesperado(contexto: string): NextResponse {
+  console.error(`Error inesperado ${contexto}.`);
   return respuestaError(
     `Ocurrió un error inesperado ${contexto}. Si el problema continúa, avisa al equipo técnico.`,
     500,

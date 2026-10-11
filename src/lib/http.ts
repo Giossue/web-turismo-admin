@@ -42,9 +42,7 @@ export function apiEndpoint(path: string): string {
 }
 
 function networkErrorMessage(): string {
-  const variable =
-    typeof window === "undefined" ? "TURISMO_API_URL" : "NEXT_PUBLIC_TURISMO_API_URL";
-  return `No se pudo conectar con la API institucional. Verifica que el servicio esté iniciado y que ${variable} sea correcto.`;
+  return "No se pudo conectar con el servicio institucional. Revisa la conexión e intenta de nuevo.";
 }
 
 function isAbortError(cause: unknown): boolean {
@@ -78,8 +76,13 @@ export async function sendApiRequest<T>(
 ): Promise<ApiResult<T>> {
   let response: Response;
   try {
-    response = await fetch(url, { ...init, headers: buildHeaders(init) });
+    const timeout = AbortSignal.timeout(60_000);
+    const signal = init.signal ? AbortSignal.any([init.signal, timeout]) : timeout;
+    response = await fetch(url, { ...init, signal, headers: buildHeaders(init) });
   } catch (cause) {
+    if (cause instanceof Error && cause.name === "TimeoutError") {
+      throw new ApiError("La solicitud tardó demasiado. Intenta de nuevo.", 408);
+    }
     if (isAbortError(cause)) throw cause;
     throw new Error(networkErrorMessage());
   }

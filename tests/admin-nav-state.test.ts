@@ -214,6 +214,8 @@ describe("sections", () => {
   test("los agentes turísticos no ven apartados de administración", () => {
     expect(resolveSection("review", false)).toBe("centers");
     expect(resolveSection("catalogs", false)).toBe("centers");
+    expect(resolveSection("users", false)).toBe("centers");
+    expect(resolveSection("activity", false)).toBe("centers");
     expect(resolveSection("establishments", false)).toBe("establishments");
     expect(resolveSection("review", true)).toBe("review");
   });
@@ -226,6 +228,8 @@ describe("sections", () => {
       "centers",
       "establishments",
       "catalogs",
+      "users",
+      "activity",
       "settings",
     ]);
     expect(navigationItems(false).map((item) => item.label)).toEqual([

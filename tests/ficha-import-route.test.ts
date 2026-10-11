@@ -12,7 +12,14 @@ afterEach(() => {
 });
 
 function mockApi(status: number, body: unknown) {
-  const fetchMock = mock(async () => Response.json(body, { status }));
+  const fetchMock = mock(async (input: RequestInfo | URL) =>
+    Response.json(
+      status === 200 && String(input).endsWith("/auth/me")
+        ? { data: { user: { id: 1, roles: ["ADMINISTRADOR"] } } }
+        : body,
+      { status },
+    ),
+  );
   globalThis.fetch = fetchMock as unknown as typeof fetch;
   return fetchMock;
 }

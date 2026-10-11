@@ -21,10 +21,9 @@ import { useEffect, useRef, useState } from "react";
 import { LoadingSpinner } from "@/components/ui/loading-state";
 import { requestPreciseDeviceLocation } from "@/lib/device-location";
 import { readMapCoordinate, type MapCoordinate } from "@/lib/map-coordinates";
+import { DEFAULT_MAP_STYLE_URL } from "@/lib/security-headers";
 
-const mapStyleUrl =
-  process.env.NEXT_PUBLIC_TILESERVER_STYLE_URL ??
-  "https://maps.devs-ueb.tech/styles/basic-preview/style.json";
+const mapStyleUrl = process.env.NEXT_PUBLIC_TILESERVER_STYLE_URL || DEFAULT_MAP_STYLE_URL;
 const defaultCenter: [number, number] = [-79.0016, -1.5923];
 
 // El bundler no emite el worker de MapLibre v6; se sirve desde `public/maplibre`

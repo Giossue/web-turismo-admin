@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
 
 import {
+  getAdminCatalogs,
   deleteAdminCatalog,
   deleteAdminCenter,
   deleteAdminEstablishment,
@@ -53,6 +54,39 @@ const cases = [
 ];
 
 describe("eliminación administrativa mediante la API", () => {
+  test("descarta una respuesta privada que llega después del cambio de sesión", async () => {
+    let generation = 1;
+    releaseRefresh = registerAdminAccessTokenRefresh(
+      async () => null,
+      () => generation,
+    );
+    let responder!: (response: Response) => void;
+    globalThis.fetch = mock(
+      () =>
+        new Promise<Response>((resolve) => {
+          responder = resolve;
+        }),
+    ) as unknown as typeof fetch;
+    const pending = getAdminCatalogs(accessToken);
+    generation++;
+    responder(Response.json({ data: { privado: true } }));
+    await expect(pending).rejects.toMatchObject({ status: 401 });
+  });
+  test("no reintenta un 401 si la cuenta cambió mientras se renovaba el token", async () => {
+    let generation = 1;
+    const fetchMock = mockApi(401, { error: { message: "La sesión expiró." } });
+    releaseRefresh = registerAdminAccessTokenRefresh(
+      async () => {
+        generation++;
+        return "token-de-otra-cuenta";
+      },
+      () => generation,
+    );
+    await expect(deleteAdminCenter(accessToken, centerCode)).rejects.toMatchObject({
+      status: 401,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
   for (const item of cases) {
     test(`${item.label}: envía DELETE autenticado sin cuerpo y devuelve el sobre de éxito`, async () => {
       const data = { deleted: true } as const;

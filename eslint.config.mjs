@@ -11,5 +11,8 @@ export default defineConfig([
     "build/**",
     "next-env.d.ts",
     "public/maplibre/**",
+    ".runtime/**",
+    "playwright-report/**",
+    "test-results/**",
   ]),
 ]);

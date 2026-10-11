@@ -10,3 +10,6 @@ dist/
 .DS_Store
 # Copiado desde node_modules por scripts/copy-maplibre-worker.mjs
 public/maplibre/
+.runtime/
+playwright-report/
+test-results/
