@@ -5,13 +5,13 @@ import { useRef } from "react";
 
 import {
   createAdminCenter,
-  getAdminCenter,
   saveAdminCenter,
   submitAdminCenterReview,
   type AdminCatalogs,
   type AdminCenterDetail,
 } from "@/lib/admin-api";
-import { adminKeys, centerSaveScope, getCachedCenterVersion } from "@/lib/admin-queries";
+import { centerSaveScope, getCachedCenterVersion } from "@/lib/admin-queries";
+import { reloadAdminCenter, storeAdminCenterDetail } from "@/lib/center-cache";
 import type { CenterFormValues } from "@/lib/center-form";
 import { toPayload } from "@/lib/center-form-mappers";
 import { errorMessage } from "@/lib/errors";
@@ -55,12 +55,8 @@ export function useCenterSave({
   // actualizar esa ficha en lugar de crear otra.
   const createdCodeRef = useRef<string | null>(null);
   const scope = centerSaveScope(code ?? "new");
-  const storeDetail = async (detail: AdminCenterDetail) => {
-    const queryKey = adminKeys.center(detail.code);
-    // Una lectura en curso no debe pisar lo recién guardado (y su versión).
-    await queryClient.cancelQueries({ queryKey, exact: true });
-    queryClient.setQueryData(queryKey, detail);
-  };
+  const storeDetail = (detail: AdminCenterDetail) =>
+    storeAdminCenterDetail(queryClient, detail);
 
   const saveMutation = useMutation({
     scope,
@@ -85,19 +81,22 @@ export function useCenterSave({
     onSuccess: storeDetail,
   });
 
-  function reportSaveError(cause: unknown) {
+  async function reportSaveError(cause: unknown) {
     if (cause instanceof ApiError && cause.status === 409) {
-      onError(errorMessage(cause, CONFLICT_MESSAGE));
       // Otra edición ganó: se recarga la ficha y el formulario la adopta, en
       // lugar de sobrescribirla con los cambios locales en el siguiente guardado.
       const targetCode = code ?? createdCodeRef.current;
       if (targetCode) {
-        void queryClient
-          .fetchQuery({
-            queryKey: adminKeys.center(targetCode),
-            queryFn: () => getAdminCenter(token, targetCode),
-          })
-          .then(onConflictReload, () => undefined);
+        try {
+          onConflictReload(await reloadAdminCenter(queryClient, token, targetCode));
+          onError(CONFLICT_MESSAGE);
+        } catch (reloadCause) {
+          onError(
+            `La ficha cambió, pero no se pudo cargar la versión vigente. Se conservaron tus cambios locales. ${errorMessage(reloadCause, "Intenta recargar la ficha.")}`,
+          );
+        }
+      } else {
+        onError(errorMessage(cause, "La ficha cambió mientras la editabas."));
       }
       return;
     }
@@ -122,7 +121,7 @@ export function useCenterSave({
       }
       return saved;
     } catch (cause) {
-      reportSaveError(cause);
+      await reportSaveError(cause);
       return null;
     }
   }

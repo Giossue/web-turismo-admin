@@ -270,6 +270,9 @@ export function OpinionManagement({ token }: { token: string }) {
         columns={columns}
         getRowId={opinionRowId}
         loading={opinionsQuery.isLoading}
+        updating={opinionsQuery.isFetching}
+        actionsDisabled={opinionsQuery.isPlaceholderData}
+        onRefresh={() => void opinionsQuery.refetch()}
         error={
           opinionsQuery.error
             ? errorMessage(

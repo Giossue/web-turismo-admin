@@ -40,6 +40,15 @@ Mocks sirven para el comportamiento del cliente. Aislamiento y carreras en la
 base se verifican en el backend con usuarios y registros de alcance distinto.
 No ajustar permisos ni reducir un caso adversario para hacer pasar una prueba.
 
+La cobertura de caché incluye `tests/admin-query-cache.test.ts` para cancelación
+de transporte, cambios de filtro/página y recuperación de foco;
+`tests/center-cache.test.ts` para lectura vigente y respuestas anteriores;
+`tests/imported-center-sections.test.ts` para preservación tras 409, reintento
+limitado y serialización; y `tests/admin-data-grid.test.tsx` para estados de
+tarjetas y bloqueo de acciones. `e2e/cache.pw.ts` comprueba las transiciones
+reales del navegador en escritorio/móvil y la actualización manual/de foco
+contra respuestas simuladas.
+
 ## Informe
 
 Nombrar comandos y resultado real, entorno usado y límites. Distinguir validación

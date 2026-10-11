@@ -10,7 +10,8 @@ import {
   Menu,
   MenuItem,
 } from "@mui/material";
-import { useId, useState, type ReactNode } from "react";
+import { useContext, useId, useState, type ReactNode } from "react";
+import { AdminRowActionsDisabledContext } from "@/components/ui/admin-row-actions-context";
 
 import {
   DeleteRecordAction,
@@ -41,7 +42,8 @@ export function RecordActionsMenu({
 }: RecordActionsMenuProps) {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const id = useId();
-  const open = Boolean(anchorEl);
+  const disabled = useContext(AdminRowActionsDisabledContext);
+  const open = Boolean(anchorEl) && !disabled;
 
   function renderMenu(deleteTrigger?: { onClick: () => void; disabled: boolean }) {
     return (
@@ -53,6 +55,7 @@ export function RecordActionsMenu({
           aria-controls={open ? `${id}-menu` : undefined}
           aria-expanded={open ? true : undefined}
           tabIndex={tabIndex}
+          disabled={disabled}
           onClick={(event) => {
             event.stopPropagation();
             setAnchorEl(event.currentTarget);
@@ -82,8 +85,9 @@ export function RecordActionsMenu({
           {actions.map((action) => (
             <MenuItem
               key={action.label}
-              disabled={action.disabled}
+              disabled={disabled || action.disabled}
               onClick={() => {
+                if (disabled) return;
                 setAnchorEl(null);
                 action.onClick();
               }}
@@ -96,8 +100,9 @@ export function RecordActionsMenu({
           {deleteTrigger && actions.length > 0 ? <Divider /> : null}
           {deleteTrigger ? (
             <MenuItem
-              disabled={deleteTrigger.disabled}
+              disabled={disabled || deleteTrigger.disabled}
               onClick={() => {
+                if (disabled) return;
                 setAnchorEl(null);
                 deleteTrigger.onClick();
               }}
@@ -115,7 +120,13 @@ export function RecordActionsMenu({
   }
 
   if (deletion) {
-    return <DeleteRecordAction {...deletion} renderTrigger={renderMenu} />;
+    return (
+      <DeleteRecordAction
+        {...deletion}
+        disabled={disabled || deletion.disabled}
+        renderTrigger={renderMenu}
+      />
+    );
   }
   return renderMenu();
 }

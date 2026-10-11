@@ -3,13 +3,24 @@
 ## Controles actuales del cliente
 
 - Botones y guardado evitan envíos duplicados mientras hay una petición pendiente.
-- `centerSaveScope` serializa guardados de la misma ficha dentro del cliente.
-- La versión de ficha se envía a la API y los 409 se manejan como conflicto.
+- `centerSaveScope` serializa guardados de la misma ficha dentro del cliente,
+  incluidos los apartados importados. La versión se lee al ejecutar y la
+  respuesta confirmada se guarda en caché antes de la siguiente escritura.
+- La versión de ficha se envía a la API y los 409 fuerzan una consulta del
+  detalle vigente aunque la caché todavía se considere fresca. Si la consulta
+  falla, el formulario conserva sus valores y comunica el fallo de recuperación.
 - La generación de sesión evita aplicar datos o reintentos de otra identidad.
 - La importación reserva capacidad antes de procesar y libera el cupo al terminar.
 
 Estos controles no garantizan un único efecto entre pestañas, clientes o réplicas.
 La API es responsable de transacciones, restricciones y transiciones atómicas.
+
+Al importar apartados, el cliente omite los que ya existen en el detalle. Si no
+hay detalle local, lo consulta antes de guardar. Tras un 409 consulta de nuevo,
+comprueba otra vez la existencia del apartado y solo reintenta una vez si sigue
+ausente, enviando la versión consultada. Un apartado encontrado durante esa
+recuperación se conserva. Las versiones y la autorización efectiva de la
+escritura siguen siendo responsabilidad de la API.
 
 ## Diseño de una nueva mutación
 

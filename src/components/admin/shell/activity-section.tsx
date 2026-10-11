@@ -178,6 +178,9 @@ export function ActivitySection({
       columns={columns}
       getRowId={getActivityRowId}
       loading={activityQuery.isLoading}
+      updating={activityQuery.isFetching}
+      actionsDisabled={activityQuery.isPlaceholderData}
+      onRefresh={() => void activityQuery.refetch()}
       error={
         activityQuery.error
           ? errorMessage(activityQuery.error, "No se pudo cargar la actividad.")

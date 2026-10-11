@@ -8,6 +8,7 @@ import {
 import {
   getAdminCatalogs,
   getAdminActivity,
+  getAdminCenter,
   getAdminCenterMedia,
   getAdminCenterSections,
   getAdminCenters,
@@ -68,7 +69,15 @@ export const adminKeys = {
 export function catalogsQueryOptions(token: string, includeInactive = false) {
   return queryOptions({
     queryKey: adminKeys.catalogs(includeInactive),
-    queryFn: () => getAdminCatalogs(token, includeInactive),
+    queryFn: ({ signal }) => getAdminCatalogs(token, includeInactive, signal),
+    enabled: token.length > 0,
+  });
+}
+
+export function centerQueryOptions(token: string, code: string | null) {
+  return queryOptions({
+    queryKey: adminKeys.center(code),
+    queryFn: code ? ({ signal }) => getAdminCenter(token, code, signal) : skipToken,
     enabled: token.length > 0,
   });
 }
@@ -76,7 +85,9 @@ export function catalogsQueryOptions(token: string, includeInactive = false) {
 export function centerSectionsQueryOptions(token: string, code: string | null) {
   return queryOptions({
     queryKey: adminKeys.centerSections(code),
-    queryFn: code ? () => getAdminCenterSections(token, code) : skipToken,
+    queryFn: code
+      ? ({ signal }) => getAdminCenterSections(token, code, signal)
+      : skipToken,
     enabled: token.length > 0,
     staleTime: 10_000,
   });
@@ -85,7 +96,7 @@ export function centerSectionsQueryOptions(token: string, code: string | null) {
 export function centerMediaQueryOptions(token: string, code: string | null) {
   return queryOptions({
     queryKey: adminKeys.media(code),
-    queryFn: code ? () => getAdminCenterMedia(token, code) : skipToken,
+    queryFn: code ? ({ signal }) => getAdminCenterMedia(token, code, signal) : skipToken,
     enabled: token.length > 0,
     staleTime: 5_000,
   });
@@ -94,7 +105,9 @@ export function centerMediaQueryOptions(token: string, code: string | null) {
 export function establishmentMediaQueryOptions(token: string, id: number | null) {
   return queryOptions({
     queryKey: adminKeys.establishmentMedia(id),
-    queryFn: id ? () => getAdminEstablishmentMedia(token, id) : skipToken,
+    queryFn: id
+      ? ({ signal }) => getAdminEstablishmentMedia(token, id, signal)
+      : skipToken,
     enabled: token.length > 0,
     staleTime: 5_000,
   });
@@ -102,23 +115,27 @@ export function establishmentMediaQueryOptions(token: string, id: number | null)
 
 /** Frescura de los listados y colas de revisión del panel. */
 const LIST_STALE_TIME = 10_000;
+const listFreshness = {
+  staleTime: LIST_STALE_TIME,
+  refetchOnWindowFocus: true,
+  refetchOnReconnect: true,
+} as const;
 
 export function summaryQueryOptions(token: string) {
   return queryOptions({
     queryKey: adminKeys.summary(),
-    queryFn: () => getAdminSummary(token),
+    queryFn: ({ signal }) => getAdminSummary(token, signal),
     enabled: token.length > 0,
-    staleTime: LIST_STALE_TIME,
+    ...listFreshness,
   });
 }
 
 export function navigationSummaryQueryOptions(token: string, userId: number) {
   return queryOptions({
     queryKey: adminKeys.navigationSummary(userId),
-    queryFn: () => getAdminNavigationSummary(token),
+    queryFn: ({ signal }) => getAdminNavigationSummary(token, signal),
     enabled: token.length > 0,
-    staleTime: LIST_STALE_TIME,
-    refetchOnWindowFocus: true,
+    ...listFreshness,
     refetchInterval: 30_000,
   });
 }
@@ -130,9 +147,9 @@ export function navigationSummaryQueryOptions(token: string, userId: number) {
 export function centersPageQueryOptions(token: string, filters: AdminCentersOptions) {
   return queryOptions({
     queryKey: adminKeys.centers(filters),
-    queryFn: () => getAdminCenters(token, filters),
+    queryFn: ({ signal }) => getAdminCenters(token, filters, signal),
     enabled: token.length > 0,
-    staleTime: LIST_STALE_TIME,
+    ...listFreshness,
     placeholderData: keepPreviousData,
   });
 }
@@ -143,9 +160,9 @@ export function establishmentsPageQueryOptions(
 ) {
   return queryOptions({
     queryKey: adminKeys.establishments(filters),
-    queryFn: () => getAdminEstablishments(token, filters),
+    queryFn: ({ signal }) => getAdminEstablishments(token, filters, signal),
     enabled: token.length > 0,
-    staleTime: LIST_STALE_TIME,
+    ...listFreshness,
     placeholderData: keepPreviousData,
   });
 }
@@ -153,9 +170,9 @@ export function establishmentsPageQueryOptions(
 export function opinionsPageQueryOptions(token: string, filters: AdminOpinionsOptions) {
   return queryOptions({
     queryKey: adminKeys.opinions(filters),
-    queryFn: () => getAdminOpinions(token, filters),
+    queryFn: ({ signal }) => getAdminOpinions(token, filters, signal),
     enabled: token.length > 0,
-    staleTime: LIST_STALE_TIME,
+    ...listFreshness,
     placeholderData: keepPreviousData,
   });
 }
@@ -163,9 +180,9 @@ export function opinionsPageQueryOptions(token: string, filters: AdminOpinionsOp
 export function usersPageQueryOptions(token: string, filters: AdminUsersOptions) {
   return queryOptions({
     queryKey: adminKeys.users(filters),
-    queryFn: () => getAdminUsers(token, filters),
+    queryFn: ({ signal }) => getAdminUsers(token, filters, signal),
     enabled: token.length > 0,
-    staleTime: LIST_STALE_TIME,
+    ...listFreshness,
     placeholderData: keepPreviousData,
   });
 }
@@ -173,9 +190,9 @@ export function usersPageQueryOptions(token: string, filters: AdminUsersOptions)
 export function activityPageQueryOptions(token: string, filters: AdminActivityOptions) {
   return queryOptions({
     queryKey: adminKeys.activity(filters),
-    queryFn: () => getAdminActivity(token, filters),
+    queryFn: ({ signal }) => getAdminActivity(token, filters, signal),
     enabled: token.length > 0,
-    staleTime: LIST_STALE_TIME,
+    ...listFreshness,
     placeholderData: keepPreviousData,
   });
 }
@@ -183,7 +200,9 @@ export function activityPageQueryOptions(token: string, filters: AdminActivityOp
 export function opinionHistoryQueryOptions(token: string, reviewCode: string | null) {
   return queryOptions({
     queryKey: adminKeys.opinionHistory(reviewCode),
-    queryFn: reviewCode ? () => getAdminOpinionHistory(token, reviewCode) : skipToken,
+    queryFn: reviewCode
+      ? ({ signal }) => getAdminOpinionHistory(token, reviewCode, signal)
+      : skipToken,
     enabled: token.length > 0,
   });
 }

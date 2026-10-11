@@ -221,6 +221,9 @@ export function CentersSection({
       columns={columns}
       getRowId={getCenterRowId}
       loading={centersQuery.isLoading}
+      updating={centersQuery.isFetching}
+      actionsDisabled={centersQuery.isPlaceholderData}
+      onRefresh={() => void centersQuery.refetch()}
       error={error}
       emptyMessage="No hay fichas para mostrar."
       pagination={{ page, total: centersQuery.data?.total ?? 0, onPageChange }}
@@ -290,6 +293,9 @@ export function CentersSection({
 export function CenterTable({
   centers,
   loading,
+  updating,
+  actionsDisabled,
+  onRefresh,
   error,
   review,
   onOpen,
@@ -300,6 +306,9 @@ export function CenterTable({
 }: {
   centers: AdminCenter[];
   loading: boolean;
+  updating?: boolean;
+  actionsDisabled?: boolean;
+  onRefresh?: () => void;
   error: string | null;
   review?: {
     /** Deshabilita las acciones mientras se guarda una revisión. */
@@ -422,6 +431,9 @@ export function CenterTable({
       columns={columns}
       getRowId={getCenterRowId}
       loading={loading}
+      updating={updating}
+      actionsDisabled={actionsDisabled}
+      onRefresh={onRefresh}
       error={error}
       emptyMessage="No hay fichas para mostrar."
       pagination={pagination}

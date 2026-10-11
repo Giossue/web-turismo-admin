@@ -540,8 +540,8 @@ function toRequestBody(body: unknown): BodyInit | undefined {
   return JSON.stringify(body);
 }
 
-function get<T>(path: string, token: string): Promise<T> {
-  return authorizedRequest<T>(apiEndpoint(path), token, { cache: "no-store" });
+function get<T>(path: string, token: string, signal?: AbortSignal): Promise<T> {
+  return authorizedRequest<T>(apiEndpoint(path), token, { cache: "no-store", signal });
 }
 
 function post<T>(path: string, token: string, body: unknown = {}): Promise<T> {
@@ -586,7 +586,11 @@ export function deleteAdminCatalog(token: string, catalog: AdminCatalogKey, id: 
   return del<{ deleted: true }>(`/admin/catalogs/${catalog}/${id}`, token);
 }
 
-export async function getAdminCenters(token: string, options: AdminCentersOptions = {}) {
+export async function getAdminCenters(
+  token: string,
+  options: AdminCentersOptions = {},
+  signal?: AbortSignal,
+) {
   const query = toQueryString({
     status: options.status === "ALL" ? undefined : options.status,
     q: options.q,
@@ -594,21 +598,26 @@ export async function getAdminCenters(token: string, options: AdminCentersOption
     limit: options.limit ?? 25,
     offset: options.offset ?? 0,
   });
-  return get<Page<AdminCenter>>(`/admin/centers${query}`, token);
+  return get<Page<AdminCenter>>(`/admin/centers${query}`, token, signal);
 }
 
-export async function getAdminUsers(token: string, options: AdminUsersOptions = {}) {
+export async function getAdminUsers(
+  token: string,
+  options: AdminUsersOptions = {},
+  signal?: AbortSignal,
+) {
   const query = toQueryString({
     q: options.q,
     limit: options.limit ?? 20,
     offset: options.offset ?? 0,
   });
-  return get<Page<AdminAccount>>(`/admin/users${query}`, token);
+  return get<Page<AdminAccount>>(`/admin/users${query}`, token, signal);
 }
 
 export async function getAdminActivity(
   token: string,
   options: AdminActivityOptions = {},
+  signal?: AbortSignal,
 ) {
   const query = toQueryString({
     type: options.type,
@@ -618,15 +627,15 @@ export async function getAdminActivity(
     limit: options.limit ?? 20,
     offset: options.offset ?? 0,
   });
-  return get<Page<AdminActivityItem>>(`/admin/activity${query}`, token);
+  return get<Page<AdminActivityItem>>(`/admin/activity${query}`, token, signal);
 }
 
-export async function getAdminSummary(token: string) {
-  return get<AdminSummary>("/admin/summary", token);
+export async function getAdminSummary(token: string, signal?: AbortSignal) {
+  return get<AdminSummary>("/admin/summary", token, signal);
 }
 
-export function getAdminNavigationSummary(token: string) {
-  return get<AdminNavigationSummary>("/admin/navigation-summary", token);
+export function getAdminNavigationSummary(token: string, signal?: AbortSignal) {
+  return get<AdminNavigationSummary>("/admin/navigation-summary", token, signal);
 }
 
 export type AdminOpinionsOptions = {
@@ -641,6 +650,7 @@ export type AdminOpinionsOptions = {
 export async function getAdminOpinions(
   token: string,
   options: AdminOpinionsOptions = {},
+  signal?: AbortSignal,
 ) {
   const query = toQueryString({
     q: options.q,
@@ -650,13 +660,18 @@ export async function getAdminOpinions(
     limit: options.limit ?? 20,
     offset: options.offset ?? 0,
   });
-  return get<Page<AdminOpinion>>(`/admin/opinions${query}`, token);
+  return get<Page<AdminOpinion>>(`/admin/opinions${query}`, token, signal);
 }
 
-export async function getAdminOpinionHistory(token: string, reviewCode: string) {
+export async function getAdminOpinionHistory(
+  token: string,
+  reviewCode: string,
+  signal?: AbortSignal,
+) {
   return get<AdminOpinionHistory>(
     `/admin/opinions/${encodeURIComponent(reviewCode)}/history`,
     token,
+    signal,
   );
 }
 
@@ -675,6 +690,7 @@ export async function reviewAdminOpinion(
 export async function getAdminEstablishments(
   token: string,
   options: AdminEstablishmentsOptions = {},
+  signal?: AbortSignal,
 ) {
   const query = toQueryString({
     q: options.q,
@@ -689,7 +705,7 @@ export async function getAdminEstablishments(
     limit: options.limit ?? 20,
     offset: options.offset ?? 0,
   });
-  return get<Page<AdminEstablishment>>(`/admin/establishments${query}`, token);
+  return get<Page<AdminEstablishment>>(`/admin/establishments${query}`, token, signal);
 }
 
 export async function submitAdminEstablishmentReview(token: string, id: number) {
@@ -789,12 +805,16 @@ export async function createAdminCatalog(
   return post<CatalogMutationResult>(`/admin/catalogs/${catalog}`, token, input);
 }
 
-export async function getAdminCenter(token: string, code: string) {
-  return get<AdminCenterDetail>(centerPath(code), token);
+export async function getAdminCenter(token: string, code: string, signal?: AbortSignal) {
+  return get<AdminCenterDetail>(centerPath(code), token, signal);
 }
 
-export async function getAdminCenterSections(token: string, code: string) {
-  return get<AdminCenterSections>(centerPath(code, "sections"), token);
+export async function getAdminCenterSections(
+  token: string,
+  code: string,
+  signal?: AbortSignal,
+) {
+  return get<AdminCenterSections>(centerPath(code, "sections"), token, signal);
 }
 
 export async function saveAdminCenterSection(
@@ -835,8 +855,12 @@ export async function reviewAdminCenter(
   return patch<AdminCenter>(centerPath(code, "review"), token, { action, observation });
 }
 
-export async function getAdminCenterMedia(token: string, code: string) {
-  return get<{ items: AdminMediaItem[] }>(centerPath(code, "media"), token);
+export async function getAdminCenterMedia(
+  token: string,
+  code: string,
+  signal?: AbortSignal,
+) {
+  return get<{ items: AdminMediaItem[] }>(centerPath(code, "media"), token, signal);
 }
 
 export async function uploadAdminCenterMedia(
@@ -874,10 +898,15 @@ function mediaFormData(
   return body;
 }
 
-export async function getAdminEstablishmentMedia(token: string, id: number) {
+export async function getAdminEstablishmentMedia(
+  token: string,
+  id: number,
+  signal?: AbortSignal,
+) {
   return get<{ items: AdminEstablishmentMediaItem[] }>(
     `/admin/establishments/${id}/media`,
     token,
+    signal,
   );
 }
 

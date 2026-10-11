@@ -22,6 +22,30 @@ Consultar la guía instalada de Next.js antes de cambiar sus APIs.
 Evitar copias independientes del mismo dato. Conservar la invalidación al
 cambiar de sesión y la protección contra respuestas tardías.
 
+## Caché y frescura
+
+Las consultas privadas se conservan en memoria durante la sesión. No se persisten
+fichas ni tokens en almacenamiento local y sus lecturas HTTP usan `no-store`.
+Las claves y opciones compartidas están en `src/lib/admin-queries.ts`; gestión y
+revisión de catastro usan la misma configuración de consulta.
+
+| Datos                          | Frescura | Actualización adicional                           |
+| ------------------------------ | -------- | ------------------------------------------------- |
+| Listados y resumen             | 10 s     | Al recuperar foco o conexión, si están antiguos   |
+| Avisos de navegación           | 10 s     | También cada 30 s mientras la pestaña está activa |
+| Catálogos, detalle e historial | 60 s     | Invalidación y recarga explícita del flujo        |
+| Apartados de ficha             | 10 s     | Invalidación del flujo de guardado/importación    |
+| Multimedia                     | 5 s      | Invalidación después de subir o retirar archivos  |
+
+La frescura no es una recarga periódica ni la duración máxima de un dato en
+memoria. Las consultas sin consumidores conservan la retención predeterminada
+de cinco minutos. Los formularios mantienen la protección de campos editados;
+la actualización al recuperar foco se configura en listados y resumen.
+
+Cada consulta transmite su `AbortSignal` al cliente HTTP: cancelar una lectura,
+abandonar un filtro o vaciar la sesión interrumpe su transporte. Las mutaciones
+no heredan esa cancelación: abortar no revierte una escritura remota.
+
 ## Desarrollo de una pantalla
 
 Responder primero el [brief cognitivo](cognitive-architecture.md). Elegir una

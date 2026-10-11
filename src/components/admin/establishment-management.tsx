@@ -47,7 +47,6 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import {
   createAdminEstablishment,
   deleteAdminEstablishment,
-  getAdminEstablishments,
   saveAdminEstablishment,
   submitAdminEstablishmentReview,
   type AdminCatalogs,
@@ -59,7 +58,11 @@ import {
   establishmentReviewStatusLabel,
   establishmentReviewStatusTone,
 } from "@/lib/admin-labels";
-import { adminKeys, catalogsQueryOptions } from "@/lib/admin-queries";
+import {
+  adminKeys,
+  catalogsQueryOptions,
+  establishmentsPageQueryOptions,
+} from "@/lib/admin-queries";
 import { errorMessage } from "@/lib/errors";
 import { localityOptions } from "@/lib/locality-options";
 import { withRetainedCatalogOption } from "@/lib/retained-catalog-options";
@@ -146,11 +149,9 @@ export const EstablishmentManagement = forwardRef<
     limit: pageSize,
     offset: page * pageSize,
   };
-  const establishmentsQuery = useQuery({
-    queryKey: adminKeys.establishments(establishmentFilters),
-    queryFn: () => getAdminEstablishments(token, establishmentFilters),
-    enabled: token.length > 0,
-  });
+  const establishmentsQuery = useQuery(
+    establishmentsPageQueryOptions(token, establishmentFilters),
+  );
 
   useEffect(() => {
     if (catalogsQuery.error) {
@@ -450,6 +451,9 @@ export const EstablishmentManagement = forwardRef<
         rows={data?.items ?? []}
         columns={columns}
         loading={establishmentsQuery.isLoading}
+        updating={establishmentsQuery.isFetching}
+        actionsDisabled={establishmentsQuery.isPlaceholderData}
+        onRefresh={() => void establishmentsQuery.refetch()}
         error={establishmentsQuery.error ? "No se pudo cargar el catastro." : null}
         emptyMessage="No hay establecimientos para los filtros seleccionados."
         pagination={{ page, total: data?.total ?? 0, pageSize, onPageChange: setPage }}

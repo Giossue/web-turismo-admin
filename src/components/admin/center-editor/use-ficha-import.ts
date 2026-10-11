@@ -6,19 +6,17 @@ import type { UseFormReturn } from "react-hook-form";
 
 import {
   importFichaFile,
-  saveAdminCenterSection,
   uploadAdminCenterMedia,
   type AdminCatalogs,
-  type AdminCenterDetail,
   type FichaImportPhoto,
 } from "@/lib/admin-api";
-import { adminKeys, getCachedCenterVersion } from "@/lib/admin-queries";
+import { adminKeys, centerSaveScope } from "@/lib/admin-queries";
 import {
   centerSectionDefinitions,
   type CenterSectionCode,
 } from "@/lib/center-sections/definitions";
 import type { SeccionesImportadas } from "@/lib/ficha/mapear-secciones";
-import { ApiError } from "@/lib/http";
+import { saveImportedCenterSection } from "@/lib/imported-center-sections";
 import type { CenterFormValues } from "@/lib/center-form";
 import { mergeImportedValues } from "@/lib/center-form-mappers";
 import { errorMessage } from "@/lib/errors";
@@ -41,12 +39,14 @@ function toImportedPhotoFile(photo: FichaImportPhoto): File {
  */
 export function useFichaImport({
   token,
+  code,
   catalogs,
   form: { getValues, reset },
   onNotice,
   onError,
 }: {
   token: string;
+  code: string | null;
   catalogs: AdminCatalogs | null;
   form: UseFormReturn<CenterFormValues>;
   onNotice: (message: string) => void;
@@ -64,6 +64,18 @@ export function useFichaImport({
   const [savingSections, setSavingSections] = useState(false);
   const [pendingSectionCount, setPendingSectionCount] = useState(0);
   const uploadingPhotosRef = useRef(false);
+  const { mutateAsync: saveSection } = useMutation({
+    scope: centerSaveScope(code ?? "new"),
+    mutationFn: ({
+      centerCode,
+      sectionCode,
+      content,
+    }: {
+      centerCode: string;
+      sectionCode: CenterSectionCode;
+      content: Record<string, unknown>;
+    }) => saveImportedCenterSection(queryClient, token, centerCode, sectionCode, content),
+  });
   const replacePendingPhotos = useCallback((photos: FichaImportPhoto[]) => {
     pendingPhotosRef.current = photos;
     setPendingPhotos(photos);
@@ -126,8 +138,8 @@ export function useFichaImport({
 
   /**
    * Guarda los apartados importados que aún no tienen información en la
-   * ficha (nunca pisa lo que ya se capturó). Van en serie con la versión
-   * vigente; ante un conflicto (409) se relee la ficha y se reintenta una vez.
+   * ficha. Comparten el scope de los demás guardados; después de un conflicto
+   * se consulta la ficha y se conserva cualquier apartado que ya exista.
    */
   const saveImportedSections = useCallback(
     async (centerCode: string) => {
@@ -145,35 +157,9 @@ export function useFichaImport({
         sectionCode;
       try {
         for (const [sectionCode, content] of entries) {
-          const current = queryClient.getQueryData<AdminCenterDetail>(
-            adminKeys.center(centerCode),
-          );
-          const currentSections = (current?.draft ?? current?.published)?.sections;
-          if (currentSections?.[sectionCode] !== undefined) {
-            skipped.push(title(sectionCode));
-            continue;
-          }
-          const save = () =>
-            saveAdminCenterSection(
-              token,
-              centerCode,
-              sectionCode,
-              content,
-              getCachedCenterVersion(queryClient, centerCode),
-            );
           try {
-            let detail: AdminCenterDetail;
-            try {
-              detail = await save();
-            } catch (cause) {
-              if (!(cause instanceof ApiError) || cause.status !== 409) throw cause;
-              await queryClient.refetchQueries({
-                queryKey: adminKeys.center(centerCode),
-              });
-              detail = await save();
-            }
-            queryClient.setQueryData(adminKeys.center(centerCode), detail);
-            saved.push(title(sectionCode));
+            const detail = await saveSection({ centerCode, sectionCode, content });
+            (detail ? saved : skipped).push(title(sectionCode));
           } catch (cause) {
             firstError ??= cause;
             skipped.push(title(sectionCode));
@@ -202,7 +188,7 @@ export function useFichaImport({
         );
       }
     },
-    [onError, onNotice, queryClient, token],
+    [onError, onNotice, queryClient, saveSection],
   );
 
   const importMutation = useMutation({

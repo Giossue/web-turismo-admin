@@ -63,7 +63,7 @@ export function DeleteRecordAction({
   }
 
   function confirmDeletion() {
-    if (deletingRef.current || deletion.isPending) return;
+    if (disabled || deletingRef.current || deletion.isPending) return;
     // El bloqueo se aplica antes de que React renderice el estado pendiente.
     deletingRef.current = true;
     deletion.mutate();
@@ -105,7 +105,7 @@ export function DeleteRecordAction({
           <Button
             color="error"
             variant="contained"
-            disabled={deletion.isPending}
+            disabled={disabled || deletion.isPending}
             onClick={confirmDeletion}
             startIcon={
               deletion.isPending ? (

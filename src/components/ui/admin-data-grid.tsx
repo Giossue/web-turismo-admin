@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 import FilterListRounded from "@mui/icons-material/FilterListRounded";
+import RefreshRounded from "@mui/icons-material/RefreshRounded";
 import { Box, Button, Card, CardContent, Stack, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import {
@@ -24,7 +25,8 @@ import {
 } from "./admin-table";
 import { ContentState } from "./content-state";
 import { FlatSurface } from "./flat-surface";
-import { LoadingState } from "./loading-state";
+import { LoadingSpinner, LoadingState } from "./loading-state";
+import { AdminRowActionsDisabledContext } from "./admin-row-actions-context";
 import { SearchField } from "./search-field";
 
 type GridSearch = {
@@ -58,6 +60,11 @@ type AdminDataGridProps<R extends GridValidRowModel> = Pick<
   /** Controles específicos de la tabla dentro de la barra compartida. */
   toolbarContent?: ReactNode;
   toolbarActions?: ReactNode;
+  /** Recarga en segundo plano, conservando las filas actuales. */
+  updating?: boolean;
+  /** Las filas todavía pertenecen a los filtros o página anteriores. */
+  actionsDisabled?: boolean;
+  onRefresh?: () => void;
   hideFooter?: boolean;
   /** Datos y acciones resumidas para tarjetas en pantallas menores a 600 px. */
   mobileCard: (row: R) => AdminMobileCard;
@@ -73,7 +80,8 @@ type GridControls = Pick<
   | "error"
   | "toolbarContent"
   | "toolbarActions"
->;
+  | "onRefresh"
+> & { refreshing?: boolean };
 
 const GridControlsContext = createContext<GridControls>({
   emptyMessage: "Sin resultados",
@@ -91,8 +99,15 @@ const AdminGridPanel = styled(GridPanel)(({ theme }) => ({
 
 // Slots estables: cambiar los filtros no remonta el panel ni interrumpe el foco.
 function AdminGridToolbar() {
-  const { search, filtering, filterCount, toolbarContent, toolbarActions } =
-    useContext(GridControlsContext);
+  const {
+    search,
+    filtering,
+    filterCount,
+    toolbarContent,
+    toolbarActions,
+    refreshing,
+    onRefresh,
+  } = useContext(GridControlsContext);
   return (
     <Toolbar
       aria-label="Buscar y filtrar"
@@ -143,6 +158,21 @@ function AdminGridToolbar() {
           {toolbarActions}
         </Stack>
       ) : null}
+      {onRefresh ? (
+        <ToolbarButton
+          render={
+            <Button
+              variant="outlined"
+              startIcon={<RefreshRounded />}
+              sx={{ ml: toolbarActions ? 0 : "auto", flexShrink: 0 }}
+            />
+          }
+          onClick={onRefresh}
+          disabled={refreshing}
+        >
+          Actualizar
+        </ToolbarButton>
+      ) : null}
     </Toolbar>
   );
 }
@@ -180,6 +210,9 @@ export function AdminDataGrid<R extends GridValidRowModel>({
   filtering = Boolean(filterPanel),
   toolbarContent,
   toolbarActions,
+  updating = false,
+  actionsDisabled = false,
+  onRefresh,
   hideFooter = false,
   mobileCard,
 }: AdminDataGridProps<R>) {
@@ -187,9 +220,10 @@ export function AdminDataGrid<R extends GridValidRowModel>({
   const pageSize = pagination.pageSize ?? ADMIN_TABLE_PAGE_SIZE;
   // Una consulta de otra página no debe reiniciar el grid mientras llega su total.
   const [knownTotal, setKnownTotal] = useState(pagination.total);
-  if (!loading && !error && knownTotal !== pagination.total)
+  if (!loading && !actionsDisabled && !error && knownTotal !== pagination.total)
     setKnownTotal(pagination.total);
-  const rowCount = loading || error ? knownTotal : pagination.total;
+  const rowCount = loading || actionsDisabled || error ? knownTotal : pagination.total;
+  const rowActionsDisabled = Boolean(loading || actionsDisabled || error);
   const controls = useMemo(
     () => ({
       search,
@@ -200,6 +234,8 @@ export function AdminDataGrid<R extends GridValidRowModel>({
       error,
       toolbarContent,
       toolbarActions,
+      refreshing: Boolean(loading || updating),
+      onRefresh,
     }),
     [
       search,
@@ -210,6 +246,9 @@ export function AdminDataGrid<R extends GridValidRowModel>({
       error,
       toolbarContent,
       toolbarActions,
+      loading,
+      updating,
+      onRefresh,
     ],
   );
 
@@ -231,7 +270,9 @@ export function AdminDataGrid<R extends GridValidRowModel>({
     },
     pageSizeOptions: [pageSize],
     filterMode: "server" as const,
-    showToolbar: Boolean(search || filtering || toolbarContent || toolbarActions),
+    showToolbar: Boolean(
+      search || filtering || toolbarContent || toolbarActions || onRefresh,
+    ),
     slots: {
       toolbar: AdminGridToolbar,
       panel: AdminGridPanel,
@@ -252,40 +293,34 @@ export function AdminDataGrid<R extends GridValidRowModel>({
   };
 
   return (
-    <GridControlsContext.Provider value={controls}>
-      <Stack spacing={1} sx={{ minWidth: 0 }}>
-        {error ? <ContentState status="error" message={error} /> : null}
-        <Box sx={{ display: { xs: "none", sm: "block" } }}>
-          <FlatSurface
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              minHeight: 320,
-              maxHeight: 680,
-              width: "100%",
-              minWidth: 0,
-              overflow: "hidden",
-            }}
-          >
-            <DataGrid<R>
-              {...gridProps}
-              nonce={nonce}
-              rowHeight={72}
-              columnHeaderHeight={44}
-              hideFooter={hideFooter}
-              sx={desktopGridSx}
-            />
-          </FlatSurface>
-        </Box>
-
-        <Box sx={{ display: { xs: "block", sm: "none" }, minWidth: 0 }}>
-          <Stack spacing={1.5} sx={{ minWidth: 0 }}>
+    <AdminRowActionsDisabledContext.Provider value={rowActionsDisabled}>
+      <GridControlsContext.Provider value={controls}>
+        <Stack spacing={1} sx={{ minWidth: 0 }} aria-busy={Boolean(loading || updating)}>
+          {error ? <ContentState status="error" message={error} /> : null}
+          {updating && !loading ? (
+            <Stack
+              role="status"
+              aria-live="polite"
+              direction="row"
+              spacing={1}
+              alignItems="center"
+            >
+              <LoadingSpinner label="Actualizando" size={18} />
+              <Typography variant="body2" color="text.secondary">
+                Actualizando datos
+              </Typography>
+            </Stack>
+          ) : null}
+          <Box sx={{ display: { xs: "none", sm: "block" } }}>
             <FlatSurface
               sx={{
+                display: "flex",
+                flexDirection: "column",
+                minHeight: 320,
+                maxHeight: 680,
                 width: "100%",
                 minWidth: 0,
-                overflow: "visible",
-                "& .MuiDataGrid-root": { height: "auto", minHeight: 0 },
+                overflow: "hidden",
               }}
             >
               <DataGrid<R>
@@ -293,152 +328,179 @@ export function AdminDataGrid<R extends GridValidRowModel>({
                 nonce={nonce}
                 rowHeight={72}
                 columnHeaderHeight={44}
-                hideFooter
-                sx={{
-                  ...desktopGridSx,
-                  height: "auto",
-                  minHeight: 0,
-                  "& .MuiDataGrid-main, & .MuiDataGrid-footerContainer": {
-                    display: "none",
-                  },
-                }}
+                hideFooter={hideFooter}
+                sx={desktopGridSx}
               />
             </FlatSurface>
+          </Box>
 
-            {loading ? (
-              <FlatSurface padding="default">
-                <ContentState status="loading" label="Cargando datos" />
+          <Box sx={{ display: { xs: "block", sm: "none" }, minWidth: 0 }}>
+            <Stack spacing={1.5} sx={{ minWidth: 0 }}>
+              <FlatSurface
+                sx={{
+                  width: "100%",
+                  minWidth: 0,
+                  overflow: "visible",
+                  "& .MuiDataGrid-root": { height: "auto", minHeight: 0 },
+                }}
+              >
+                <DataGrid<R>
+                  {...gridProps}
+                  nonce={nonce}
+                  rowHeight={72}
+                  columnHeaderHeight={44}
+                  hideFooter
+                  sx={{
+                    ...desktopGridSx,
+                    height: "auto",
+                    minHeight: 0,
+                    "& .MuiDataGrid-main, & .MuiDataGrid-footerContainer": {
+                      display: "none",
+                    },
+                  }}
+                />
               </FlatSurface>
-            ) : error ? null : rows.length === 0 ? (
-              <FlatSurface>
-                <ContentState status="empty" message={emptyMessage} />
-              </FlatSurface>
-            ) : (
-              <Stack component="ul" spacing={1.5} sx={{ listStyle: "none", p: 0, m: 0 }}>
-                {rows.map((row, index) => {
-                  const card = mobileCard(row);
-                  const id = getRowId
-                    ? getRowId(row)
-                    : ((row.id as string | number | undefined) ?? index);
-                  return (
-                    <Box component="li" key={id}>
-                      <Card
-                        component="article"
-                        variant="outlined"
-                        sx={{ borderRadius: 2 }}
-                      >
-                        <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
-                          <Stack spacing={1.5}>
-                            <Stack
-                              direction="row"
-                              spacing={1}
-                              alignItems="flex-start"
-                              justifyContent="space-between"
-                            >
-                              <Box sx={{ flex: 1, minWidth: 0 }}>
-                                <Typography
-                                  variant="subtitle1"
-                                  fontWeight={600}
-                                  sx={{ overflowWrap: "anywhere" }}
-                                >
-                                  {card.title}
-                                </Typography>
-                                {card.subtitle ? (
-                                  <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                    sx={{ overflowWrap: "anywhere" }}
-                                  >
-                                    {card.subtitle}
-                                  </Typography>
-                                ) : null}
-                              </Box>
-                              {card.status ? (
-                                <Box sx={{ flexShrink: 0 }}>{card.status}</Box>
-                              ) : null}
-                            </Stack>
 
-                            {card.fields?.length ? (
-                              <Box
-                                component="dl"
-                                sx={{
-                                  m: 0,
-                                  display: "grid",
-                                  gridTemplateColumns:
-                                    "repeat(auto-fit, minmax(min(100%, 130px), 1fr))",
-                                  gap: 1.5,
-                                }}
-                              >
-                                {card.fields.map(({ label, value }, fieldIndex) => (
-                                  <Box
-                                    key={`${label}-${fieldIndex}`}
-                                    sx={{ minWidth: 0 }}
-                                  >
-                                    <Typography
-                                      component="dt"
-                                      variant="caption"
-                                      color="text.secondary"
-                                    >
-                                      {label}
-                                    </Typography>
-                                    <Box
-                                      component="dd"
-                                      sx={{
-                                        m: 0,
-                                        typography: "body2",
-                                        overflowWrap: "anywhere",
-                                      }}
-                                    >
-                                      {value}
-                                    </Box>
-                                  </Box>
-                                ))}
-                              </Box>
-                            ) : null}
-
-                            {card.primaryAction || card.actions ? (
+              {loading ? (
+                <FlatSurface padding="default">
+                  <ContentState status="loading" label="Cargando datos" />
+                </FlatSurface>
+              ) : error ? null : rows.length === 0 ? (
+                <FlatSurface>
+                  <ContentState status="empty" message={emptyMessage} />
+                </FlatSurface>
+              ) : (
+                <Stack
+                  component="ul"
+                  spacing={1.5}
+                  sx={{ listStyle: "none", p: 0, m: 0 }}
+                >
+                  {rows.map((row, index) => {
+                    const card = mobileCard(row);
+                    const id = getRowId
+                      ? getRowId(row)
+                      : ((row.id as string | number | undefined) ?? index);
+                    return (
+                      <Box component="li" key={id}>
+                        <Card
+                          component="article"
+                          variant="outlined"
+                          sx={{ borderRadius: 2 }}
+                        >
+                          <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
+                            <Stack spacing={1.5}>
                               <Stack
                                 direction="row"
-                                alignItems="center"
-                                justifyContent="space-between"
                                 spacing={1}
-                                sx={{ pt: 0.5 }}
+                                alignItems="flex-start"
+                                justifyContent="space-between"
                               >
-                                {card.primaryAction ? (
-                                  <Button
-                                    size="small"
-                                    variant="outlined"
-                                    onClick={card.primaryAction.onClick}
+                                <Box sx={{ flex: 1, minWidth: 0 }}>
+                                  <Typography
+                                    variant="subtitle1"
+                                    fontWeight={600}
+                                    sx={{ overflowWrap: "anywhere" }}
                                   >
-                                    {card.primaryAction.label}
-                                  </Button>
-                                ) : (
-                                  <Box />
-                                )}
-                                {card.actions}
+                                    {card.title}
+                                  </Typography>
+                                  {card.subtitle ? (
+                                    <Typography
+                                      variant="body2"
+                                      color="text.secondary"
+                                      sx={{ overflowWrap: "anywhere" }}
+                                    >
+                                      {card.subtitle}
+                                    </Typography>
+                                  ) : null}
+                                </Box>
+                                {card.status ? (
+                                  <Box sx={{ flexShrink: 0 }}>{card.status}</Box>
+                                ) : null}
                               </Stack>
-                            ) : null}
-                          </Stack>
-                        </CardContent>
-                      </Card>
-                    </Box>
-                  );
-                })}
-              </Stack>
-            )}
 
-            {!hideFooter ? (
-              <AdminTableFooter
-                page={pagination.page}
-                pageSize={pageSize}
-                total={pagination.total}
-                onPageChange={pagination.onPageChange}
-              />
-            ) : null}
-          </Stack>
-        </Box>
-      </Stack>
-    </GridControlsContext.Provider>
+                              {card.fields?.length ? (
+                                <Box
+                                  component="dl"
+                                  sx={{
+                                    m: 0,
+                                    display: "grid",
+                                    gridTemplateColumns:
+                                      "repeat(auto-fit, minmax(min(100%, 130px), 1fr))",
+                                    gap: 1.5,
+                                  }}
+                                >
+                                  {card.fields.map(({ label, value }, fieldIndex) => (
+                                    <Box
+                                      key={`${label}-${fieldIndex}`}
+                                      sx={{ minWidth: 0 }}
+                                    >
+                                      <Typography
+                                        component="dt"
+                                        variant="caption"
+                                        color="text.secondary"
+                                      >
+                                        {label}
+                                      </Typography>
+                                      <Box
+                                        component="dd"
+                                        sx={{
+                                          m: 0,
+                                          typography: "body2",
+                                          overflowWrap: "anywhere",
+                                        }}
+                                      >
+                                        {value}
+                                      </Box>
+                                    </Box>
+                                  ))}
+                                </Box>
+                              ) : null}
+
+                              {card.primaryAction || card.actions ? (
+                                <Stack
+                                  direction="row"
+                                  alignItems="center"
+                                  justifyContent="space-between"
+                                  spacing={1}
+                                  sx={{ pt: 0.5 }}
+                                >
+                                  {card.primaryAction ? (
+                                    <Button
+                                      size="small"
+                                      variant="outlined"
+                                      onClick={card.primaryAction.onClick}
+                                      disabled={rowActionsDisabled}
+                                    >
+                                      {card.primaryAction.label}
+                                    </Button>
+                                  ) : (
+                                    <Box />
+                                  )}
+                                  {card.actions}
+                                </Stack>
+                              ) : null}
+                            </Stack>
+                          </CardContent>
+                        </Card>
+                      </Box>
+                    );
+                  })}
+                </Stack>
+              )}
+
+              {!hideFooter ? (
+                <AdminTableFooter
+                  page={pagination.page}
+                  pageSize={pageSize}
+                  total={rowCount}
+                  onPageChange={pagination.onPageChange}
+                />
+              ) : null}
+            </Stack>
+          </Box>
+        </Stack>
+      </GridControlsContext.Provider>
+    </AdminRowActionsDisabledContext.Provider>
   );
 }
 

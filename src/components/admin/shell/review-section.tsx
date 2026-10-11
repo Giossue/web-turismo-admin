@@ -252,6 +252,9 @@ export function ReviewSection({
           <CenterTable
             centers={centers}
             loading={centersQuery.isLoading}
+            updating={centersQuery.isFetching}
+            actionsDisabled={centersQuery.isPlaceholderData}
+            onRefresh={() => void centersQuery.refetch()}
             error={
               centersQuery.error
                 ? errorMessage(centersQuery.error, "No se pudieron cargar las fichas.")
@@ -300,6 +303,9 @@ export function ReviewSection({
           <EstablishmentReviewTable
             establishments={establishments}
             loading={establishmentsQuery.isLoading}
+            updating={establishmentsQuery.isFetching}
+            actionsDisabled={establishmentsQuery.isPlaceholderData}
+            onRefresh={() => void establishmentsQuery.refetch()}
             error={
               establishmentsQuery.error
                 ? errorMessage(
@@ -418,6 +424,9 @@ export function ReviewSection({
 function EstablishmentReviewTable({
   establishments,
   loading,
+  updating,
+  actionsDisabled,
+  onRefresh,
   error,
   pagination,
   search,
@@ -428,6 +437,9 @@ function EstablishmentReviewTable({
 }: {
   establishments: AdminEstablishment[];
   loading: boolean;
+  updating: boolean;
+  actionsDisabled: boolean;
+  onRefresh: () => void;
   error: string | null;
   pagination: AdminTablePagination;
   search: GridSearch;
@@ -575,6 +587,9 @@ function EstablishmentReviewTable({
         rows={establishments}
         columns={columns}
         loading={loading}
+        updating={updating}
+        actionsDisabled={actionsDisabled}
+        onRefresh={onRefresh}
         error={error}
         emptyMessage="No hay catastros pendientes de revisión."
         pagination={pagination}

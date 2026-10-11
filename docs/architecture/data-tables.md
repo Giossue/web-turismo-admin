@@ -41,6 +41,19 @@ estable. Distinguir colección vacía, búsqueda sin resultados, error y acceso
 denegado. Las acciones deben mantener foco y nombre accesible en menú y tarjeta.
 No depender exclusivamente del color para estado.
 
+Una recarga muestra «Actualizando datos» y `aria-busy` sin retirar las filas.
+Mientras los resultados conservados pertenecen a otro filtro o página,
+`isPlaceholderData` bloquea los menús, confirmaciones de eliminación y acciones
+primarias de tarjetas; el total anterior se conserva hasta recibir la respuesta.
+La recarga del mismo filtro conserva sus acciones y la API sigue validando cada
+operación. Un error de consulta bloquea acciones de los resultados conservados.
+
+Los listados de centros, catastro, revisión, opiniones, usuarios y actividad
+ofrecen Actualizar en la barra compartida. La acción consulta de nuevo sin
+reiniciar filtros ni página y se bloquea mientras la consulta está pendiente.
+La política de actualización al recuperar foco/conexión está descrita en
+[frontend](frontend.md#caché-y-frescura).
+
 En móvil, conservar identidad y acciones alcanzables y permitir que los
 controles se acomoden por grupos. No comprimir columnas hasta volverlas ilegibles.
 Si se solicita verificación, cubrir labels largos, vacíos, recarga, teclado,

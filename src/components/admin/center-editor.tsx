@@ -22,8 +22,8 @@ import { MediaManager } from "@/components/admin/media-manager";
 import { ContentState } from "@/components/ui/content-state";
 import { EditableContext } from "@/components/ui/form/editable-context";
 import { PageHeader } from "@/components/ui/page-header";
-import { getAdminCenter, type AdminCenterDetail } from "@/lib/admin-api";
-import { adminKeys, catalogsQueryOptions } from "@/lib/admin-queries";
+import type { AdminCenterDetail } from "@/lib/admin-api";
+import { adminKeys, catalogsQueryOptions, centerQueryOptions } from "@/lib/admin-queries";
 import { centerEditorCatalogs } from "@/lib/center-editor-catalogs";
 import {
   CENTER_CREATE_FIELDS,
@@ -63,11 +63,7 @@ export function CenterEditor({
 }) {
   const queryClient = useQueryClient();
   const catalogsQuery = useQuery(catalogsQueryOptions(token));
-  const centerQuery = useQuery({
-    queryKey: adminKeys.center(code),
-    queryFn: () => getAdminCenter(token, code as string),
-    enabled: token.length > 0 && code !== null,
-  });
+  const centerQuery = useQuery(centerQueryOptions(token, code));
   const detail = useMemo(
     () => (centerQuery.data ? withEditorDraft(centerQuery.data) : null),
     [centerQuery.data],
@@ -143,6 +139,7 @@ export function CenterEditor({
   });
   const fichaImport = useFichaImport({
     token,
+    code,
     catalogs,
     form,
     onNotice,

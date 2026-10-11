@@ -119,6 +119,9 @@ export function UsersSection({
       columns={columns}
       getRowId={getUserRowId}
       loading={usersQuery.isLoading}
+      updating={usersQuery.isFetching}
+      actionsDisabled={usersQuery.isPlaceholderData}
+      onRefresh={() => void usersQuery.refetch()}
       error={
         usersQuery.error
           ? errorMessage(usersQuery.error, "No se pudieron cargar los usuarios.")
