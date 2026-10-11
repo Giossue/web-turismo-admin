@@ -39,7 +39,7 @@ export function ConservationFields({ catalogs }: SectionFieldsProps) {
       <SectionHeader
         level="subsection"
         title="Estado por componente"
-        description="La ficha distingue el estado del atractivo y de su entorno antes de registrar factores de alteración o declaratorias."
+        description="El atractivo y su entorno pueden tener estados distintos. Si un estado no está confirmado, conserva Sin confirmar; puedes registrar sus factores y publicar la ficha."
       />
       <Grid container spacing={webTokens.spacing.control}>
         {COMPONENTS.map(({ key, label }) => (
@@ -51,7 +51,7 @@ export function ConservationFields({ catalogs }: SectionFieldsProps) {
                   name={`conservation.${key}.state`}
                   label="Estado de conservación"
                   options={CONSERVATION_STATE_OPTIONS}
-                  emptyLabel="Sin seleccionar"
+                  emptyLabel="Sin confirmar"
                 />
                 <SectionTextField
                   name={`conservation.${key}.observation`}

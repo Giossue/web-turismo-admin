@@ -53,6 +53,13 @@ La API calcula con sus datos guardados y conserva desconocidos como NULL.
 Este comportamiento requiere aplicar primero la migración de Promoción y
 desplegar la API compatible del repositorio hermano.
 
+Conservación mantiene por separado el estado del atractivo y del entorno. Si
+el Excel no selecciona un estado único, se muestra Sin confirmar y se guarda
+como null, conservando factores y observaciones. No se deduce el estado a partir
+de los factores. Con la API compatible, esa ausencia no bloquea la publicación
+y aporta cero puntos; requiere primero `20261011_conservation_unknown_state.sql`
+y la nueva lectura/proyección de Conservación del repositorio hermano.
+
 ## Evoluciones
 
 Este portal no recibe webhooks ni opera colas persistentes. Si se necesitan,
