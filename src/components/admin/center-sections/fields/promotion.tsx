@@ -5,6 +5,7 @@ import { useFormContext, useWatch } from "react-hook-form";
 import { SectionHeader } from "@/components/ui/section-header";
 import type { AdminCatalogs } from "@/lib/admin-api";
 import { emptyPromotionMedia } from "@/lib/center-sections/form-defaults";
+import { PROMOTION_RESPONSE_OPTIONS } from "@/lib/center-sections/options";
 import {
   INCLUSION_HELP,
   INCLUSION_QUESTION,
@@ -21,6 +22,7 @@ import { RepeatableFieldArray } from "../shared/repeatable-field-array";
 import {
   SectionCatalogSelect,
   SectionResponseSelect,
+  SectionSelect,
   SectionTextField,
 } from "../shared/section-fields";
 import { OBSERVATION_RULES, textRules } from "../shared/section-rules";
@@ -46,7 +48,7 @@ export function PromotionFields({ catalogs }: SectionFieldsProps) {
       <SectionHeader
         level="subsection"
         title="Promoción y comercialización"
-        description="Registra cómo se da a conocer este lugar y si se ofrece dentro de visitas turísticas organizadas."
+        description="Registra cómo se da a conocer este lugar y si se ofrece dentro de visitas turísticas organizadas. Si desconoces una respuesta sobre el plan o el paquete, conserva «Sin confirmar»: aporta cero puntos y permite publicar."
       />
       <PlanGroup />
       <RepeatableFieldArray
@@ -72,9 +74,10 @@ function PlanGroup() {
   return (
     <FieldGroup>
       <Grid size={{ xs: 12, sm: 6 }}>
-        <SectionResponseSelect
+        <SectionSelect
           name="promotion.hasPlan"
           label={PLAN_QUESTION}
+          options={PROMOTION_RESPONSE_OPTIONS}
           helperText={PLAN_HELP}
         />
       </Grid>
@@ -87,9 +90,10 @@ function PlanGroup() {
         />
       </Grid>
       <Grid size={{ xs: 12, sm: 6 }}>
-        <SectionResponseSelect
+        <SectionSelect
           name="promotion.includedInPlan"
           label={INCLUSION_QUESTION}
+          options={PROMOTION_RESPONSE_OPTIONS}
           helperText={INCLUSION_HELP}
         />
       </Grid>
@@ -177,9 +181,10 @@ function PackageGroup() {
   return (
     <FieldGroup>
       <Grid size={{ xs: 12, sm: 6 }}>
-        <SectionResponseSelect
+        <SectionSelect
           name="promotion.partOfPackage"
           label={PACKAGE_QUESTION}
+          options={PROMOTION_RESPONSE_OPTIONS}
           helperText={PACKAGE_HELP}
         />
       </Grid>

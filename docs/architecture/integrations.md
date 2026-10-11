@@ -44,6 +44,15 @@ y las fotos se envían a la API cuando la ficha tiene código, sin publicarla.
 Los apartados ya presentes se omiten y las fotos fallidas permanecen pendientes
 para reintento. La API conserva la autorización y las escrituras efectivas.
 
+Las preguntas de plan, inclusión y paquete en Promoción conservan las casillas
+sin respuesta única como «Sin confirmar». Esa ausencia no obliga a responder
+Sí o No para publicar ni suma puntos. Las contradicciones conocidas del archivo
+se muestran sin reemplazar sus respuestas. La referencia del puntaje lee el
+resultado guardado de las hojas de evaluación; no ejecuta fórmulas ni macros.
+La API calcula con sus datos guardados y conserva desconocidos como NULL.
+Este comportamiento requiere aplicar primero la migración de Promoción y
+desplegar la API compatible del repositorio hermano.
+
 ## Evoluciones
 
 Este portal no recibe webhooks ni opera colas persistentes. Si se necesitan,

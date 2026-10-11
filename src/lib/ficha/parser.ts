@@ -672,36 +672,14 @@ export async function parsearFicha(
     higieneSeguridad: leerHigieneSeguridad(worksheet),
   };
 
-  for (const [respuesta, dato] of [
-    [
-      datos.promocion.tienePlanPromocionCantonal,
-      "si el municipio tiene un plan para promocionar el turismo del cantón",
-    ],
-    [
-      datos.promocion.formaPartePaquete,
-      "si una agencia, operadora o administrador ofrece una visita a este lugar dentro de un tour o paquete turístico",
-    ],
-    ...(datos.promocion.tienePlanPromocionCantonal === "SI"
-      ? ([
-          [
-            datos.promocion.incluidoEnPlan,
-            "si este lugar figura en el plan de promoción del municipio",
-          ],
-        ] as const)
-      : []),
-  ]) {
-    if (respuesta === null) {
-      advertencias.push(
-        `El Excel deja sin confirmar ${dato}. Completa esa respuesta en Promoción (paso 10) antes de publicar.`,
-      );
-    }
-  }
+  // Una casilla sin respuesta única se conserva como Sin confirmar en el
+  // formulario. No exige inventar Sí o No para calcular o publicar la ficha.
   if (
     datos.promocion.tienePlanPromocionCantonal === "NO" &&
     datos.promocion.incluidoEnPlan === "SI"
   ) {
     advertencias.push(
-      "Plan municipal: el Excel marca que el cantón no tiene un plan de promoción, pero que este atractivo figura en ese documento. Revisa ambas respuestas en Promoción (paso 10).",
+      "Plan municipal: el Excel marca que no existe un plan de promoción, pero que este atractivo está incluido en él. Se conservan ambas respuestas del archivo; esta contradicción no bloquea la publicación.",
     );
   }
 

@@ -97,8 +97,11 @@ export function FichaValuationReference({
             </Table>
           </TableContainer>
           <Typography variant="caption" color="text.secondary">
-            Los ceros son los resultados que guarda el archivo. Esta referencia acompaña
-            la importación; la valoración de la ficha se calcula con sus datos guardados.
+            Las hojas ocultas del Excel suman puntos según las casillas marcadas. En
+            Promoción, un Sí aporta 2 puntos por el plan, 2 por la inclusión y 3 por el
+            paquete. Una respuesta Sin confirmar se conserva como tal y aporta cero
+            puntos. Esta referencia muestra el resultado guardado en el archivo; la
+            valoración de la ficha se calcula con sus datos guardados.
           </Typography>
         </Stack>
       </AccordionDetails>

@@ -13,6 +13,13 @@ export const SECTION_RESPONSE_OPTIONS = [
 
 export type SectionResponse = (typeof SECTION_RESPONSE_OPTIONS)[number]["value"];
 
+/** Decisiones de Promoción: desconocido se conserva, sin exigir Sí o No. */
+export const PROMOTION_RESPONSE_OPTIONS = [
+  { value: "SI", label: "Sí" },
+  { value: "NO", label: "No" },
+  { value: "SIN_INFORMACION", label: "Sin confirmar" },
+] as const;
+
 /** Respuesta por defecto: la ausencia de dato nunca se interpreta como "No". */
 export const EMPTY_RESPONSE: SectionResponse = "SIN_INFORMACION";
 
