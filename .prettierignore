@@ -6,3 +6,8 @@ playwright-report/
 test-results/
 patches/
 coverage/
+
+# Workflows OpenSpec generados para Codex y Claude.
+.agents/skills/openspec-*/
+.claude/skills/openspec-*/
+.claude/commands/opsx/

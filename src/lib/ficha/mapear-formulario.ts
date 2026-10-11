@@ -11,7 +11,7 @@ function idATexto(id: number | null): string {
  * Convierte la ficha ya extraída + los catálogos ya resueltos a los valores
  * del formulario principal (`CenterFormValues`, ver `src/lib/center-form.ts`).
  * Solo cubre los campos que el parser puede llenar con confianza (ver
- * docs/plans/active/importar-ficha-mintur.md sección 3): identificación,
+ * openspec/specs/mintur-import/spec.md): identificación,
  * ubicación, administración, clima/ingreso, actividades y accesibilidad
  * general. `touristZoneId` y `hierarchyId` se omiten a propósito — no tienen
  * fuente en la ficha (zona turística) o se calculan después (jerarquía) — y

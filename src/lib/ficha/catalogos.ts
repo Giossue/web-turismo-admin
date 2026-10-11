@@ -81,7 +81,7 @@ const NOMBRES_ESCENARIO: Record<string, string> = {
  * Resuelve los textos crudos de la ficha contra los catálogos reales de la
  * API (`getAdminCatalogs`), aplicando el orden de acotado obligatorio
  * provincia → cantón → parroquia y categoría → tipo → subtipo — ver
- * docs/plans/active/importar-ficha-mintur.md sección 4: buscar parroquia por
+ * openspec/specs/mintur-import/spec.md: buscar parroquia por
  * nombre sin acotar por cantón puede confundir registros homónimos en
  * cantones distintos (caso real encontrado: "Magdalena (chapacoto)" en
  * Chimbo vs. "La Magdalena" en Quito).

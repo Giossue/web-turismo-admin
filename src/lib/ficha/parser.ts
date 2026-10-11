@@ -597,7 +597,7 @@ function leerImagenesAnexos(
  * Lee y valida la ficha MINTUR (`.xlsx`/`.xlsm`). No escribe nada en ninguna
  * base de datos ni resuelve catálogos — eso lo hace `resolverCatalogosFicha`
  * (`catalogos.ts`) con el resultado de esta función. Ver
- * docs/plans/active/importar-ficha-mintur.md.
+ * openspec/specs/mintur-import/spec.md.
  */
 export async function parsearFicha(
   buffer: ArrayBuffer,

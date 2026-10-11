@@ -11,6 +11,9 @@
     "unrs-resolver"
   ],
   "scripts": {
+    "openspec": "node scripts/openspec.mjs",
+    "knowledge:init": "bun run openspec init --tools codex,claude --profile custom --language Spanish --no-animation",
+    "knowledge:update": "bun run openspec update --force",
     "prepare:workers": "bun scripts/build-ficha-worker.ts",
     "predev": "bun run prepare:workers && node scripts/copy-maplibre-worker.mjs",
     "dev": "next dev --port 3002",
@@ -47,6 +50,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@fission-ai/openspec": "1.14.1",
     "@playwright/test": "^1.64.0",
     "@types/bun": "^1.4.2",
     "@types/node": "^22.20.2",

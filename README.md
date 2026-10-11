@@ -6,6 +6,31 @@ es el único cliente para turistas; este repositorio no contiene una versión we
 Todas las secciones del panel y el editor de fichas comparten contenido centrado con un
 ancho máximo de 1200 px, márgenes laterales adaptables y espacio interior para móvil.
 
+## Knowledge y trabajo con agentes
+
+El proyecto usa el knowledge de CognitiveStack `dev`, adaptado al stack y los
+contratos actuales. Empieza por [AGENTS.md](AGENTS.md), el
+[índice de documentación](docs/README.md) y [ARCHITECTURE.md](ARCHITECTURE.md).
+La [revisión de la rama y sus adaptaciones](docs/architecture/cognitivestack-adoption.md)
+registra la fuente exacta y las diferencias respecto a la plantilla.
+
+Los comportamientos están en `openspec/specs/` y los cambios en `openspec/changes/`.
+La planificación anterior se conserva en el historial Git.
+
+```bash
+bun run openspec list --json
+bun run openspec validate --all --strict
+bun run knowledge:init
+bun run knowledge:update
+```
+
+OpenSpec está fijado como herramienta de desarrollo. El comando del proyecto
+desactiva su telemetría y utiliza un perfil temporal con los doce workflows,
+instalados para Codex y Claude, sin cambiar la configuración personal. No editar sus skills,
+comandos ni prompts generados. Detalles en el
+[ciclo de cambios](docs/quality/change-lifecycle.md) y la
+[instalación oficial adaptada](docs/quality/openspec-installation.md).
+
 ## Arranque local
 
 Para abrir la app Android y el admin al mismo tiempo en Kitty desde este repositorio:

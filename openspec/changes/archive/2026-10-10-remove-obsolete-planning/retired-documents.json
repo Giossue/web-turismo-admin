@@ -1,0 +1,73 @@
+{
+  "sourceRepository": "https://github.com/Giossue/web-turismo-admin",
+  "sourceCommit": "368498451d50a13471256fd8043a5850ef01c598",
+  "documentCount": 8,
+  "recovery": "git show <sourceCommit>:<path>",
+  "stateMeaning": "Los estados y checkboxes son declaraciones históricas; no prueban implementación ni despliegue.",
+  "documents": [
+    {
+      "path": "docs/plans/active/2026-09-17-web-admin-bootstrap.md",
+      "sha256": "22e72fec91f0044a009b529b0a812ddb55779e051019d2b0321b9ffd5b4069c5",
+      "title": "Plan activo: repositorio web administrativo",
+      "declaredState": [],
+      "completedCheckboxes": 0,
+      "pendingCheckboxes": 0
+    },
+    {
+      "path": "docs/plans/active/2026-09-18-design-tokens.md",
+      "sha256": "c6f624c5632582edfab855f1cae2ae96ec68442d9d11724e2a531af911c36be9",
+      "title": "Plan activo: tokens y componentes visuales web",
+      "declaredState": ["- Estado: implementado el 18 de septiembre de 2026."],
+      "completedCheckboxes": 0,
+      "pendingCheckboxes": 0
+    },
+    {
+      "path": "docs/plans/active/2026-09-19-floating-new-center-action.md",
+      "sha256": "7c1b93f8579b280d9b2d4e533948c92567075a22b7aa1f0fccf1b02481c721d9",
+      "title": "Plan activo: acción superior para nueva ficha",
+      "declaredState": [],
+      "completedCheckboxes": 0,
+      "pendingCheckboxes": 0
+    },
+    {
+      "path": "docs/plans/active/2026-09-20-continuous-center-record-layout.md",
+      "sha256": "eb92892e8afe034a26e90eaf8a38707cc92039d2fb2e6aa9c6cedaa0a6eedc12",
+      "title": "Plan activo: asistente por pasos para la ficha turística",
+      "declaredState": [],
+      "completedCheckboxes": 0,
+      "pendingCheckboxes": 0
+    },
+    {
+      "path": "docs/plans/active/2026-09-20-unified-admin-tables.md",
+      "sha256": "d7cd70d3b67800033ac0802ac3d601822f24ea3e5211242f0f3ad7394cd56fca",
+      "title": "Plan activo: tablas administrativas unificadas",
+      "declaredState": [],
+      "completedCheckboxes": 0,
+      "pendingCheckboxes": 0
+    },
+    {
+      "path": "docs/plans/active/2026-09-22-code-quality-refactor.md",
+      "sha256": "5a4bcead1c6d8fdf4ea1fed3abdd860c598ae42808fd3b218bd79457c3f00ba7",
+      "title": "Plan activo: auditoría y refactor de calidad del panel",
+      "declaredState": [],
+      "completedCheckboxes": 0,
+      "pendingCheckboxes": 0
+    },
+    {
+      "path": "docs/plans/active/2026-10-02-admin-deletion.md",
+      "sha256": "989cc4b7489fdc5ca804ca42aedb15dc10bd880b66de44e8306fade68a120111",
+      "title": "Eliminación administrativa",
+      "declaredState": [],
+      "completedCheckboxes": 0,
+      "pendingCheckboxes": 0
+    },
+    {
+      "path": "docs/plans/active/importar-ficha-mintur.md",
+      "sha256": "203a0d5ffb4bc925c63ed2d15f3ef6849bf631424b33273161d69de9770d2280",
+      "title": "Plan activo: importar la ficha MINTUR (Excel) para precargar el formulario",
+      "declaredState": [],
+      "completedCheckboxes": 0,
+      "pendingCheckboxes": 0
+    }
+  ]
+}

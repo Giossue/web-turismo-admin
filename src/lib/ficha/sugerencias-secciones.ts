@@ -3,7 +3,7 @@ import type { FichaExtraida } from "./tipos";
 
 /**
  * Sugerencias para las secciones del asistente que todavía no se guardan
- * automáticamente al importar (ver docs/importar-ficha-mintur.md). El
+ * automáticamente al importar (ver openspec/specs/mintur-import/spec.md). El
  * usuario decide si las aplica con el botón "Cargar desde la ficha" de cada
  * paso — nunca se escriben solas.
  *

@@ -1,0 +1,69 @@
+schema: spec-driven
+
+context: |
+  Language: Spanish
+  All artifacts must be written in Spanish.
+  Keep OpenSpec structural headings and SHALL/MUST keywords in English.
+  Proyecto: Web Turismo Admin, portal institucional de Turismo Vinculación.
+  Knowledge adaptado de CognitiveStack dev; leer AGENTS.md y docs/README.md.
+  Stack conservado: Next.js App Router, React, TypeScript, MUI v7/MUI X Community,
+  TanStack Query, React Hook Form, Zod, MapLibre y fetch. Gestor: Bun.
+  La API NestJS externa decide identidad, roles, registros, persistencia y auditoría.
+  La web no conecta PostgreSQL, Redis ni MinIO, ni incorpora un contrato de tenants.
+  Fuentes: docs/product/ para propósito y dominio; openspec/specs/ para comportamiento;
+  openspec/changes/ para cambios; ARCHITECTURE.md y docs/architecture/ para diseño;
+  docs/security/ para controles; docs/quality/ para evidencia y aceptación.
+  Usar bun run openspec para los ejemplos del CLI y el perfil fijado del proyecto.
+  Conservar alcance y autorización del usuario; las skills no exigen repetir permisos
+  ya otorgados. Añadir/ejecutar pruebas cuando se solicite; declarar lo no comprobado.
+  Commit y push únicamente cuando se soliciten para el trabajo correspondiente.
+githubCopilot:
+  cloudAgent: false
+rules:
+  proposal:
+    - Explicar problema, usuario, alcance y exclusiones sin inventar
+      funcionalidades de API.
+    - Nombrar capacidades por comportamiento duradero y vocabulario de
+      docs/product/glossary.md.
+  specs:
+    - Describir resultados observables con éxito, validación, permiso y casos
+      límite relevantes.
+    - Para datos privados, cubrir usuario/rol sin acceso y referencias fuera de
+      su alcance real.
+    - Para efectos repetibles, especificar repetición y concurrencia sin asumir
+      Idempotency-Key.
+    - Una base documental describe el código existente y no certifica despliegue
+      remoto.
+  design:
+    - Leer arquitectura afectada y conservar el stack conforme al ADR 0001.
+    - Para pantalla nueva o modificada, responder el brief cognitivo y niveles
+      P0-P3.
+    - Elegir controles MUI y componentes reales según component-selection.md y
+      component-system.md.
+    - Para frontera sensible, responder el brief de backend.md y preservar
+      controles.md.
+    - Distinguir garantías del cliente, contratos de API y comprobaciones
+      pendientes.
+  tasks:
+    - Agrupar unidades coherentes y sus fuentes de documentación.
+    - Si se requieren datos nuevos, registrar dependencia de migración en la API
+      y orden de despliegue.
+    - Incluir estados, errores, cancelación y accesibilidad proporcionales al
+      flujo.
+    - Incluir comprobaciones según el alcance solicitado; no afirmar pruebas no
+      ejecutadas.
+operations:
+  apply:
+    guidance:
+      - Usar las skills locales relevantes y leer únicamente las fuentes
+        afectadas.
+      - Completar el alcance de implementación ya autorizado sin confirmaciones
+        rutinarias nuevas.
+      - No cambiar contratos, permisos o stack como efecto de adaptar una
+        interfaz.
+  archive:
+    guidance:
+      - Integrar solo comportamiento implementado o base documental comprobada
+        contra el código.
+      - Exigir coherencia de artifacts, documentación y evidencia; reportar
+        límites de verificación.

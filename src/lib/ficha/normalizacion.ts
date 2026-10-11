@@ -5,7 +5,7 @@ import { esTextoVacio } from "./xlsx-utils";
  * "MANIFESTACIONES_CULTURALES") contra los nombres reales de la base
  * ("Bolívar", "Manifestaciones culturales"): mayúsculas, sin tildes, guiones
  * bajos como espacios, espacios repetidos colapsados.
- * Ver docs/plans/active/importar-ficha-mintur.md sección 4.
+ * Ver openspec/specs/mintur-import/spec.md para el contrato del importador.
  *
  * Defensivo ante `null`/`undefined`: la API real puede traer catálogos con
  * algún elemento sin `name` (visto en producción — un `TypeError` al llamar

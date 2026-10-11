@@ -49,7 +49,7 @@ function respuestaLimite() {
  * administrativos exigen un rol del panel, y además se necesitan para
  * resolver la ficha) y limita el tamaño del cuerpo.
  *
- * Ver docs/plans/active/importar-ficha-mintur.md.
+ * Ver openspec/specs/mintur-import/spec.md y docs/security/controles.md.
  */
 export async function POST(request: NextRequest) {
   const authorization = request.headers.get("authorization");

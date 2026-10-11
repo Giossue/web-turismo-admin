@@ -41,7 +41,7 @@ export function leerMarcaDirecta(
  * derecha del rango combinado (o de la celda sola, si la etiqueta no está
  * combinada).
  *
- * Ver docs/plans/active/importar-ficha-mintur.md sección 2.4: esta posición
+ * Ver openspec/specs/mintur-import/spec.md: esta posición
  * es una hipótesis estructural verificada (la celda vacía existe exactamente
  * ahí) pero **no** contra un ejemplo real marcado — en el archivo de
  * referencia esas casillas estaban vacías, incluida una que lógicamente
