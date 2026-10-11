@@ -2,6 +2,7 @@ import { toNullableNumber } from "@/lib/values";
 
 import type { CenterSectionCode } from "./definitions";
 import type { SectionFormValues } from "./form-types";
+import { EMPTY_RESPONSE } from "./options";
 
 /** JSON de un apartado tal como lo guarda `PATCH /admin/centers/:code/sections/:section`. */
 export type SectionContent = Record<string, unknown>;
@@ -205,7 +206,11 @@ const writePromotion: SectionWriter = (values) => ({
   promotion: {
     hasPlan: values.promotion.hasPlan,
     planName: values.promotion.planName.trim(),
-    includedInPlan: values.promotion.includedInPlan,
+    includedInPlan:
+      values.promotion.hasPlan === "NO" &&
+      values.promotion.includedInPlan === EMPTY_RESPONSE
+        ? null
+        : values.promotion.includedInPlan,
     partOfPackage: values.promotion.partOfPackage,
     packageDetail: values.promotion.packageDetail.trim(),
     observation: values.promotion.observation.trim(),

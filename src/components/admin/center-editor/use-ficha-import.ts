@@ -21,6 +21,7 @@ import type { CenterFormValues } from "@/lib/center-form";
 import { mergeImportedValues } from "@/lib/center-form-mappers";
 import { errorMessage } from "@/lib/errors";
 import type { SugerenciasSecciones } from "@/lib/ficha/sugerencias-secciones";
+import type { FichaResumenValoracion } from "@/lib/ficha/tipos";
 
 function toImportedPhotoFile(photo: FichaImportPhoto): File {
   const binary = atob(photo.contenidoBase64);
@@ -54,6 +55,8 @@ export function useFichaImport({
 }) {
   const queryClient = useQueryClient();
   const [warnings, setWarnings] = useState<string[]>([]);
+  const [resumenValoracion, setResumenValoracion] =
+    useState<FichaResumenValoracion | null>(null);
   const [sugerencias, setSugerencias] = useState<SugerenciasSecciones | null>(null);
   const [pendingPhotos, setPendingPhotos] = useState<FichaImportPhoto[]>([]);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
@@ -195,6 +198,7 @@ export function useFichaImport({
     mutationFn: (file: File) => importFichaFile(token, file),
     onMutate: () => {
       setWarnings([]);
+      setResumenValoracion(null);
       onError(null);
       setPhotoUploadError(null);
       replacePendingPhotos([]);
@@ -206,6 +210,7 @@ export function useFichaImport({
         : { ...current, ...imported.formulario };
       reset(next, { keepDefaultValues: true, keepDirtyValues: false });
       setWarnings([...new Set(imported.advertencias)]);
+      setResumenValoracion(imported.resumenValoracion ?? null);
       setSugerencias(imported.sugerenciasSecciones ?? null);
       replacePendingPhotos(imported.fotos ?? []);
       pendingSectionsRef.current = imported.secciones ?? {};
@@ -217,7 +222,7 @@ export function useFichaImport({
             ? " Se detectó 1 foto de anexos; se adjuntará al guardar la ficha."
             : ` Se detectaron ${imported.fotos.length} fotos de anexos; se adjuntarán al guardar la ficha.`;
       onNotice(
-        `Se precargó el formulario desde la ficha. Revisa las advertencias antes de guardar.${photoMessage}`,
+        `Se precargó el formulario desde la ficha.${imported.advertencias.length ? " Revisa las advertencias antes de guardar." : " Revisa los datos antes de guardar."}${photoMessage}`,
       );
     },
     onError: (cause) => onError(errorMessage(cause, "No se pudo importar la ficha.")),
@@ -227,6 +232,7 @@ export function useFichaImport({
     importing: importMutation.isPending,
     importFile: (file: File) => importMutation.mutate(file),
     warnings,
+    resumenValoracion,
     dismissWarnings: () => setWarnings([]),
     sugerencias,
     pendingPhotos,

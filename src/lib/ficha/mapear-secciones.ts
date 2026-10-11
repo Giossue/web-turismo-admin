@@ -243,7 +243,11 @@ function accesibilidad(
   return valores;
 }
 
-function planta(ficha: Ficha, catalogos: AdminCatalogs): SectionFormValues {
+function planta(
+  ficha: Ficha,
+  catalogos: AdminCatalogs,
+  advertencias: string[],
+): SectionFormValues {
   const valores = base("planta");
   const datos = ficha.planta;
   const registros: PlantForm[] = [];
@@ -287,13 +291,34 @@ function planta(ficha: Ficha, catalogos: AdminCatalogs): SectionFormValues {
   const guias = [
     ["Local", datos.guia.local],
     ["Nacional", datos.guia.nacional],
-    ["Nacional especializado", datos.guia.nacionalEspecializado],
     ["Nacional especializado en cultura", datos.guia.cultura],
     ["Nacional especializado en aventura", datos.guia.aventura],
   ] as const;
   for (const [nombre, guia] of guias) {
     agregar("Guías", nombre, "EN_ATRACTIVO", [guia.atractivo, null, null]);
     agregar("Guías", nombre, "EN_POBLADO_CERCANO", [guia.ciudad, null, null]);
+  }
+  const notasGuias: string[] = [];
+  for (const [campo, scope, ambito] of [
+    ["atractivo", "EN_ATRACTIVO", "en el atractivo"],
+    ["ciudad", "EN_POBLADO_CERCANO", "en la ciudad o poblado cercano"],
+  ] as const) {
+    const total = datos.guia.nacionalEspecializado[campo];
+    if (total === null || total <= 0) continue;
+    const cultura = datos.guia.cultura[campo] ?? 0;
+    const aventura = datos.guia.aventura[campo] ?? 0;
+    // Conservar el conteo original; un desglose coincidente no es otro tipo de guía.
+    notasGuias.push(
+      `Guías nacionales especializados ${ambito}: ${total} en el Excel; cultura: ${cultura}, aventura: ${aventura}.`,
+    );
+    if (total === cultura + aventura) continue;
+    if (buscar(catalogos.plantTypes, "Nacional especializado")) {
+      agregar("Guías", "Nacional especializado", scope, [total, null, null]);
+    } else {
+      advertencias.push(
+        `Guías turísticos ${ambito}: el Excel declara ${total} nacionales especializados y un desglose de ${cultura} en cultura y ${aventura} en aventura. Revisa estos conteos en el paso 5; el total original se conservó en las observaciones.`,
+      );
+    }
   }
   valores.plant = registros;
 
@@ -338,6 +363,7 @@ function planta(ficha: Ficha, catalogos: AdminCatalogs): SectionFormValues {
   });
 
   valores.observation = observacionGeneral(
+    ...notasGuias,
     datos.observacionPlantaAtractivo,
     datos.observacionPlantaCiudad,
     observacionEnPrimero(valores.facilityDetails, datos.observacionFacilidades),
@@ -885,7 +911,7 @@ export function mapearSeccionesImportadas(
   const advertencias: string[] = [];
   const valores: Partial<Record<CenterSectionCode, SectionFormValues>> = {
     accesibilidad: accesibilidad(ficha, catalogos, resueltos),
-    planta: planta(ficha, catalogos),
+    planta: planta(ficha, catalogos, advertencias),
     conservacion: conservacion(ficha, catalogos),
     "higiene-seguridad": higiene(ficha, catalogos),
     politicas: politicas(ficha),

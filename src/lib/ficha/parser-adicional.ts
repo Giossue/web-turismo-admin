@@ -19,9 +19,9 @@ function leerSiNoDirecto(
   refSi: string,
   refNo: string,
 ): "SI" | "NO" | null {
-  if (leerMarcaJuntoAEtiqueta(worksheet, refSi)) return "SI";
-  if (leerMarcaJuntoAEtiqueta(worksheet, refNo)) return "NO";
-  return null;
+  const si = leerMarcaJuntoAEtiqueta(worksheet, refSi) === true;
+  const no = leerMarcaJuntoAEtiqueta(worksheet, refNo) === true;
+  return si === no ? null : si ? "SI" : "NO";
 }
 
 // --- 8. Políticas y regulaciones (filas 224-232) ---

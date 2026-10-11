@@ -53,7 +53,6 @@ import type {
 
 const TAMANO_MAXIMO_IMAGEN_BYTES = 5 * 1024 * 1024;
 const MAX_IMAGENES_ANEXOS = 20;
-const MAX_TOTAL_IMAGENES_BYTES = 20 * 1024 * 1024;
 
 const HOJA_PRINCIPAL = "Ficha_Jerarquia";
 const HOJA_ACCESIBILIDAD = "ficha_Accesibilidad";
@@ -516,7 +515,6 @@ function leerImagenesAnexos(
     ).media ?? [];
   const metadata: FichaImagenAnexo[] = [];
   const adjuntas: FichaImagenAdjunta[] = [];
-  let totalAdjuntas = 0;
 
   for (const imagen of worksheet.getImages()) {
     const row = imagen.range.tl.nativeRow;
@@ -553,15 +551,11 @@ function leerImagenesAnexos(
       );
       continue;
     }
-    if (
-      tamanoBytes === 0 ||
-      tamanoBytes > TAMANO_MAXIMO_IMAGEN_BYTES ||
-      totalAdjuntas + tamanoBytes > MAX_TOTAL_IMAGENES_BYTES
-    ) {
+    if (tamanoBytes === 0 || tamanoBytes > TAMANO_MAXIMO_IMAGEN_BYTES) {
       advertencias.push(
         tamanoBytes === 0
           ? `No se pudo extraer la imagen ${metadata.length} de los anexos.`
-          : `La imagen ${metadata.length} supera el límite de 5 MB por fotografía o de 20 MB en total y no se adjuntó.`,
+          : `La fotografía ${metadata.length} pesa ${(tamanoBytes / (1024 * 1024)).toLocaleString("es", { maximumFractionDigits: 2 })} MB y no se adjuntó. El máximo es 5 MB por imagen; reduce su tamaño y vuelve a importarla.`,
       );
       continue;
     }
@@ -579,7 +573,6 @@ function leerImagenesAnexos(
       );
       continue;
     }
-    totalAdjuntas += tamanoBytes;
 
     adjuntas.push({
       nombre,
@@ -673,10 +666,30 @@ export async function parsearFicha(
     higieneSeguridad: leerHigieneSeguridad(worksheet),
   };
 
-  if (datos.resumenValoracion.totalInformativo !== null) {
+  for (const [respuesta, pregunta] of [
+    [
+      datos.promocion.tienePlanPromocionCantonal,
+      "¿Existe un plan de promoción turística cantonal?",
+    ],
+    [datos.promocion.formaPartePaquete, "¿Forma parte de un paquete turístico?"],
+    ...(datos.promocion.tienePlanPromocionCantonal === "SI"
+      ? ([
+          [datos.promocion.incluidoEnPlan, "¿El atractivo está incluido en el plan?"],
+        ] as const)
+      : []),
+  ]) {
+    if (respuesta === null) {
+      advertencias.push(
+        `Promoción y comercialización: el Excel no tiene una respuesta única para «${pregunta}». Selecciona Sí o No en el paso 10 antes de publicar la ficha.`,
+      );
+    }
+  }
+  if (
+    datos.promocion.tienePlanPromocionCantonal === "NO" &&
+    datos.promocion.incluidoEnPlan === "SI"
+  ) {
     advertencias.push(
-      `El Excel reporta un puntaje total de ${datos.resumenValoracion.totalInformativo} ` +
-        "(solo informativo — verifica que el panel calcule un valor similar tras revisar la ficha).",
+      "Promoción y comercialización: el Excel indica que no existe un plan, pero que el atractivo está incluido en él. Se conservaron ambas respuestas; revísalas en el paso 10.",
     );
   }
 

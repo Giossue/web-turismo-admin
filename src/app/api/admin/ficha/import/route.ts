@@ -190,6 +190,7 @@ async function importarFicha(request: NextRequest, token: string) {
             ...apartados.advertencias,
           ],
           fotos: resultado.imagenesAdjuntas,
+          resumenValoracion: resultado.datos.resumenValoracion,
         },
       },
       { headers: headersPrivados },

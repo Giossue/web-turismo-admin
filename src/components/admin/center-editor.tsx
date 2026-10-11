@@ -326,6 +326,22 @@ export function CenterEditor({
           if (file) fichaImport.importFile(file);
         }}
       />
+      {fichaImport.resumenValoracion?.totalInformativo != null ? (
+        <Alert severity="info">
+          <Typography variant="subtitle2" component="p">
+            Puntaje del Excel:{" "}
+            {fichaImport.resumenValoracion.totalInformativo.toLocaleString("es")} de{" "}
+            {fichaImport.resumenValoracion.criterios.reduce(
+              (total, criterio) => total + criterio.puntajeMaximo,
+              0,
+            )}{" "}
+            puntos.
+          </Typography>
+          Es la valoración que figura en el archivo importado. El panel calcula su propia
+          valoración con los datos guardados; puede variar si corriges o completas la
+          información.
+        </Alert>
+      ) : null}
       {fichaImport.warnings.length > 0 ? (
         <Alert severity="warning" onClose={fichaImport.dismissWarnings}>
           <Typography variant="subtitle2" component="p" sx={{ mb: 0.5 }}>

@@ -3,7 +3,7 @@
 import CheckRounded from "@mui/icons-material/CheckRounded";
 import CloseRounded from "@mui/icons-material/CloseRounded";
 import VisibilityRounded from "@mui/icons-material/VisibilityRounded";
-import { Box, Stack, Tab, Tabs, Typography } from "@mui/material";
+import { Alert, Box, Button, Stack, Tab, Tabs, Typography } from "@mui/material";
 import type { GridColDef } from "@mui/x-data-grid";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useMemo, useRef, useState } from "react";
@@ -51,6 +51,21 @@ import { EstablishmentDetailDialog } from "./establishment-detail-dialog";
 import { pageAfterRemoval } from "./pagination";
 
 const pageSize = ADMIN_TABLE_PAGE_SIZE;
+
+function centerReviewError(cause: unknown): string {
+  const message = errorMessage(cause, "No se pudo actualizar la ficha.");
+  if (
+    message === "La sección promoción requiere respuestas SI o NO para publicar el plan."
+  ) {
+    return "No se pudo publicar la ficha. En el paso 10, «Promoción y comercialización», selecciona Sí o No en «¿Existe un plan de promoción?» y «¿Forma parte de un paquete turístico?».";
+  }
+  if (
+    message === "La inclusión en un plan debe responderse como SI o NO antes de publicar."
+  ) {
+    return "No se pudo publicar la ficha. En el paso 10, «Promoción y comercialización», revisa «¿El atractivo está incluido en el plan?» y selecciona Sí o No.";
+  }
+  return message;
+}
 
 type GridSearch = { label: string; value: string; onChange: (value: string) => void };
 
@@ -138,11 +153,15 @@ export function ReviewSection({
   const centerReview = useReviewIntent<AdminCenter>();
   const establishmentReview = useReviewIntent<AdminEstablishment>();
   const centerSubmittingRef = useRef(false);
+  const [centerError, setCenterError] = useState<string | null>(null);
 
   const centerMutation = useMutation({
     mutationFn: ({ item, action, observation }: ReviewVariables<AdminCenter>) =>
       reviewAdminCenter(token, item.code, action, observation),
-    onMutate: () => showError(null),
+    onMutate: () => {
+      showError(null);
+      setCenterError(null);
+    },
     onSuccess: async (_, { item, action }) => {
       centerReview.close();
       showNotice(
@@ -164,7 +183,11 @@ export function ReviewSection({
         queryClient.invalidateQueries({ queryKey: adminKeys.allNavigationSummaries() }),
       ]);
     },
-    onError: (cause) => showError(errorMessage(cause, "No se pudo actualizar la ficha.")),
+    onError: (cause) => {
+      const message = centerReviewError(cause);
+      setCenterError(message);
+      showError(message);
+    },
     onSettled: () => {
       centerSubmittingRef.current = false;
     },
@@ -260,7 +283,13 @@ export function ReviewSection({
                 ? errorMessage(centersQuery.error, "No se pudieron cargar las fichas.")
                 : null
             }
-            review={{ pending: centerMutation.isPending, onReview: centerReview.start }}
+            review={{
+              pending: centerMutation.isPending,
+              onReview: (item, action) => {
+                setCenterError(null);
+                centerReview.start(item, action);
+              },
+            }}
             onOpen={onOpen}
             pagination={{
               page: centersPage,
@@ -391,7 +420,27 @@ export function ReviewSection({
               observation: centerReview.reason.trim() || undefined,
             });
           }}
-        />
+        >
+          {centerError ? (
+            <Alert
+              severity="error"
+              action={
+                <Button
+                  color="inherit"
+                  size="small"
+                  onClick={() => {
+                    centerReview.close();
+                    onOpen(centerIntent.item.code);
+                  }}
+                >
+                  Revisar ficha
+                </Button>
+              }
+            >
+              {centerError}
+            </Alert>
+          ) : null}
+        </ReviewDecisionDialog>
       ) : null}
       {establishmentIntent ? (
         <ReviewDecisionDialog

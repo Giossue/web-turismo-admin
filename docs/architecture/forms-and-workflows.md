@@ -54,5 +54,14 @@ principal queda como cambios locales; el editor guarda los apartados pendientes
 y sube las fotos cuando la ficha tiene código, también al importar sobre una
 existente. La publicación sigue su revisión institucional.
 
+Las fotos tienen un límite de 5 MiB por imagen, sin un límite adicional para su
+suma; los límites del libro y del worker se conservan. El puntaje del Excel se
+presenta como referencia informativa con su máximo, sin copiarlo como valoración
+de la API. Los conteos generales de guías coincidentes con su desglose se conservan
+en observaciones y no generan filas duplicadas. Las respuestas de Promoción vacías,
+ambiguas o contradictorias se señalan para revisión en el paso 10, sin inventar No.
+Un rechazo de publicación permanece visible en el diálogo y ofrece revisar la ficha;
+la autorización y la decisión siguen perteneciendo a la API.
+
 Detalle: [importación MINTUR](../../openspec/specs/mintur-import/spec.md) y
 [controles actuales](../security/controles.md).

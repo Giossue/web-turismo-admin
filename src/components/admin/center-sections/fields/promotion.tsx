@@ -63,10 +63,14 @@ function PlanGroup() {
   const hasPlan = useWatch({ control, name: "promotion.hasPlan" }) === "SI";
   return (
     <FieldGroup>
-      <Grid size={{ xs: 12, sm: 4 }}>
-        <SectionResponseSelect name="promotion.hasPlan" label="¿Tiene plan?" />
+      <Grid size={{ xs: 12, sm: 6 }}>
+        <SectionResponseSelect
+          name="promotion.hasPlan"
+          label="¿Existe un plan de promoción?"
+          helperText="Plan turístico cantonal. Selecciona Sí o No antes de publicar."
+        />
       </Grid>
-      <Grid size={{ xs: 12, sm: 8 }}>
+      <Grid size={{ xs: 12, sm: 6 }}>
         <SectionTextField
           name="promotion.planName"
           label="Nombre del plan"
@@ -77,8 +81,7 @@ function PlanGroup() {
       <Grid size={{ xs: 12, sm: 6 }}>
         <SectionResponseSelect
           name="promotion.includedInPlan"
-          label="¿Está incluido en un plan?"
-          disabled={!hasPlan}
+          label="¿El atractivo está incluido en el plan?"
         />
       </Grid>
     </FieldGroup>
@@ -167,7 +170,8 @@ function PackageGroup() {
       <Grid size={{ xs: 12, sm: 6 }}>
         <SectionResponseSelect
           name="promotion.partOfPackage"
-          label="¿Forma parte de un paquete?"
+          label="¿Forma parte de un paquete turístico?"
+          helperText="Selecciona Sí o No antes de publicar la ficha."
         />
       </Grid>
       <Grid size={12}>

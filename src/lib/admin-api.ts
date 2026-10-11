@@ -2,6 +2,7 @@ import type { CenterSectionCode, SectionProgress } from "./center-sections/defin
 import type { mapearFichaAFormulario } from "./ficha/mapear-formulario";
 import type { SeccionesImportadas } from "./ficha/mapear-secciones";
 import type { SugerenciasSecciones } from "./ficha/sugerencias-secciones";
+import type { FichaResumenValoracion } from "./ficha/tipos";
 import { errorMessage } from "./errors";
 import { ApiError, apiEndpoint, sendApiRequest, toApiError, toQueryString } from "./http";
 
@@ -462,6 +463,8 @@ type FichaImportResult = {
   sugerenciasSecciones: SugerenciasSecciones;
   advertencias: string[];
   fotos: FichaImportPhoto[];
+  /** Referencia del Excel; no sustituye la valoración calculada por la API. */
+  resumenValoracion?: FichaResumenValoracion;
 };
 
 type AdminAccessTokenRefresh = (expiredToken: string) => Promise<string | null>;
