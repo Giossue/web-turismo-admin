@@ -7,7 +7,13 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   images: { unoptimized: true },
   outputFileTracingIncludes: {
-    "/api/admin/ficha/import": ["./.runtime/ficha-import.cjs"],
+    "/api/admin/ficha/import": [
+      "./.runtime/ficha-import.cjs",
+      "./node_modules/sharp/**/*",
+      "./node_modules/@img/sharp-*/**/*",
+      "./node_modules/@img/colour/**/*",
+      "./node_modules/detect-libc/**/*",
+    ],
   },
   async headers() {
     return [

@@ -30,21 +30,27 @@ válida con rol `ADMINISTRADOR` o `AGENTE_TURISTICO` y obtiene catálogos autori
 Estas llamadas comparten un plazo de cinco segundos. El cuerpo multipart se lee con un
 máximo de 20 MiB más 64 KiB de envoltorio y un plazo total de treinta segundos.
 
-| Recurso                         | Límite                                                                          |
-| ------------------------------- | ------------------------------------------------------------------------------- |
-| Importaciones simultáneas       | 2 por proceso, incluidas las cargas                                             |
-| Intentos por cuenta             | 12 por minuto y proceso                                                         |
-| Cuentas en memoria de cuotas    | 1024; las entradas caducan al minuto                                            |
-| Entradas ZIP                    | 2048, sin nombres duplicados ni rutas inseguras                                 |
-| Entrada descomprimida           | 16 MiB                                                                          |
-| Total descomprimido             | 64 MiB                                                                          |
-| Relación de compresión          | 200:1 por entrada, incluidos los bytes reales                                   |
-| XML                             | 500 000 nodos y profundidad 64; sin DTD                                         |
-| Hojas                           | 4096 filas y 256 columnas para celdas y dimensiones                             |
-| Celdas del libro                | 300 000                                                                         |
-| Área total de celdas combinadas | 200 000                                                                         |
-| Worker                          | 15 segundos; heap antiguo 192 MiB, joven 32 MiB, pila 4 MiB                     |
-| Fotos extraídas                 | 20; hasta 5 MiB por foto, sin tope adicional de suma; PNG/JPEG con firma válida |
+| Recurso                         | Límite                                                                                                                                                |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Importaciones simultáneas       | 2 por proceso, incluidas las cargas                                                                                                                   |
+| Intentos por cuenta             | 12 por minuto y proceso                                                                                                                               |
+| Cuentas en memoria de cuotas    | 1024; las entradas caducan al minuto                                                                                                                  |
+| Entradas ZIP                    | 2048, sin nombres duplicados ni rutas inseguras                                                                                                       |
+| Entrada descomprimida           | 16 MiB                                                                                                                                                |
+| Total descomprimido             | 64 MiB                                                                                                                                                |
+| Relación de compresión          | 200:1 por entrada, incluidos los bytes reales                                                                                                         |
+| XML                             | 500 000 nodos y profundidad 64; sin DTD                                                                                                               |
+| Hojas                           | 4096 filas y 256 columnas para celdas y dimensiones                                                                                                   |
+| Celdas del libro                | 300 000                                                                                                                                               |
+| Área total de celdas combinadas | 200 000                                                                                                                                               |
+| Worker                          | 15 segundos; heap antiguo 192 MiB, joven 32 MiB, pila 4 MiB                                                                                           |
+| Fotos extraídas                 | 20; salida hasta 5 MiB por foto, sin tope de suma; PNG/JPEG con firma válida y preparación automática                                                 |
+| Preparación de imagen           | Entrada hasta 40 millones de píxeles, caché nativa 16 MiB, una foto y un hilo libvips; hasta cuatro codificaciones con plazo individual de 2 segundos |
+
+En subida manual se admiten orígenes PNG/JPEG hasta 20 MiB para preparar en el
+navegador; se leen firma y dimensiones antes de decodificar y se verifica el
+máximo de salida de 5 MiB antes de enviar a la API. El original local no se
+modifica ni se envía cuando se prepara una versión más pequeña.
 
 `yauzl` descomprime las entradas de forma secuencial y verifica sus tamaños. Los contadores
 limitan también los bytes reales si el directorio ZIP miente. El XML se valida antes de

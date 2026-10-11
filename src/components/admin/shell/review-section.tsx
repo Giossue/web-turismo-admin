@@ -57,12 +57,12 @@ function centerReviewError(cause: unknown): string {
   if (
     message === "La sección promoción requiere respuestas SI o NO para publicar el plan."
   ) {
-    return "No se pudo publicar la ficha. En el paso 10, «Promoción y comercialización», selecciona Sí o No en «¿Existe un plan de promoción?» y «¿Forma parte de un paquete turístico?».";
+    return "No se pudo publicar la ficha. En Promoción (paso 10), confirma si existe un plan municipal de promoción y si este lugar se ofrece dentro de un tour o paquete turístico. La ficha necesita Sí o No en esas preguntas.";
   }
   if (
     message === "La inclusión en un plan debe responderse como SI o NO antes de publicar."
   ) {
-    return "No se pudo publicar la ficha. En el paso 10, «Promoción y comercialización», revisa «¿El atractivo está incluido en el plan?» y selecciona Sí o No.";
+    return "No se pudo publicar la ficha. En Promoción (paso 10), confirma si este atractivo figura en el plan municipal y selecciona Sí o No.";
   }
   return message;
 }

@@ -8,6 +8,8 @@ const resultado = await Bun.build({
   naming: "ficha-import.cjs",
   target: "node",
   format: "cjs",
+  // El módulo y sus binarios nativos se incluyen en el tracing de Next.
+  external: ["sharp"],
 });
 if (!resultado.success)
   throw new AggregateError(

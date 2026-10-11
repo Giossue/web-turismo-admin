@@ -2,43 +2,39 @@
 
 ## Why
 
-La importación de «Plaza 15 de mayo.xlsm» muestra un límite agregado de fotografías
-que no corresponde a la regla del producto, confunde el puntaje del archivo con
-una advertencia y busca como tipo independiente un conteo general de guías
-especializados cuyo desglose ya está informado. La publicación falla con un mensaje
-genérico cuando falta una respuesta en Promoción.
+El usuario solicita que el sistema reduzca automáticamente las fotografías,
+en lugar de exigir editarlas fuera del panel. También necesita comprender
+paquete turístico, plan cantonal y la evaluación de 31 puntos del Excel.
 
 ## What Changes
 
-- Mantener 5 MiB por fotografía, sin un límite adicional de bytes para su suma.
-- Identificar tamaño y acción cuando una fotografía excede ese límite.
-- Mostrar el puntaje del Excel como referencia informativa con su máximo.
-- Conservar el conteo general de guías en observaciones y evitar duplicarlo como
-  tipo cuando coincide con el desglose de cultura y aventura; avisar de discrepancias.
-- Avisar de respuestas ausentes/ambiguas y contradicciones de Promoción durante
-  la importación, sin inventar Sí/No ni corregir el archivo automáticamente.
-- Mantener el error de publicación dentro del diálogo, con campos, apartado y
-  acceso a revisar la ficha; traducir los mensajes genéricos de la API vigente.
+- Optimizar fotos PNG/JPEG de anexos dentro del worker y fotos manuales antes
+  de enviarlas a la API, con tamaño y calidad acotados y sin cambiar el original.
+- Aplicar el máximo de 5 MiB a la foto preparada, sin límite agregado nuevo.
+- Conservar conteos generales de guías sin duplicar el desglose de especializaciones.
+- Mantener el rechazo de publicación dentro del diálogo con acceso a revisar la ficha.
+- Explicar plan municipal y oferta organizada junto a sus preguntas y avisos.
+- Sustituir el aviso de puntaje por una referencia desplegable con explicación
+  de los nueve criterios y los puntos obtenidos frente al máximo de cada uno.
+- Conservar respuestas sin información y contradicciones: no deducir respuestas
+  institucionales de páginas web que no las acreditan.
 
 ## Capabilities
 
 ### New Capabilities
 
-Ninguna.
+- `photo-preparation`: compresión previa automática de fotos manuales.
 
 ### Modified Capabilities
 
-- `mintur-import`: límites individuales, referencia de valoración y revisión de
-  guías y promoción.
+- `mintur-import`: preparación de fotos, desglose de valoración y explicación
+  de preguntas de Promoción.
 - `review-and-moderation`: diagnóstico recuperable de publicación incompleta.
 
 ## Impact
 
-Solo el portal Next/MUI y su endpoint interno de importación. Respuesta compatible
-con un campo opcional `resumenValoracion`; la API NestJS sigue calculando valoración,
-autorizando guardado y publicación. No se cambian catálogos, esquema, datos guardados
-ni estados de producción. Se conservan cantidad máxima de fotos, límites del Excel,
-descompresión, aislamiento del worker, sesión y protección de respuestas tardías.
-
-El usuario autorizó corregir el flujo y proporcionó el archivo para leerlo y
-comprobar sus valores. No se solicitó publicar esa ficha, desplegar ni ejecutar suites.
+Portal y worker Next/MUI. Sharp 0.35.5, ya instalado por Next, pasa a dependencia
+directa para el worker; su empaquetado debe incluir binarios nativos en standalone.
+La API mantiene límites, permisos y normalización final WebP. No cambian reglas
+de publicación, datos institucionales, catálogos ni esquema. El usuario autoriza
+commit y push; no se solicita despliegue ni suites de pruebas.

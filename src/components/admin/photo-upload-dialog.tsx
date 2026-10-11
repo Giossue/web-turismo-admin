@@ -18,23 +18,16 @@ import {
 import { useRef, useState, type DragEvent } from "react";
 
 import { errorMessage } from "@/lib/errors";
+import { PHOTO_ACCEPT } from "@/lib/photo-preparation-policy";
+import { photoFileError, preparePhotoFile } from "@/lib/prepare-photo-file";
 import { webTokens } from "@/theme/tokens";
 
-export const PHOTO_ACCEPT = "image/jpeg,image/png";
-const PHOTO_TYPES = new Set(PHOTO_ACCEPT.split(","));
-/** Igual que `MEDIA_MAX_IMAGE_BYTES` de la API; se valida antes de subir. */
-const PHOTO_MAX_BYTES = 5 * 1024 * 1024;
+export { PHOTO_ACCEPT } from "@/lib/photo-preparation-policy";
 /** Pausa breve para que se vea el resultado antes de cerrar el modal. */
 const CLOSE_DELAY_MS = 800;
 
-type UploadStatus = "pending" | "uploading" | "done" | "error";
+type UploadStatus = "pending" | "preparing" | "uploading" | "done" | "error";
 type QueuedPhoto = { id: string; file: File; status: UploadStatus; error?: string };
-
-function validationError(file: File): string | null {
-  if (!PHOTO_TYPES.has(file.type)) return "Solo se aceptan imágenes JPEG o PNG.";
-  if (file.size > PHOTO_MAX_BYTES) return "Pesa más de 5 MB.";
-  return null;
-}
 
 function formatSize(bytes: number): string {
   return bytes >= 1024 * 1024
@@ -63,6 +56,7 @@ export function PhotoUploadDialog({
   onUploaded: (count: number) => void;
 }) {
   const fileInput = useRef<HTMLInputElement>(null);
+  const uploadInProgress = useRef(false);
   const [queue, setQueue] = useState<QueuedPhoto[]>([]);
   const [description, setDescription] = useState("");
   const [sourceAuthor, setSourceAuthor] = useState("");
@@ -89,7 +83,7 @@ export function PhotoUploadDialog({
   function addFiles(files: FileList | null) {
     if (!files || uploading) return;
     const added = Array.from(files).map((file): QueuedPhoto => {
-      const error = validationError(file);
+      const error = photoFileError(file);
       return {
         id: `${file.name}-${file.size}-${file.lastModified}-${Math.random()}`,
         file,
@@ -112,14 +106,17 @@ export function PhotoUploadDialog({
   }
 
   async function start() {
-    if (uploading || pending.length === 0) return;
+    if (uploadInProgress.current || pending.length === 0) return;
+    uploadInProgress.current = true;
     setUploading(true);
     let uploaded = 0;
     let failed = 0;
     for (const item of pending) {
-      setStatus(item.id, "uploading");
+      setStatus(item.id, "preparing");
       try {
-        await upload(item.file, { description, sourceAuthor });
+        const prepared = await preparePhotoFile(item.file);
+        setStatus(item.id, "uploading");
+        await upload(prepared, { description, sourceAuthor });
         setStatus(item.id, "done");
         uploaded += 1;
       } catch (cause) {
@@ -128,6 +125,7 @@ export function PhotoUploadDialog({
       }
     }
     setUploading(false);
+    uploadInProgress.current = false;
     if (uploaded > 0) onUploaded(uploaded);
     if (failed === 0) {
       setTimeout(() => {
@@ -182,7 +180,7 @@ export function PhotoUploadDialog({
               Arrastra las fotos aquí o haz clic para elegirlas
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              JPEG o PNG, hasta 5 MB cada una. Se recortan a 4:3 y se guardan en WebP.
+              JPEG o PNG. Reducimos el peso automáticamente antes de subirlas.
             </Typography>
           </Box>
           <input
@@ -245,11 +243,13 @@ export function PhotoUploadDialog({
                     >
                       {item.status === "error"
                         ? item.error
-                        : item.status === "uploading"
-                          ? "Subiendo…"
-                          : item.status === "done"
-                            ? "Subida"
-                            : `Lista para subir · ${formatSize(item.file.size)}`}
+                        : item.status === "preparing"
+                          ? "Preparando fotografía…"
+                          : item.status === "uploading"
+                            ? "Subiendo…"
+                            : item.status === "done"
+                              ? "Subida"
+                              : `Lista para subir · ${formatSize(item.file.size)}`}
                     </Typography>
                   </Box>
                   {item.status === "done" ? (

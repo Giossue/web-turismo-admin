@@ -10,6 +10,7 @@ import { FormProvider, useForm } from "react-hook-form";
 
 import { CenterFormPanel } from "@/components/admin/center-editor/center-form-panels";
 import { CenterSummaryStep } from "@/components/admin/center-editor/center-summary-step";
+import { FichaValuationReference } from "@/components/admin/center-editor/ficha-valuation-reference";
 import {
   CenterWizardNavigation,
   CenterWizardStepper,
@@ -326,21 +327,8 @@ export function CenterEditor({
           if (file) fichaImport.importFile(file);
         }}
       />
-      {fichaImport.resumenValoracion?.totalInformativo != null ? (
-        <Alert severity="info">
-          <Typography variant="subtitle2" component="p">
-            Puntaje del Excel:{" "}
-            {fichaImport.resumenValoracion.totalInformativo.toLocaleString("es")} de{" "}
-            {fichaImport.resumenValoracion.criterios.reduce(
-              (total, criterio) => total + criterio.puntajeMaximo,
-              0,
-            )}{" "}
-            puntos.
-          </Typography>
-          Es la valoración que figura en el archivo importado. El panel calcula su propia
-          valoración con los datos guardados; puede variar si corriges o completas la
-          información.
-        </Alert>
+      {fichaImport.resumenValoracion ? (
+        <FichaValuationReference summary={fichaImport.resumenValoracion} />
       ) : null}
       {fichaImport.warnings.length > 0 ? (
         <Alert severity="warning" onClose={fichaImport.dismissWarnings}>
@@ -386,7 +374,7 @@ export function CenterEditor({
               ? fichaImport.uploadingPhotos
                 ? `Subiendo ${fichaImport.pendingPhotoCount} foto(s) importada(s)…`
                 : `${fichaImport.pendingPhotoCount} foto(s) importada(s) pendientes de carga.`
-              : `${fichaImport.pendingPhotoCount} foto(s) detectada(s); se adjuntarán al guardar la ficha.`)}
+              : `${fichaImport.pendingPhotoCount} fotografía${fichaImport.pendingPhotoCount === 1 ? " preparada" : "s preparadas"}; se adjuntarán al guardar la ficha.`)}
         </Alert>
       ) : null}
       {detail?.review?.observation ? (

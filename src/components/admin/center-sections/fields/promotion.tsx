@@ -5,6 +5,14 @@ import { useFormContext, useWatch } from "react-hook-form";
 import { SectionHeader } from "@/components/ui/section-header";
 import type { AdminCatalogs } from "@/lib/admin-api";
 import { emptyPromotionMedia } from "@/lib/center-sections/form-defaults";
+import {
+  INCLUSION_HELP,
+  INCLUSION_QUESTION,
+  PACKAGE_HELP,
+  PACKAGE_QUESTION,
+  PLAN_HELP,
+  PLAN_QUESTION,
+} from "@/lib/center-sections/promotion-copy";
 import type { SectionFormValues } from "@/lib/center-sections/form-types";
 import { webTokens } from "@/theme/tokens";
 
@@ -38,7 +46,7 @@ export function PromotionFields({ catalogs }: SectionFieldsProps) {
       <SectionHeader
         level="subsection"
         title="Promoción y comercialización"
-        description="Separa la existencia del plan, su inclusión institucional, los paquetes y los medios de promoción utilizados."
+        description="Registra cómo se da a conocer este lugar y si se ofrece dentro de visitas turísticas organizadas."
       />
       <PlanGroup />
       <RepeatableFieldArray
@@ -66,8 +74,8 @@ function PlanGroup() {
       <Grid size={{ xs: 12, sm: 6 }}>
         <SectionResponseSelect
           name="promotion.hasPlan"
-          label="¿Existe un plan de promoción?"
-          helperText="Plan turístico cantonal. Selecciona Sí o No antes de publicar."
+          label={PLAN_QUESTION}
+          helperText={PLAN_HELP}
         />
       </Grid>
       <Grid size={{ xs: 12, sm: 6 }}>
@@ -81,7 +89,8 @@ function PlanGroup() {
       <Grid size={{ xs: 12, sm: 6 }}>
         <SectionResponseSelect
           name="promotion.includedInPlan"
-          label="¿El atractivo está incluido en el plan?"
+          label={INCLUSION_QUESTION}
+          helperText={INCLUSION_HELP}
         />
       </Grid>
     </FieldGroup>
@@ -170,8 +179,8 @@ function PackageGroup() {
       <Grid size={{ xs: 12, sm: 6 }}>
         <SectionResponseSelect
           name="promotion.partOfPackage"
-          label="¿Forma parte de un paquete turístico?"
-          helperText="Selecciona Sí o No antes de publicar la ficha."
+          label={PACKAGE_QUESTION}
+          helperText={PACKAGE_HELP}
         />
       </Grid>
       <Grid size={12}>

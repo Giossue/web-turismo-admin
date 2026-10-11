@@ -1,6 +1,7 @@
 import ExcelJS from "exceljs";
 import { FichaInvalidaError, validarArchivoFicha } from "./archivo";
 import { prepararExcelSeguro } from "./zip-seguro";
+import { prepararFotoAnexo } from "./preparar-foto";
 export { FichaInvalidaError, TAMANO_MAXIMO_BYTES, validarArchivoFicha } from "./archivo";
 
 import { cargarCasillasFormulario } from "./controles-formulario";
@@ -51,7 +52,6 @@ import type {
   ResultadoParseoFicha,
 } from "./tipos";
 
-const TAMANO_MAXIMO_IMAGEN_BYTES = 5 * 1024 * 1024;
 const MAX_IMAGENES_ANEXOS = 20;
 
 const HOJA_PRINCIPAL = "Ficha_Jerarquia";
@@ -500,10 +500,10 @@ function leerAccesibilidadDetalle(
   return items;
 }
 
-function leerImagenesAnexos(
+async function leerImagenesAnexos(
   workbook: ExcelJS.Workbook,
   advertencias: string[],
-): { metadata: FichaImagenAnexo[]; adjuntas: FichaImagenAdjunta[] } {
+): Promise<{ metadata: FichaImagenAnexo[]; adjuntas: FichaImagenAdjunta[] }> {
   const worksheet = workbook.getWorksheet(HOJA_PRINCIPAL);
   if (!worksheet) return { metadata: [], adjuntas: [] };
 
@@ -551,12 +551,8 @@ function leerImagenesAnexos(
       );
       continue;
     }
-    if (tamanoBytes === 0 || tamanoBytes > TAMANO_MAXIMO_IMAGEN_BYTES) {
-      advertencias.push(
-        tamanoBytes === 0
-          ? `No se pudo extraer la imagen ${metadata.length} de los anexos.`
-          : `La fotografía ${metadata.length} pesa ${(tamanoBytes / (1024 * 1024)).toLocaleString("es", { maximumFractionDigits: 2 })} MB y no se adjuntó. El máximo es 5 MB por imagen; reduce su tamaño y vuelve a importarla.`,
-      );
+    if (tamanoBytes === 0) {
+      advertencias.push(`No se pudo extraer la imagen ${metadata.length} de los anexos.`);
       continue;
     }
     const contenido = archivo.buffer!;
@@ -574,13 +570,23 @@ function leerImagenesAnexos(
       continue;
     }
 
-    adjuntas.push({
-      nombre,
-      extension: archivo.extension as FichaImagenAdjunta["extension"],
-      mimeType,
-      tamanoBytes,
-      contenidoBase64: archivo.buffer!.toString("base64"),
-    });
+    try {
+      const foto = await prepararFotoAnexo(
+        contenido,
+        archivo.extension as FichaImagenAdjunta["extension"],
+      );
+      adjuntas.push({
+        nombre: `foto-${metadata.length}.${foto.extension}`,
+        extension: foto.extension,
+        mimeType: foto.extension === "png" ? "image/png" : "image/jpeg",
+        tamanoBytes: foto.contenido.length,
+        contenidoBase64: foto.contenido.toString("base64"),
+      });
+    } catch {
+      advertencias.push(
+        `No se pudo preparar la fotografía ${metadata.length} de forma segura; no se adjuntó. Comprueba que la imagen sea válida.`,
+      );
+    }
   }
 
   return { metadata, adjuntas };
@@ -602,7 +608,7 @@ export async function parsearFicha(
   const worksheet = validarPlantilla(workbook);
 
   const advertencias: string[] = [];
-  const imagenesAnexos = leerImagenesAnexos(workbook, advertencias);
+  const imagenesAnexos = await leerImagenesAnexos(workbook, advertencias);
   const identificacion = leerIdentificacion(worksheet);
   const ubicacion = leerUbicacion(worksheet, advertencias);
   const caracteristicas = leerCaracteristicas(worksheet);
@@ -666,21 +672,27 @@ export async function parsearFicha(
     higieneSeguridad: leerHigieneSeguridad(worksheet),
   };
 
-  for (const [respuesta, pregunta] of [
+  for (const [respuesta, dato] of [
     [
       datos.promocion.tienePlanPromocionCantonal,
-      "¿Existe un plan de promoción turística cantonal?",
+      "si el municipio tiene un plan para promocionar el turismo del cantón",
     ],
-    [datos.promocion.formaPartePaquete, "¿Forma parte de un paquete turístico?"],
+    [
+      datos.promocion.formaPartePaquete,
+      "si una agencia, operadora o administrador ofrece una visita a este lugar dentro de un tour o paquete turístico",
+    ],
     ...(datos.promocion.tienePlanPromocionCantonal === "SI"
       ? ([
-          [datos.promocion.incluidoEnPlan, "¿El atractivo está incluido en el plan?"],
+          [
+            datos.promocion.incluidoEnPlan,
+            "si este lugar figura en el plan de promoción del municipio",
+          ],
         ] as const)
       : []),
   ]) {
     if (respuesta === null) {
       advertencias.push(
-        `Promoción y comercialización: el Excel no tiene una respuesta única para «${pregunta}». Selecciona Sí o No en el paso 10 antes de publicar la ficha.`,
+        `El Excel deja sin confirmar ${dato}. Completa esa respuesta en Promoción (paso 10) antes de publicar.`,
       );
     }
   }
@@ -689,7 +701,7 @@ export async function parsearFicha(
     datos.promocion.incluidoEnPlan === "SI"
   ) {
     advertencias.push(
-      "Promoción y comercialización: el Excel indica que no existe un plan, pero que el atractivo está incluido en él. Se conservaron ambas respuestas; revísalas en el paso 10.",
+      "Plan municipal: el Excel marca que el cantón no tiene un plan de promoción, pero que este atractivo figura en ese documento. Revisa ambas respuestas en Promoción (paso 10).",
     );
   }
 
