@@ -12,6 +12,7 @@ export type CenterFormValues = {
   categoryId: string;
   typeId: string;
   subtypeId: string;
+  /** Referencia histórica interna; no se solicita en la captura. */
   touristZoneId: string;
   provinceId: string;
   cantonId: string;
@@ -113,7 +114,6 @@ const IDENTIFICATION_FIELDS = [
   "provinceId",
   "cantonId",
   "parishId",
-  "touristZoneId",
   "productLineId",
   "scenarioId",
 ] as const satisfies readonly CenterFormField[];
@@ -165,10 +165,7 @@ function isCoordinate(text: string, limit: number): boolean {
  */
 export function isReadyToCreate(values: CenterFormValues): boolean {
   return (
-    IDENTIFICATION_FIELDS.every(
-      // La zona turística es opcional (no es un campo de la ficha MINTUR).
-      (field) => field === "touristZoneId" || values[field].trim() !== "",
-    ) &&
+    IDENTIFICATION_FIELDS.every((field) => values[field].trim() !== "") &&
     values.name.trim().length <= CENTER_NAME_MAX_LENGTH &&
     isCoordinate(values.latitude, 90) &&
     isCoordinate(values.longitude, 180)

@@ -28,6 +28,13 @@ ficha. La versión se obtiene de los datos actuales y se envía al guardar.
 Manejar un 409 como conflicto, no como permiso para sobrescribir silenciosamente.
 Conservar la protección de la sesión del editor contra un resultado tardío.
 
+La captura territorial pide provincia, cantón, parroquia y coordenadas. No
+presenta «Zona turística» en el formulario, resumen o diferencias: esa relación
+histórica no pertenece a la ficha MINTUR. Se conserva la compatibilidad de los
+valores existentes sin asignar una zona de demostración al importar. La API
+incluye los centros publicados en descargas por sus coordenadas y cobertura;
+no requiere seleccionar una zona interna para ese uso.
+
 ## Diálogos
 
 Título asociado, cancelación visible, gestión de foco, cuerpo que pueda hacer

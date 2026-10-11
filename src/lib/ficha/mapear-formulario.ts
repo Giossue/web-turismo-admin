@@ -39,7 +39,7 @@ export function mapearFichaAFormulario(
     categoryId: idATexto(catalogos.categoriaId.id),
     typeId: idATexto(catalogos.tipoId.id),
     subtypeId: idATexto(catalogos.subtipoId.id),
-    // touristZoneId: sin fuente en la ficha — el usuario lo elige a mano.
+    // touristZoneId: relación histórica interna, sin fuente en la ficha.
     provinceId: idATexto(catalogos.provinciaId.id),
     cantonId: idATexto(catalogos.cantonId.id),
     parishId: idATexto(catalogos.parroquiaId.id),

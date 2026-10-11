@@ -127,14 +127,6 @@ export function IdentificationPanel({
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
           <RhfCatalogSelect<CenterFormValues>
-            label="Zona turística"
-            name="touristZoneId"
-            options={options.zones}
-            disabled={!cantonId}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
-          <RhfCatalogSelect<CenterFormValues>
             label="Línea de producto"
             name="productLineId"
             options={catalogs?.lines ?? []}

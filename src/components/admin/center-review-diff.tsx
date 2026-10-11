@@ -54,7 +54,6 @@ const SECTION_SNAPSHOTS: Record<CenterSectionCode, (draft: CenterDraft) => unkno
   identificacion: (draft) => ({
     name: draft.name,
     subtypeId: draft.subtypeId,
-    touristZoneId: draft.touristZoneId,
     parishId: draft.parishId,
     productLineId: draft.productLineId,
     scenarioId: draft.scenarioId,
@@ -110,7 +109,6 @@ const REVIEW_SECTIONS: readonly ReviewSection[] = centerSectionDefinitions.map(
 const FIELD_LABELS: Record<string, string> = {
   name: "Nombre",
   subtypeId: "Subtipo",
-  touristZoneId: "Zona turística",
   parishId: "Parroquia",
   productLineId: "Línea de producto",
   scenarioId: "Escenario",
@@ -436,7 +434,6 @@ function resolveCatalogOption(
     .at(-1)
     ?.replace(/\[\d+\]$/, "");
   if (key === "subtypeId") return findCatalogOption(catalogs.subtypes, value);
-  if (key === "touristZoneId") return findCatalogOption(catalogs.zones, value);
   if (key === "parishId") return findCatalogOption(catalogs.parishes, value);
   if (key === "productLineId") return findCatalogOption(catalogs.lines, value);
   if (key === "scenarioId") return findCatalogOption(catalogs.scenarios, value);

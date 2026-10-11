@@ -69,7 +69,6 @@ export function CenterSummaryStep({
   const summaryRows = [
     ["Nombre", draft?.name ?? PENDING],
     ["Subtipo", findCatalogName(catalogs?.subtypes, draft?.subtypeId)],
-    ["Zona turística", findCatalogName(catalogs?.zones, draft?.touristZoneId)],
     ["Parroquia", findCatalogName(catalogs?.parishes, draft?.parishId)],
     ["Coordenadas", formatCoordinates(draft?.latitude, draft?.longitude)],
     ["Estado", detail ? centerStatusLabel(detail.status) : PENDING],
