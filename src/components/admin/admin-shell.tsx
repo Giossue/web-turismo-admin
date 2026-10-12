@@ -20,6 +20,10 @@ import {
   type EstablishmentManagementRef,
 } from "@/components/admin/establishment-management";
 import { OpinionManagement } from "@/components/admin/opinion-management";
+import {
+  RegistryImportDialog,
+  type RegistryImportDialogRef,
+} from "@/components/admin/registry-import-dialog";
 import { LoadingState } from "@/components/ui/loading-state";
 import { PageHeader } from "@/components/ui/page-header";
 import type { AdminCenterDetail } from "@/lib/admin-api";
@@ -78,6 +82,7 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
   const notifications = useAdminNotifications(token, user.id, section);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const establishmentRef = useRef<EstablishmentManagementRef>(null);
+  const registryImportRef = useRef<RegistryImportDialogRef>(null);
   const editorMode = section === "editor";
   const meta = adminSectionConfig[section];
 
@@ -168,13 +173,24 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
         </Button>
       </>
     ) : section === "establishments" ? (
-      <Button
-        variant="contained"
-        startIcon={<AddRounded />}
-        onClick={() => establishmentRef.current?.openCreate()}
-      >
-        Nuevo establecimiento
-      </Button>
+      <>
+        {isAdmin ? (
+          <Button
+            variant="outlined"
+            startIcon={<CloudUploadRounded />}
+            onClick={() => registryImportRef.current?.choose()}
+          >
+            Importar catastro MINTUR
+          </Button>
+        ) : null}
+        <Button
+          variant="contained"
+          startIcon={<AddRounded />}
+          onClick={() => establishmentRef.current?.openCreate()}
+        >
+          Nuevo establecimiento
+        </Button>
+      </>
     ) : undefined;
 
   const renderHeader = (actions?: ReactNode) => (
@@ -287,6 +303,9 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
               onError={feedback.showError}
               canManageStatus={isAdmin}
             />
+          ) : null}
+          {section === "establishments" && isAdmin ? (
+            <RegistryImportDialog ref={registryImportRef} token={token} />
           ) : null}
           {section === "editor" ? (
             <CenterEditor

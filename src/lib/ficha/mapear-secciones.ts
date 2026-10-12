@@ -1,4 +1,5 @@
 import type { AdminCatalogs, CatalogOption } from "@/lib/admin-api";
+import { CENTER_STEP_FIELDS, type CenterFormValues } from "@/lib/center-form";
 import { createSectionValues } from "@/lib/center-sections/create-section-values";
 import {
   centerSectionDefinitions,
@@ -157,6 +158,17 @@ function meses(textoMeses: string | null | undefined): string[] {
   return [...new Set(encontrados.map((indice) => String(indice + 1)))];
 }
 
+function caracteristicas(ficha: Ficha, resueltos: CatalogosResueltos): SectionFormValues {
+  const valores = base("caracteristicas");
+  const clima = ficha.caracteristicas.clima;
+  valores.climateId = resueltos.climaId?.id ? String(resueltos.climaId.id) : "";
+  valores.minTemperature = numero(clima.temperaturaMinC);
+  valores.maxTemperature = numero(clima.temperaturaMaxC);
+  valores.minRainfall = numero(clima.precipitacionMinMm);
+  valores.maxRainfall = numero(clima.precipitacionMaxMm);
+  return valores;
+}
+
 function accesibilidad(
   ficha: Ficha,
   catalogos: AdminCatalogs,
@@ -240,6 +252,14 @@ function accesibilidad(
         observation: texto(item.observacion).slice(0, 1_000),
       };
     });
+  // Sin campo propio para el tiempo de desplazamiento: queda en la observación.
+  valores.observation = observacionGeneral(
+    acceso.tiempoAutoHoras
+      ? `Tiempo estimado de desplazamiento en auto: ${acceso.tiempoAutoHoras} (h:min)`
+      : null,
+    acceso.observacionUbicacion,
+    acceso.observacionAccesibilidad,
+  );
   return valores;
 }
 
@@ -323,7 +343,7 @@ function planta(
   valores.plant = registros;
 
   valores.facilityDetails = datos.facilidadesEntorno
-    .filter((facilidad) => (facilidad.cantidad ?? 0) > 0)
+    .filter((facilidad) => facilidad.marcada || (facilidad.cantidad ?? 0) > 0)
     .map((facilidad) => {
       const categoria = buscar(catalogos.facilityCategories, facilidad.categoria);
       const tipo = buscar(
@@ -338,7 +358,7 @@ function planta(
         categoryId: idDe(categoria),
         typeId: idDe(tipo),
         typeLabel: tipo ? "" : facilidad.nombre,
-        quantity: numero(facilidad.cantidad),
+        quantity: (facilidad.cantidad ?? 0) > 0 ? numero(facilidad.cantidad) : "",
         latitude,
         longitude,
         administrator: texto(facilidad.administrador),
@@ -366,6 +386,12 @@ function planta(
     ...notasGuias,
     datos.observacionPlantaAtractivo,
     datos.observacionPlantaCiudad,
+    datos.observacionAlimentosAtractivo,
+    datos.observacionAlimentosCiudad,
+    datos.observacionAgenciasAtractivo,
+    datos.observacionAgenciasCiudad,
+    datos.observacionGuiasAtractivo,
+    datos.observacionGuiasCiudad,
     observacionEnPrimero(valores.facilityDetails, datos.observacionFacilidades),
     observacionEnPrimero(valores.complementaryServices, datos.observacionComplementarios),
   );
@@ -502,11 +528,12 @@ function higiene(ficha: Ficha, catalogos: AdminCatalogs): SectionFormValues {
 
   for (const salud of datos.salud) {
     const tipo = buscar(catalogos.healthServiceTypes, salud.nombre);
-    for (const [scope, cantidad] of [
-      ["EN_ATRACTIVO", salud.cantidadAtractivo],
-      ["EN_POBLADO_CERCANO", salud.cantidadCiudad],
+    for (const [scope, cantidad, marcado] of [
+      ["EN_ATRACTIVO", salud.cantidadAtractivo, salud.marcadoAtractivo],
+      ["EN_POBLADO_CERCANO", salud.cantidadCiudad, salud.marcadoCiudad],
     ] as const) {
-      if (!cantidad) continue;
+      // Una casilla marcada con cantidad 0 indica que el servicio existe.
+      if (!cantidad && !marcado) continue;
       entradas.push({
         ...emptyHygieneEntry(),
         kind: "HEALTH",
@@ -514,7 +541,7 @@ function higiene(ficha: Ficha, catalogos: AdminCatalogs): SectionFormValues {
         typeId: idDe(tipo),
         name: tipo ? "" : salud.nombre,
         response: "SI",
-        quantity: String(cantidad),
+        quantity: cantidad ? String(cantidad) : "",
       });
     }
   }
@@ -578,7 +605,7 @@ function higiene(ficha: Ficha, catalogos: AdminCatalogs): SectionFormValues {
     institution: texto(contingencia.institucion),
     document: texto(contingencia.nombreDocumento).slice(0, 250),
     year: numero(contingencia.anioElaboracion),
-    observation: "",
+    observation: texto(datos.observacionMultiamenazas).slice(0, 1_000),
   };
 
   const porTipo = (kind: HygieneEntryForm["kind"]) =>
@@ -763,9 +790,20 @@ function anexos(ficha: Ficha, catalogos: AdminCatalogs): SectionFormValues {
         institution: texto(persona?.institucion).slice(0, 180),
         phone: texto(persona?.telefono).slice(0, 180),
         email: /^\S+@\S+\.\S+$/.test(email) ? email : "",
+        date: persona?.fecha ?? "",
         observation: "",
       };
     });
+  // Fuente de las fotos (también va con cada foto subida) y enlace de la
+  // ubicación gráfica: los anexos no tienen campos propios para ellos.
+  valores.observation = observacionGeneral(
+    ficha.anexos.fuenteFotografias
+      ? `Fuente de las fotografías: ${ficha.anexos.fuenteFotografias}`
+      : null,
+    ficha.anexos.ubicacionGrafica
+      ? `Ubicación gráfica del atractivo: ${ficha.anexos.ubicacionGrafica}`
+      : null,
+  );
   const gad = ficha.validacionGad;
   if (gad?.nombre) {
     const email = texto(gad.email);
@@ -910,6 +948,7 @@ export function mapearSeccionesImportadas(
 ): { secciones: SeccionesImportadas; advertencias: string[] } {
   const advertencias: string[] = [];
   const valores: Partial<Record<CenterSectionCode, SectionFormValues>> = {
+    caracteristicas: caracteristicas(ficha, resueltos),
     accesibilidad: accesibilidad(ficha, catalogos, resueltos),
     planta: planta(ficha, catalogos, advertencias),
     conservacion: conservacion(ficha, catalogos),
@@ -922,10 +961,61 @@ export function mapearSeccionesImportadas(
   };
   depurarParaPublicar(valores, advertencias);
   const secciones: SeccionesImportadas = Object.fromEntries(
-    Object.entries(valores).map(([code, values]) => [
-      code,
-      toSectionContent(code as CenterSectionCode, values),
-    ]),
+    Object.entries(valores)
+      .map(([code, values]) => {
+        const codigo = code as CenterSectionCode;
+        return [codigo, toSectionContent(codigo, values)] as const;
+      })
+      // El clima solo se guarda si la ficha lo trae: un apartado vacío
+      // marcado "SI" ocultaría que falta llenarlo.
+      .filter(
+        ([codigo, contenido]) =>
+          codigo !== "caracteristicas" || !esPlantillaVacia(codigo, contenido),
+      ),
   );
   return { secciones, advertencias };
+}
+
+/** `true` si el contenido es igual al de un apartado sin datos importados. */
+function esPlantillaVacia(codigo: CenterSectionCode, contenido: SectionContent): boolean {
+  return (
+    JSON.stringify(contenido) === JSON.stringify(toSectionContent(codigo, base(codigo)))
+  );
+}
+
+function tieneDato(valor: unknown): boolean {
+  if (typeof valor === "string") return valor.trim() !== "";
+  if (typeof valor === "number") return Number.isFinite(valor);
+  if (typeof valor === "boolean") return valor;
+  if (Array.isArray(valor)) return valor.some(tieneDato);
+  if (valor && typeof valor === "object") return Object.values(valor).some(tieneDato);
+  return false;
+}
+
+/**
+ * Apartados del asistente (de los 14) que recibieron datos de la ficha, ya
+ * sea en el formulario principal o en el contenido propio del apartado.
+ */
+export function contarApartadosImportados(
+  formulario: Partial<CenterFormValues>,
+  secciones: SeccionesImportadas | undefined,
+): number {
+  return centerSectionDefinitions.filter(({ code }) => {
+    const contenido = secciones?.[code];
+    if (contenido && !esPlantillaVacia(code, contenido)) return true;
+    const campos = CENTER_STEP_FIELDS[code] ?? [];
+    return campos.some((campo) =>
+      tieneDato(
+        campo
+          .split(".")
+          .reduce<unknown>(
+            (valor, clave) =>
+              valor && typeof valor === "object"
+                ? (valor as Record<string, unknown>)[clave]
+                : undefined,
+            formulario,
+          ),
+      ),
+    );
+  }).length;
 }

@@ -186,6 +186,13 @@ const TIPOS_INGRESO = [
   { valor: "PAGADO" as const, fila: 33 },
 ];
 
+const MODALIDADES_ATENCION = [
+  { valor: "TODOS_DIAS" as const, columna: "J" },
+  { valor: "FINES_SEMANA_FERIADOS" as const, columna: "M" },
+  { valor: "DIAS_HABILES" as const, columna: "P" },
+  { valor: "OTRO" as const, columna: "R" },
+];
+
 function leerIngreso(worksheet: ExcelJS.Worksheet): FichaIngreso {
   const tipoSeleccionado = leerSeleccionUnica(
     worksheet,
@@ -211,12 +218,33 @@ function leerIngreso(worksheet: ExcelJS.Worksheet): FichaIngreso {
     .filter((opcion) => leerMarcaJuntoAEtiqueta(worksheet, opcion.refEtiqueta) === true)
     .map((opcion) => opcion.nombre);
 
+  // c. Atención: casillas en J/M/P/R de la fila de cada tipo de ingreso y
+  // "Especificar" en T. Se prefiere la fila del tipo de ingreso marcado.
+  const filasAtencion = [
+    ...TIPOS_INGRESO.filter((t) => t.valor === tipoSeleccionado.valor),
+    ...TIPOS_INGRESO.filter((t) => t.valor !== tipoSeleccionado.valor),
+  ];
+  let atencion: FichaIngreso["atencion"] = null;
+  let atencionOtro: string | null = null;
+  for (const { fila } of filasAtencion) {
+    const marcada = MODALIDADES_ATENCION.find(
+      (m) => leerMarcaDirecta(worksheet, `${m.columna}${fila}`) === true,
+    );
+    if (!marcada) continue;
+    atencion = marcada.valor;
+    atencionOtro =
+      marcada.valor === "OTRO" ? leerTextoOpcional(worksheet, `T${fila}`) : null;
+    break;
+  }
+
   return {
     tipoSeleccionado: {
       valor: tipoSeleccionado.valor,
       advertencia: tipoSeleccionado.advertencia,
     },
     horarios,
+    atencion,
+    atencionOtro,
     // "d. Maneja un sistema de reservas" (B34:G34) no tiene una casilla adyacente
     // identificable en el layout de esta fila — coexiste con la etiqueta "f. Forma
     // de Pago:" en las mismas columnas. Sin coordenada confirmada, se deja sin dato
@@ -261,12 +289,21 @@ function leerCaracteristicas(worksheet: ExcelJS.Worksheet): FichaCaracteristicas
   };
 }
 
-/** "14 - 16" → {min:14, max:16}. Usado tanto para temperatura como precipitación. */
-function parsearRango(texto: string | null): { min: number | null; max: number | null } {
+/**
+ * "14 - 16", "10 a 18", "10 – 18" o "500 hasta 1500" → {min, max}. Usado
+ * tanto para temperatura como precipitación (admite coma decimal).
+ */
+export function parsearRango(texto: string | null): {
+  min: number | null;
+  max: number | null;
+} {
   if (!texto) return { min: null, max: null };
-  const match = /(-?\d+(?:\.\d+)?)\s*-\s*(-?\d+(?:\.\d+)?)/.exec(texto);
+  const match =
+    /(-?\d+(?:[.,]\d+)?)\s*(?:-|–|—|\ba\b|\bhasta\b)\s*(-?\d+(?:[.,]\d+)?)/i.exec(texto);
   if (!match) return { min: null, max: null };
-  return { min: Number(match[1]), max: Number(match[2]) };
+  const min = Number(match[1].replace(",", "."));
+  const max = Number(match[2].replace(",", "."));
+  return min <= max ? { min, max } : { min: max, max: min };
 }
 
 const ORDENES_VIA = [
@@ -386,6 +423,8 @@ function leerAccesoConectividad(
     ciudadPobladoCercano: leerTextoOpcional(worksheet, "P39"),
     distanciaKm: leerPositivoOpcional(worksheet, "F40"),
     tiempoAutoHoras: horaDesdeFraccionDia(leerCelda(worksheet, "L40")),
+    observacionUbicacion: leerTextoOpcional(worksheet, "E41"),
+    observacionAccesibilidad: leerTextoOpcional(worksheet, "E69"),
     coordenadas,
     viasTerrestres: leerViasTerrestres(worksheet, advertencias),
     transporteTipos: TIPOS_TRANSPORTE.filter(
@@ -632,6 +671,10 @@ export async function parsearFicha(
     caracteristicas,
     accesoConectividad,
     descripcion: leerTextoOpcional(worksheet, "B300"),
+    anexos: {
+      fuenteFotografias: leerTextoOpcional(worksheet, "D311"),
+      ubicacionGrafica: leerTextoOpcional(worksheet, "D322"),
+    },
     responsables: {
       elaborado: leerResponsable(worksheet, {
         nombre: "E325",
@@ -672,16 +715,11 @@ export async function parsearFicha(
     higieneSeguridad: leerHigieneSeguridad(worksheet),
   };
 
-  // Una casilla sin respuesta única se conserva como Sin confirmar en el
-  // formulario. No exige inventar Sí o No para calcular o publicar la ficha.
-  if (
-    datos.promocion.tienePlanPromocionCantonal === "NO" &&
-    datos.promocion.incluidoEnPlan === "SI"
-  ) {
-    advertencias.push(
-      "Plan municipal: el Excel marca que no existe un plan de promoción, pero que este atractivo está incluido en él. Se conservan ambas respuestas del archivo; esta contradicción no bloquea la publicación.",
-    );
-  }
-
-  return { datos, advertencias, imagenesAdjuntas: imagenesAnexos.adjuntas };
+  // La fuente de las fotografías (D311) acompaña a cada foto al subirla.
+  const fuenteFotos = datos.anexos.fuenteFotografias?.slice(0, 180) ?? null;
+  const imagenesAdjuntas = imagenesAnexos.adjuntas.map((foto) => ({
+    ...foto,
+    fuente: fuenteFotos,
+  }));
+  return { datos, advertencias, imagenesAdjuntas };
 }

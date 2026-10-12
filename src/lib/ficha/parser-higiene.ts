@@ -138,6 +138,9 @@ function leerSalud(worksheet: ExcelJS.Worksheet): FichaServicioSalud[] {
       nombre,
       cantidadAtractivo: leerNumeroOpcional(worksheet, `G${fila}`),
       cantidadCiudad: leerNumeroOpcional(worksheet, `R${fila}`),
+      // Casillas E (atractivo) y P (ciudad): el servicio existe aunque la cantidad sea 0.
+      marcadoAtractivo: leerMarcaDirecta(worksheet, `E${fila}`) === true,
+      marcadoCiudad: leerMarcaDirecta(worksheet, `P${fila}`) === true,
     };
   });
 }

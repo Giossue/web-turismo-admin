@@ -177,7 +177,13 @@ export function AnnexesFields({ catalogs, mediaItems }: SectionFieldsProps) {
               />
             </Grid>
             <Grid size={{ xs: 2, sm: 1, md: 0.5 }}>{removeButton}</Grid>
-            <Grid size={12}>
+            <Grid size={{ xs: 12, sm: 4, md: 3 }}>
+              <SectionDateField
+                name={`annexResponsibles.${index}.date`}
+                label="Fecha de firma"
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 8, md: 9 }}>
               <SectionTextField
                 name={`annexResponsibles.${index}.observation`}
                 label="Observación"

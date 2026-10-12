@@ -43,6 +43,8 @@ export type CatalogosResueltos = {
   escenarioId: ResolucionCatalogo;
   climaId: ResolucionCatalogo;
   tipoIngresoId: ResolucionCatalogo;
+  /** 3.4.c Atención (modalidad marcada en la fila del tipo de ingreso). */
+  modalidadAtencionId: ResolucionCatalogo;
   /**
    * Localidad más cercana (4.a de la ficha), acotada por cantón cuando se
    * pudo resolver. Es la misma "Localidad cercana" del paso "Accesibilidad y
@@ -61,6 +63,13 @@ const NOMBRES_TIPO_INGRESO: Record<string, string> = {
   LIBRE: "Libre",
   RESTRINGIDO: "Restringido",
   PAGADO: "Pagado",
+};
+
+const NOMBRES_MODALIDAD_ATENCION: Record<string, string> = {
+  TODOS_DIAS: "Todos los días",
+  FINES_SEMANA_FERIADOS: "Fines de semana y feriados",
+  DIAS_HABILES: "Solo días hábiles",
+  OTRO: "Otro",
 };
 
 const NOMBRES_LINEA_PRODUCTO: Record<string, string> = {
@@ -174,6 +183,15 @@ export function resolverCatalogosFicha(
     "Tipo de ingreso",
   );
 
+  const modalidadAtencionTexto = datos.caracteristicas.ingreso.atencion
+    ? NOMBRES_MODALIDAD_ATENCION[datos.caracteristicas.ingreso.atencion]
+    : null;
+  const modalidadAtencionId = resolverPorNombre(
+    catalogos.attentionModes ?? [],
+    modalidadAtencionTexto,
+    "Atención",
+  );
+
   const localidadesDeCanton = cantonId.id
     ? catalogos.localities.filter((l) => l.cantonId === cantonId.id)
     : catalogos.localities;
@@ -219,6 +237,7 @@ export function resolverCatalogosFicha(
     escenarioId,
     climaId,
     tipoIngresoId,
+    modalidadAtencionId,
     localidadId,
     accesibilidadTipoIds,
     actividadIds,
@@ -238,6 +257,7 @@ export function advertenciasDeCatalogos(resueltos: CatalogosResueltos): string[]
     resueltos.escenarioId,
     resueltos.climaId,
     resueltos.tipoIngresoId,
+    resueltos.modalidadAtencionId,
     resueltos.localidadId,
   ];
   return resoluciones.map((r) => r.advertencia).filter((a): a is string => a !== null);

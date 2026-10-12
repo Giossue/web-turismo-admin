@@ -29,6 +29,7 @@ import { Controller, useForm, useWatch } from "react-hook-form";
 import { AdminDataGrid } from "@/components/ui/admin-data-grid";
 import { ADMIN_TABLE_PAGE_SIZE } from "@/components/ui/admin-table";
 import { CoordinateFieldset } from "@/components/admin/coordinate-fieldset";
+import { MinturRegistryDetails } from "@/components/admin/mintur-registry-details";
 import { MediaManager } from "@/components/admin/media-manager";
 import { RecordActionsMenu } from "@/components/admin/record-actions-menu";
 import { pageAfterRemoval } from "@/components/admin/shell/pagination";
@@ -724,6 +725,11 @@ export const EstablishmentManagement = forwardRef<
                 onNotice={onNotice}
                 onError={onError}
               />
+            </Stack>
+          ) : null}
+          {editing?.mintur ? (
+            <Stack sx={{ mt: webTokens.spacing.section }}>
+              <MinturRegistryDetails data={editing.mintur} />
             </Stack>
           ) : null}
         </DialogContent>

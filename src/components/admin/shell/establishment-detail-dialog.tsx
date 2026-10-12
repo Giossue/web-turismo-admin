@@ -10,6 +10,7 @@ import {
   Typography,
 } from "@mui/material";
 
+import { MinturRegistryDetails } from "@/components/admin/mintur-registry-details";
 import { DetailList, type DetailListItem } from "@/components/ui/detail-list";
 import type { AdminEstablishment } from "@/lib/admin-api";
 import { establishmentReviewStatusLabel } from "@/lib/admin-labels";
@@ -64,6 +65,9 @@ export function EstablishmentDetailDialog({
               {establishment.nombreComercial}
             </Typography>
             <DetailList items={establishmentDetails(establishment)} spacing={1.25} />
+            {establishment.mintur ? (
+              <MinturRegistryDetails data={establishment.mintur} />
+            ) : null}
           </Stack>
         ) : null}
       </DialogContent>

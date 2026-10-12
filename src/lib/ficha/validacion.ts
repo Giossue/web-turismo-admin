@@ -73,6 +73,10 @@ export const fichaIngresoSchema = z.object({
   horarios: z.array(
     z.object({ tipo: tipoIngreso, horaIngreso: texto, horaSalida: texto }),
   ),
+  atencion: z
+    .enum(["TODOS_DIAS", "FINES_SEMANA_FERIADOS", "DIAS_HABILES", "OTRO"])
+    .nullable(),
+  atencionOtro: texto,
   manejaReservas: z.boolean().nullable(),
   formasPago: z.array(z.string()),
   precioDesde: numero,
@@ -118,6 +122,8 @@ export const fichaAccesoConectividadSchema = z.object({
   ciudadPobladoCercano: texto,
   distanciaKm: numero,
   tiempoAutoHoras: texto,
+  observacionUbicacion: texto,
+  observacionAccesibilidad: texto,
   coordenadas: coordenadaCruda.nullable(),
   viasTerrestres: z.array(fichaViaTerrestreSchema),
   transporteTipos: z.array(z.string()),
@@ -169,6 +175,8 @@ export const fichaImagenAdjuntaSchema = z.object({
   mimeType: z.enum(["image/png", "image/jpeg"]),
   tamanoBytes: z.number().int().positive(),
   contenidoBase64: z.string().min(1),
+  /** Fuente de las fotografías de los anexos (D311). */
+  fuente: z.string().max(180).nullable().optional(),
 });
 
 // --- Políticas, actividades, promoción, visitantes y recurso humano ---
@@ -256,6 +264,7 @@ export const fichaGuiaTuristicaSchema = z.object({
 export const fichaFacilidadEntornoSchema = z.object({
   categoria: z.string(),
   nombre: z.string(),
+  marcada: z.boolean(),
   cantidad: numero,
   coordenadas: coordenadaCruda.nullable(),
   administrador: texto,
@@ -276,6 +285,12 @@ export const fichaPlantaSchema = z.object({
   guia: fichaGuiaTuristicaSchema,
   observacionPlantaAtractivo: texto,
   observacionPlantaCiudad: texto,
+  observacionAlimentosAtractivo: texto,
+  observacionAlimentosCiudad: texto,
+  observacionAgenciasAtractivo: texto,
+  observacionAgenciasCiudad: texto,
+  observacionGuiasAtractivo: texto,
+  observacionGuiasCiudad: texto,
   facilidadesEntorno: z.array(fichaFacilidadEntornoSchema),
   observacionFacilidades: texto,
   complementarios: z.array(fichaServicioComplementarioSchema),
@@ -344,6 +359,8 @@ export const fichaServicioSaludSchema = z.object({
   nombre: z.string(),
   cantidadAtractivo: numero,
   cantidadCiudad: numero,
+  marcadoAtractivo: z.boolean(),
+  marcadoCiudad: z.boolean(),
 });
 
 export const fichaServicioSeguridadSchema = z.object({
@@ -406,6 +423,7 @@ export const fichaExtraidaSchema = z.object({
   caracteristicas: fichaCaracteristicasSchema,
   accesoConectividad: fichaAccesoConectividadSchema,
   descripcion: texto,
+  anexos: z.object({ fuenteFotografias: texto, ubicacionGrafica: texto }),
   responsables: z.object({
     elaborado: fichaResponsableFirmaSchema,
     validado: fichaResponsableFirmaSchema,

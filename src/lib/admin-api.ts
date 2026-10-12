@@ -351,6 +351,55 @@ export type AdminEstablishment = {
   reviewedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Datos del catastro nacional MINTUR; null si no se importó. */
+  mintur?: EstablishmentMinturData | null;
+};
+
+export type MinturRegistryStatus =
+  | "RATIFICADO"
+  | "PENDIENTE_INSPECCION"
+  | "SUSPENSION_TEMPORAL"
+  | "SUSPENSION_DEFINITIVA"
+  | "INACTIVO";
+
+export type EstablishmentMinturData = {
+  codigoEstablecimientoRuc: string | null;
+  referenciaDireccion: string | null;
+  telefonoSecundario: string | null;
+  correo: string | null;
+  sitioWeb: string | null;
+  estadoRegistro: MinturRegistryStatus | null;
+  fechaRegistro: string | null;
+  totalTrabajadores: number | null;
+  totalHabitaciones: number | null;
+  totalCamas: number | null;
+  totalPlazas: number | null;
+  totalMesas: number | null;
+  capacidadPersonas: number | null;
+  importadoAt: string | null;
+};
+
+export type MinturImportJob = {
+  id: string;
+  fileName: string;
+  phase: "LEYENDO" | "GUARDANDO" | "TERMINADO" | "ERROR";
+  startedAt: string;
+  finishedAt: string | null;
+  sheets: string[];
+  totalRows: number;
+  processedRows: number;
+  created: number;
+  updated: number;
+  skipped: number;
+  approximateCoordinates: number;
+  skippedByReason: Record<string, number>;
+  skippedSamples: Array<{
+    sheet: string;
+    rowNumber: number;
+    numeroRegistro: string | null;
+    reason: string;
+  }>;
+  error: string | null;
 };
 
 export type SaveEstablishmentInput = {
@@ -460,6 +509,8 @@ export type FichaImportPhoto = {
   mimeType: "image/png" | "image/jpeg";
   tamanoBytes: number;
   contenidoBase64: string;
+  /** Fuente de las fotografías indicada en la ficha (anexos). */
+  fuente?: string | null;
 };
 
 type FichaImportResult = {
@@ -771,6 +822,24 @@ export async function setAdminEstablishmentActive(
   return post<AdminEstablishment>(
     `/admin/establishments/${id}/${active ? "reactivate" : "deactivate"}`,
     token,
+  );
+}
+
+export async function importMinturRegistry(token: string, file: File) {
+  const body = new FormData();
+  body.append("file", file);
+  return post<MinturImportJob>("/admin/establishments/import", token, body);
+}
+
+export async function getMinturRegistryImport(
+  token: string,
+  id: string,
+  signal?: AbortSignal,
+) {
+  return get<MinturImportJob>(
+    `/admin/establishments/import/${encodeURIComponent(id)}`,
+    token,
+    signal,
   );
 }
 

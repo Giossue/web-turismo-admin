@@ -15,7 +15,10 @@ import {
   centerSectionDefinitions,
   type CenterSectionCode,
 } from "@/lib/center-sections/definitions";
-import type { SeccionesImportadas } from "@/lib/ficha/mapear-secciones";
+import {
+  contarApartadosImportados,
+  type SeccionesImportadas,
+} from "@/lib/ficha/mapear-secciones";
 import { saveImportedCenterSection } from "@/lib/imported-center-sections";
 import type { CenterFormValues } from "@/lib/center-form";
 import { mergeImportedValues } from "@/lib/center-form-mappers";
@@ -102,6 +105,7 @@ export function useFichaImport({
             await uploadAdminCenterMedia(token, code, toImportedPhotoFile(photo), {
               typeCode: "FOTOGRAFIA",
               description: "Importada desde ficha MINTUR",
+              sourceAuthor: photo.fuente ?? undefined,
             });
           } catch (cause) {
             firstError ??= cause;
@@ -220,7 +224,8 @@ export function useFichaImport({
       setPendingSectionCount(Object.keys(pendingSectionsRef.current).length);
       // El resumen se muestra en el diálogo de importación, no en un aviso.
       setImportResult({
-        sections: Object.keys(imported.secciones ?? {}).length,
+        sections: contarApartadosImportados(imported.formulario, imported.secciones),
+        totalSections: centerSectionDefinitions.length,
         photos: imported.fotos?.length ?? 0,
         warnings: new Set(imported.advertencias).size,
       });

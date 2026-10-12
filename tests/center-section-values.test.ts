@@ -373,6 +373,7 @@ const sectionFixtures: Record<CenterSectionCode, Partial<SectionFormValues>> = {
         institution: "UEB",
         phone: "032222222",
         email: "ana@example.org",
+        date: "2025-12-19",
         observation: "",
       },
     ],

@@ -167,6 +167,8 @@ function leerFacilidadesEntorno(worksheet: ExcelJS.Worksheet): FichaFacilidadEnt
     return {
       categoria: item.categoria,
       nombre: item.nombre,
+      // Casilla de la columna I: la facilidad existe aunque no se indique cantidad.
+      marcada: leerMarcaDirecta(worksheet, `I${item.fila}`) === true,
       cantidad: leerNumeroOpcional(worksheet, `J${item.fila}`),
       coordenadas,
       administrador: leerTextoOpcional(worksheet, `O${item.fila}`),
@@ -217,6 +219,12 @@ export function leerPlanta(worksheet: ExcelJS.Worksheet): FichaPlanta {
     guia,
     observacionPlantaAtractivo: leerTextoOpcional(worksheet, "E86"),
     observacionPlantaCiudad: leerTextoOpcional(worksheet, "P86"),
+    observacionAlimentosAtractivo: leerTextoOpcional(worksheet, "E92"),
+    observacionAlimentosCiudad: leerTextoOpcional(worksheet, "P92"),
+    observacionAgenciasAtractivo: leerTextoOpcional(worksheet, "E97"),
+    observacionAgenciasCiudad: leerTextoOpcional(worksheet, "P97"),
+    observacionGuiasAtractivo: leerTextoOpcional(worksheet, "E100"),
+    observacionGuiasCiudad: leerTextoOpcional(worksheet, "P100"),
     facilidadesEntorno: leerFacilidadesEntorno(worksheet),
     observacionFacilidades: leerTextoOpcional(worksheet, "E120"),
     complementarios: leerComplementarios(worksheet),

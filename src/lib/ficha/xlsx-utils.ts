@@ -138,16 +138,33 @@ export function encontrarMerge(worksheet: ExcelJS.Worksheet, ref: string): strin
   return null;
 }
 
+/** "1899-12-30T08:30:00.000Z" (hora de Excel que exceljs entrega como fecha). */
+const HORA_ISO = /^\d{4}-\d{2}-\d{2}T(\d{2}):(\d{2})(?::(\d{2}))?/;
+
 /**
- * Excel guarda horas como fracción de un día de 24h (ej. 0.333... = 08:00).
- * Devuelve "HH:MM" o `null` si no hay valor / es el placeholder "0".
+ * Excel guarda horas como fracción de un día de 24h (ej. 0.333... = 08:00);
+ * exceljs entrega las celdas con formato de hora como `Date` (que `leerCelda`
+ * convierte a ISO, sobre la fecha base 1899-12-30). Acepta ambas formas y
+ * devuelve "HH:MM" o `null` si no hay valor / es el placeholder 0 (00:00).
  */
 export function horaDesdeFraccionDia(
-  valor: string | number | boolean | null,
+  valor: string | number | boolean | Date | null,
 ): string | null {
   if (valor === null || valor === "" || valor === 0 || valor === "0") return null;
-  const fraccion = typeof valor === "number" ? valor : Number(valor);
-  if (!Number.isFinite(fraccion) || fraccion < 0 || fraccion >= 1) return null;
+  let fraccion: number;
+  if (valor instanceof Date) {
+    if (Number.isNaN(valor.getTime())) return null;
+    fraccion =
+      (valor.getUTCHours() * 3600 + valor.getUTCMinutes() * 60 + valor.getUTCSeconds()) /
+      86400;
+  } else if (typeof valor === "string" && HORA_ISO.test(valor)) {
+    const [, horas, minutos, segundos] = HORA_ISO.exec(valor)!;
+    fraccion =
+      (Number(horas) * 3600 + Number(minutos) * 60 + Number(segundos ?? 0)) / 86400;
+  } else {
+    fraccion = typeof valor === "number" ? valor : Number(valor);
+  }
+  if (!Number.isFinite(fraccion) || fraccion <= 0 || fraccion >= 1) return null;
   const minutosTotales = Math.round(fraccion * 24 * 60);
   const horas = Math.floor(minutosTotales / 60);
   const minutos = minutosTotales % 60;

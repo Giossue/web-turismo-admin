@@ -29,7 +29,7 @@ const catalogos = new Proxy(
 const resueltos = { localidadId: { id: 9, advertencia: null } } as CatalogosResueltos;
 
 describe("mapearSeccionesImportadas", () => {
-  test("genera los nueve apartados que la importación antes dejaba vacíos", async () => {
+  test("genera los apartados que la importación antes dejaba vacíos", async () => {
     const { secciones } = mapearSeccionesImportadas(
       await datosFixture(),
       catalogos,
@@ -39,6 +39,7 @@ describe("mapearSeccionesImportadas", () => {
       [
         "accesibilidad",
         "anexos",
+        "caracteristicas",
         "conservacion",
         "higiene-seguridad",
         "planta",

@@ -221,6 +221,7 @@ export function emptyAnnexResponsible(): AnnexResponsibleForm {
     institution: "",
     phone: "",
     email: "",
+    date: "",
     observation: "",
   };
 }

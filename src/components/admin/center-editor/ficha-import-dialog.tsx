@@ -15,7 +15,9 @@ import { LoadingSpinner } from "@/components/ui/loading-state";
 import { webTokens } from "@/theme/tokens";
 
 export type FichaImportResult = {
+  /** Apartados del asistente que recibieron datos del Excel. */
   sections: number;
+  totalSections: number;
   photos: number;
   warnings: number;
 };
@@ -63,9 +65,11 @@ export function FichaImportDialog({
             </Stack>
             <Stack component="ul" spacing={0.5} sx={{ m: 0, pl: 3 }}>
               <Typography component="li" variant="body2">
-                {result.sections === 1
-                  ? "1 apartado leído"
-                  : `${result.sections} apartados leídos`}
+                {result.sections === 0
+                  ? "Ningún apartado recibió datos"
+                  : `${result.sections} de ${result.totalSections} ${
+                      result.totalSections === 1 ? "apartado" : "apartados"
+                    } con datos`}
               </Typography>
               {result.photos > 0 ? (
                 <Typography component="li" variant="body2">

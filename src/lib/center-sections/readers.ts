@@ -397,6 +397,7 @@ export function readAnnexResponsible(item: JsonRecord): AnnexResponsibleForm {
     institution: readString(item, "institution"),
     phone: readString(item, "phone"),
     email: readString(item, "email"),
+    date: readString(item, "date"),
     observation: readString(item, "observation"),
   };
 }

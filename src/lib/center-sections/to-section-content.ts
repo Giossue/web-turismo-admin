@@ -306,6 +306,7 @@ const writeAnnexes: SectionWriter = (values) => ({
       institution: responsible.institution.trim(),
       phone: responsible.phone.trim(),
       email: responsible.email.trim(),
+      date: textOrNull(responsible.date),
       observation: responsible.observation.trim(),
     })),
     accessibilitySurvey: {

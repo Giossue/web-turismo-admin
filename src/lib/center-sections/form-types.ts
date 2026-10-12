@@ -279,6 +279,8 @@ export type AnnexResponsibleForm = {
   institution: string;
   phone: string;
   email: string;
+  /** Fecha de firma (`AAAA-MM-DD`, `""` = sin dato). */
+  date: string;
   observation: string;
 };
 

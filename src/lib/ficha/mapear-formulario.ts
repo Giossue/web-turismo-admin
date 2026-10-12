@@ -72,10 +72,10 @@ export function mapearFichaAFormulario(
     },
     admission: {
       incomeTypeId: idATexto(catalogos.tipoIngresoId.id),
-      attentionModeId: "",
+      attentionModeId: idATexto(catalogos.modalidadAtencionId.id),
       opensAt: horarioSeleccionado?.horaIngreso ?? "",
       closesAt: horarioSeleccionado?.horaSalida ?? "",
-      otherAttention: "",
+      otherAttention: datos.caracteristicas.ingreso.atencionOtro?.slice(0, 180) ?? "",
       reservations: false,
       priceFrom:
         datos.caracteristicas.ingreso.precioDesde !== null
@@ -85,7 +85,16 @@ export function mapearFichaAFormulario(
         datos.caracteristicas.ingreso.precioHasta !== null
           ? String(datos.caracteristicas.ingreso.precioHasta)
           : "",
-      observation: datos.caracteristicas.ingreso.observacion ?? "",
+      // El formulario no tiene campo para los meses recomendables (3.4.g):
+      // se conservan en la observación del ingreso.
+      observation: [
+        datos.caracteristicas.ingreso.observacion,
+        datos.caracteristicas.ingreso.mesesRecomendados
+          ? `Meses recomendables de visita: ${datos.caracteristicas.ingreso.mesesRecomendados}`
+          : null,
+      ]
+        .filter(Boolean)
+        .join("\n"),
     },
     activityIds: catalogos.actividadIds.map(String),
     accessibilityIds: catalogos.accesibilidadTipoIds.map(String),
