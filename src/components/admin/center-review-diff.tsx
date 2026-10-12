@@ -27,6 +27,7 @@ import {
   centerSectionDefinitions,
   type CenterSectionCode,
 } from "@/lib/center-sections/definitions";
+import * as sectionOptions from "@/lib/center-sections/options";
 import { findCatalogOption, isRecord } from "@/lib/values";
 import { webTokens } from "@/theme/tokens";
 
@@ -170,7 +171,112 @@ const FIELD_LABELS: Record<string, string> = {
   administrator: "Administrador",
   universalAccessibility: "Accesibilidad universal",
   specification: "Especificación",
+  conservation: "Estado de conservación",
+  attraction: "Atractivo",
+  environment: "Entorno",
+  state: "Estado",
+  factors: "Factor",
+  factorId: "Factor",
+  component: "Componente",
+  origin: "Origen",
+  declarations: "Declaratoria",
+  entity: "Entidad",
+  denomination: "Denominación",
+  date: "Fecha",
+  scope: "Alcance",
+  hygieneSafety: "Higiene y seguridad",
+  entries: "Servicio",
+  kind: "Tipo de servicio",
+  condition: "Condición",
+  radios: "Radios portátiles",
+  internalUse: "Uso interno",
+  emergencyUse: "Uso en emergencias",
+  contingency: "Plan de contingencia",
+  hasPlan: "Tiene plan",
+  policies: "Política",
+  question: "Pregunta",
+  promotion: "Promoción",
+  media: "Medio de promoción",
+  url: "Enlace",
+  partOfPackage: "Forma parte de un paquete",
+  packageDetail: "Detalle del paquete",
+  includedInPlan: "Incluido en el plan",
+  visitors: "Visitantes",
+  registry: "Registro de visitantes",
+  exists: "Existe",
+  type: "Tipo",
+  years: "Años",
+  reports: "Genera reportes",
+  frequency: "Frecuencia",
+  seasons: "Temporada",
+  month: "Mes",
+  months: "Meses",
+  origins: "Procedencia",
+  influx: "Afluencia",
+  weekday: "Entre semana",
+  weekend: "Fin de semana",
+  holidays: "Feriados",
+  informants: "Informante",
+  visitorUse: "Uso de visitantes",
+  humanResources: "Recurso humano",
+  summary: "Resumen",
+  administrationOperation: "Personas en administración y operación",
+  specializedTourism: "Personal especializado en turismo",
+  training: "Capacitación",
+  group: "Grupo",
+  year: "Año",
+  annexes: "Anexo",
+  documents: "Documento",
+  document: "Documento",
+  responsibles: "Responsable",
+  responsible: "Responsable",
+  role: "Rol",
+  author: "Autor",
+  institution: "Institución",
+  position: "Cargo",
+  phone: "Teléfono",
+  email: "Correo",
+  contact: "Contacto",
+  visibility: "Visibilidad",
+  fileId: "Archivo",
+  source: "Fuente",
+  acceptance: "Aceptación",
+  gadValidation: "Validación del GAD",
+  available: "Disponible",
+  value: "Valor",
+  values: "Valores",
+  detail: "Detalle",
+  operator: "Operador",
+  provider: "Proveedor",
+  place: "Lugar",
+  periodicity: "Periodicidad",
+  planName: "Nombre del plan",
+  terminal: "Terminal",
+  arrival: "Llegada",
+  departure: "Salida",
+  arrivalConditionId: "Estado de llegada",
+  departureConditionId: "Estado de salida",
+  secondary: "Secundario",
+  transferDetail: "Detalle del traslado",
+  startLatitude: "Latitud inicial",
+  startLongitude: "Longitud inicial",
+  endLatitude: "Latitud final",
+  endLongitude: "Longitud final",
+  code: "Código",
 };
+
+/** Etiquetas de los valores codificados (ALTERADO, SIN_INFORMACION, ...). */
+const VALUE_LABELS: Record<string, string> = Object.fromEntries(
+  (Object.values(sectionOptions) as unknown[])
+    .flatMap((options) => (Array.isArray(options) ? (options as unknown[]) : []))
+    .filter(
+      (option): option is { value: string; label: string } =>
+        isRecord(option) &&
+        typeof option.value === "string" &&
+        typeof option.label === "string",
+    )
+    .map((option) => [option.value, option.label]),
+);
 
 const SECTION_STATUS_LABELS: Record<DiffStatus, string> = {
   ADDED: "Agregado",
@@ -250,35 +356,39 @@ export function CenterReviewDiff({
                   </Stack>
                 </AccordionSummary>
                 <AccordionDetails>
-                  <Stack spacing={1.5}>
-                    {section.changes.map((change) => (
-                      <Box key={change.path}>
-                        <Typography variant="body2" fontWeight={700} gutterBottom>
-                          {formatPath(change.path)}
-                        </Typography>
-                        <Grid container spacing={1}>
-                          <Grid size={{ xs: 12, md: 6 }}>
-                            <DiffValue
-                              label="Publicado"
-                              value={change.before}
-                              catalogs={catalogs}
-                              path={change.path}
-                              tone="before"
-                            />
+                  {section.status === "ADDED" ? (
+                    <AddedSectionList section={section} catalogs={catalogs} />
+                  ) : (
+                    <Stack spacing={1.5}>
+                      {section.changes.map((change) => (
+                        <Box key={change.path}>
+                          <Typography variant="body2" fontWeight={700} gutterBottom>
+                            {formatPath(change.path)}
+                          </Typography>
+                          <Grid container spacing={1}>
+                            <Grid size={{ xs: 12, md: 6 }}>
+                              <DiffValue
+                                label="Publicado"
+                                value={change.before}
+                                catalogs={catalogs}
+                                path={change.path}
+                                tone="before"
+                              />
+                            </Grid>
+                            <Grid size={{ xs: 12, md: 6 }}>
+                              <DiffValue
+                                label="Propuesto"
+                                value={change.after}
+                                catalogs={catalogs}
+                                path={change.path}
+                                tone="after"
+                              />
+                            </Grid>
                           </Grid>
-                          <Grid size={{ xs: 12, md: 6 }}>
-                            <DiffValue
-                              label="Propuesto"
-                              value={change.after}
-                              catalogs={catalogs}
-                              path={change.path}
-                              tone="after"
-                            />
-                          </Grid>
-                        </Grid>
-                      </Box>
-                    ))}
-                  </Stack>
+                        </Box>
+                      ))}
+                    </Stack>
+                  )}
                 </AccordionDetails>
               </Accordion>
             ))}
@@ -286,6 +396,48 @@ export function CenterReviewDiff({
         {changed.length === 0 ? <Divider /> : null}
       </Stack>
     </FlatSurface>
+  );
+}
+
+/** Apartado nuevo: no hay versión publicada con qué comparar, solo se listan sus datos. */
+function AddedSectionList({
+  section,
+  catalogs,
+}: {
+  section: SectionDiff;
+  catalogs: AdminCatalogs | null;
+}) {
+  return (
+    <Stack spacing={1}>
+      <Typography variant="body2" color="text.secondary">
+        Este apartado no existía en la versión publicada. Estos son los datos que se
+        publicarán:
+      </Typography>
+      <Box component="dl" sx={{ m: 0 }}>
+        {section.changes.map((change) => (
+          <Grid
+            key={change.path}
+            container
+            spacing={1}
+            sx={{ py: 0.75, borderBottom: 1, borderColor: "divider" }}
+          >
+            <Grid size={{ xs: 12, md: 5 }} component="dt">
+              <Typography variant="body2" color="text.secondary">
+                {formatPath(change.path)}
+              </Typography>
+            </Grid>
+            <Grid size={{ xs: 12, md: 7 }} component="dd" sx={{ m: 0 }}>
+              <Typography
+                variant="body2"
+                sx={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}
+              >
+                {formatValue(change.after, change.path, catalogs)}
+              </Typography>
+            </Grid>
+          </Grid>
+        ))}
+      </Box>
+    </Stack>
   );
 }
 
@@ -331,8 +483,8 @@ function buildSectionDiff(
   published: CenterDraft,
   proposed: CenterDraft,
 ): SectionDiff {
-  const before = flattenSnapshot(normalize(section.getSnapshot(published)));
-  const after = flattenSnapshot(normalize(section.getSnapshot(proposed)));
+  const before = withoutEmpty(flattenSnapshot(normalize(section.getSnapshot(published))));
+  const after = withoutEmpty(flattenSnapshot(normalize(section.getSnapshot(proposed))));
   const paths = new Set([...Object.keys(before), ...Object.keys(after)]);
   const changes: ScalarChange[] = [];
 
@@ -390,6 +542,21 @@ function flattenSnapshot(value: unknown, prefix = ""): Record<string, unknown> {
   return { [prefix || "valor"]: value };
 }
 
+/** Los vacíos (sin dato, texto vacío, listas vacías) no cuentan como cambio. */
+function withoutEmpty(values: Record<string, unknown>) {
+  return Object.fromEntries(
+    Object.entries(values).filter(([, value]) => !isEmptyValue(value)),
+  );
+}
+
+function isEmptyValue(value: unknown) {
+  if (value === undefined || value === null) return true;
+  if (typeof value === "string") return value.trim() === "";
+  if (Array.isArray(value)) return value.length === 0;
+  if (isRecord(value)) return Object.keys(value).length === 0;
+  return false;
+}
+
 function areEqual(left: unknown, right: unknown) {
   return JSON.stringify(left) === JSON.stringify(right);
 }
@@ -397,6 +564,7 @@ function areEqual(left: unknown, right: unknown) {
 function formatPath(path: string) {
   return path
     .split(".")
+    .filter((segment) => segment !== "details")
     .map((segment) => {
       const match = segment.match(/^(.*)\[(\d+)\]$/);
       if (!match) return FIELD_LABELS[segment] ?? humanize(segment);
@@ -407,10 +575,9 @@ function formatPath(path: string) {
 }
 
 function formatValue(value: unknown, path: string, catalogs: AdminCatalogs | null) {
-  if (value === undefined) return "Sin dato en esta versión";
-  if (value === null) return "Sin dato";
+  if (isEmptyValue(value)) return "Sin dato";
   if (typeof value === "boolean") return value ? "Sí" : "No";
-  if (typeof value === "string") return value || "Texto vacío";
+  if (typeof value === "string") return VALUE_LABELS[value] ?? value;
   if (typeof value === "number") {
     const option = resolveCatalogOption(path, value, catalogs);
     if (option) return option.code ? `${option.name} (${option.code})` : option.name;
