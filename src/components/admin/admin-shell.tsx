@@ -1,6 +1,7 @@
 "use client";
 
 import AddRounded from "@mui/icons-material/AddRounded";
+import CloudUploadRounded from "@mui/icons-material/CloudUploadRounded";
 import DownloadRounded from "@mui/icons-material/DownloadRounded";
 import MenuRounded from "@mui/icons-material/MenuRounded";
 import { Box, Button, IconButton, Stack, Tooltip } from "@mui/material";
@@ -97,6 +98,15 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
     },
     [feedback, openEditorWith],
   );
+  // Excel elegido desde la lista; el editor lo importa al abrirse.
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const importTargetRef = useRef<string | undefined>(undefined);
+  const [pendingImport, setPendingImport] = useState<File | null>(null);
+  const chooseImport = useCallback((code?: string) => {
+    importTargetRef.current = code;
+    importInputRef.current?.click();
+  }, []);
+  const clearPendingImport = useCallback(() => setPendingImport(null), []);
   const closeEditor = useCallback(() => navigate("centers"), [navigate]);
   const goToReview = useCallback(() => navigate("review"), [navigate]);
   // Estable durante una sesión del editor: el primer guardado de una ficha nueva
@@ -129,6 +139,26 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
         >
           Descargar plantilla
         </Button>
+        <Button
+          variant="outlined"
+          startIcon={<CloudUploadRounded />}
+          onClick={() => chooseImport()}
+        >
+          Importar ficha
+        </Button>
+        <input
+          ref={importInputRef}
+          type="file"
+          accept=".xlsx,.xlsm"
+          hidden
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (!file) return;
+            setPendingImport(file);
+            openEditor(importTargetRef.current);
+          }}
+        />
         <Button
           variant="contained"
           startIcon={<AddRounded />}
@@ -245,6 +275,7 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
               onStatusChange={nav.setCenterStatus}
               onPageChange={nav.setCentersPage}
               onOpen={openEditor}
+              onImport={chooseImport}
               onGoToReview={isAdmin ? goToReview : undefined}
             />
           ) : null}
@@ -266,6 +297,8 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
               onSaved={handleEditorSaved}
               onNotice={feedback.showNotice}
               onError={feedback.showError}
+              initialImport={pendingImport}
+              onInitialImportStarted={clearPendingImport}
             />
           ) : null}
           {section === "settings" ? <SettingsSection user={user} /> : null}
