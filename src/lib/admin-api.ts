@@ -87,6 +87,8 @@ export type OpinionTargetType = "CENTRO" | "PUNTO_INTERES";
 
 export type AdminCenter = {
   code: string;
+  /** `false` en fichas publicadas de otro agente: solo lectura. */
+  editable?: boolean;
   name: string;
   status: { code: string; name: string };
   updatedAt: string;
@@ -167,6 +169,8 @@ export type CenterDraft = {
 
 export type AdminCenterDetail = {
   code: string;
+  /** `false` en fichas publicadas de otro agente: solo se envía lo publicado. */
+  editable?: boolean;
   status: { code: string; name: string };
   baseStatus: { code: string; name: string };
   active: boolean;
@@ -314,6 +318,8 @@ export type AdminCentersOptions = {
 
 export type AdminEstablishment = {
   id: number;
+  /** `false` en catastros publicados de otro agente: solo lectura. */
+  editable?: boolean;
   localityId: number;
   localityName: string;
   localityType: string;

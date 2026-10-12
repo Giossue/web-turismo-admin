@@ -22,6 +22,7 @@ import { mergeImportedValues } from "@/lib/center-form-mappers";
 import { errorMessage } from "@/lib/errors";
 import type { SugerenciasSecciones } from "@/lib/ficha/sugerencias-secciones";
 import type { FichaResumenValoracion } from "@/lib/ficha/tipos";
+import type { FichaImportResult } from "./ficha-import-dialog";
 
 function toImportedPhotoFile(photo: FichaImportPhoto): File {
   const binary = atob(photo.contenidoBase64);
@@ -60,6 +61,7 @@ export function useFichaImport({
   const [sugerencias, setSugerencias] = useState<SugerenciasSecciones | null>(null);
   const [pendingPhotos, setPendingPhotos] = useState<FichaImportPhoto[]>([]);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const [importResult, setImportResult] = useState<FichaImportResult | null>(null);
   const [photoUploadError, setPhotoUploadError] = useState<string | null>(null);
   const pendingPhotosRef = useRef<FichaImportPhoto[]>([]);
   const pendingSectionsRef = useRef<SeccionesImportadas>({});
@@ -198,6 +200,7 @@ export function useFichaImport({
     mutationFn: (file: File) => importFichaFile(token, file),
     onMutate: () => {
       setWarnings([]);
+      setImportResult(null);
       setResumenValoracion(null);
       onError(null);
       setPhotoUploadError(null);
@@ -215,21 +218,20 @@ export function useFichaImport({
       replacePendingPhotos(imported.fotos ?? []);
       pendingSectionsRef.current = imported.secciones ?? {};
       setPendingSectionCount(Object.keys(pendingSectionsRef.current).length);
-      const photoMessage =
-        imported.fotos.length === 0
-          ? ""
-          : imported.fotos.length === 1
-            ? " Se detectó 1 foto de anexos; se adjuntará al guardar la ficha."
-            : ` Se detectaron ${imported.fotos.length} fotos de anexos; se adjuntarán al guardar la ficha.`;
-      onNotice(
-        `Se precargó el formulario desde la ficha.${imported.advertencias.length ? " Revisa las advertencias antes de guardar." : " Revisa los datos antes de guardar."}${photoMessage}`,
-      );
+      // El resumen se muestra en el diálogo de importación, no en un aviso.
+      setImportResult({
+        sections: Object.keys(imported.secciones ?? {}).length,
+        photos: imported.fotos?.length ?? 0,
+        warnings: new Set(imported.advertencias).size,
+      });
     },
     onError: (cause) => onError(errorMessage(cause, "No se pudo importar la ficha.")),
   });
 
   return {
     importing: importMutation.isPending,
+    importResult,
+    dismissImportResult: () => setImportResult(null),
     importFile: (file: File) => importMutation.mutate(file),
     warnings,
     resumenValoracion,

@@ -9,6 +9,7 @@ import { FormProvider, useForm } from "react-hook-form";
 
 import { CenterFormPanel } from "@/components/admin/center-editor/center-form-panels";
 import { CenterSummaryStep } from "@/components/admin/center-editor/center-summary-step";
+import { FichaImportDialog } from "@/components/admin/center-editor/ficha-import-dialog";
 import { FichaValuationReference } from "@/components/admin/center-editor/ficha-valuation-reference";
 import {
   CenterWizardNavigation,
@@ -100,8 +101,10 @@ export function CenterEditor({
 
   const isNew = code === null;
   const state = detail?.status.code ?? "BORRADOR";
-  const canEdit = isNew || EDITABLE_STATES.has(state);
-  const canReview = !isNew && state === "BORRADOR";
+  // Las fichas publicadas de otro agente se consultan sin poder modificarlas.
+  const ownsCenter = detail?.editable !== false;
+  const canEdit = isNew || (ownsCenter && EDITABLE_STATES.has(state));
+  const canReview = !isNew && ownsCenter && state === "BORRADOR";
   // Misma fuente que el resumen final (`CenterSummaryStep`).
   const savedSections = (detail?.draft ?? detail?.published)?.sections;
   const completedSectionCodes = useMemo(
@@ -306,6 +309,11 @@ export function CenterEditor({
           ) : null,
         ]}
       />
+      <FichaImportDialog
+        importing={fichaImport.importing}
+        result={fichaImport.importResult}
+        onClose={fichaImport.dismissImportResult}
+      />
       {fichaImport.resumenValoracion ? (
         <FichaValuationReference summary={fichaImport.resumenValoracion} />
       ) : null}
@@ -363,9 +371,11 @@ export function CenterEditor({
       ) : null}
       {!canEdit ? (
         <Alert severity="info">
-          {state === "EN_REVISION"
-            ? "La ficha está en revisión. Puedes consultar la propuesta, pero no modificarla."
-            : "Puedes consultar la ficha, pero su estado no permite modificarla."}
+          {!ownsCenter
+            ? "Esta ficha la registró otra persona. Puedes consultar la versión publicada, pero no modificarla."
+            : state === "EN_REVISION"
+              ? "La ficha está en revisión. Puedes consultar la propuesta, pero no modificarla."
+              : "Puedes consultar la ficha, pero su estado no permite modificarla."}
         </Alert>
       ) : null}
 

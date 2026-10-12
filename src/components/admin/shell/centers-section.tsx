@@ -73,21 +73,29 @@ function CenterInventoryActions({
                     onClick: () => onOpen(center.code),
                   },
             ]
-          : [
-              {
-                label: "Editar",
-                icon: <EditRounded fontSize="small" />,
-                onClick: () => onOpen(center.code),
-              },
-              {
-                label: "Actualizar desde Excel",
-                icon: <CloudUploadRounded fontSize="small" />,
-                onClick: () => onImport(center.code),
-              },
-            ]
+          : center.editable === false
+            ? [
+                {
+                  label: "Ver ficha",
+                  icon: <VisibilityRounded fontSize="small" />,
+                  onClick: () => onOpen(center.code),
+                },
+              ]
+            : [
+                {
+                  label: "Editar",
+                  icon: <EditRounded fontSize="small" />,
+                  onClick: () => onOpen(center.code),
+                },
+                {
+                  label: "Actualizar desde Excel",
+                  icon: <CloudUploadRounded fontSize="small" />,
+                  onClick: () => onImport(center.code),
+                },
+              ]
       }
       deletion={
-        canDelete && center.status.code !== "EN_REVISION"
+        canDelete && center.editable !== false && center.status.code !== "EN_REVISION"
           ? {
               subject: center.name,
               title: "Eliminar centro turístico",
@@ -280,7 +288,9 @@ export function CentersSection({
               ? onGoToReview
                 ? "Ir a revisión"
                 : "Ver ficha"
-              : "Editar ficha",
+              : center.editable === false
+                ? "Ver ficha"
+                : "Editar ficha",
             onClick: isReview && onGoToReview ? onGoToReview : () => onOpen(center.code),
           },
           actions: (
