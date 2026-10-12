@@ -30,10 +30,14 @@ function formatCoordinates(latitude: number | undefined, longitude: number | und
 export function CenterSummaryStep({
   detail,
   catalogs,
+  publishesDirectly = false,
 }: {
   detail: AdminCenterDetail | null;
   catalogs: AdminCatalogs | null;
+  /** El administrador publica sin pasar por revisión. */
+  publishesDirectly?: boolean;
 }) {
+  const sendLabel = publishesDirectly ? "publicarla" : "enviarla a revisión";
   const draft = detail?.draft ?? detail?.published ?? null;
   const sectionValues = draft?.sections ?? {};
   const completedSections = centerSectionDefinitions.filter(
@@ -46,8 +50,7 @@ export function CenterSummaryStep({
   const readiness = !detail
     ? {
         severity: "warning" as const,
-        message:
-          "La ficha aún no está guardada. Pulsa «Guardar ficha» para crearla; después podrás enviarla a revisión.",
+        message: `La ficha aún no está guardada. Pulsa «Guardar ficha» para crearla; después podrás ${sendLabel}.`,
       }
     : state && state !== "BORRADOR"
       ? {
@@ -59,12 +62,13 @@ export function CenterSummaryStep({
             severity: "warning" as const,
             message: `Faltan ${missingSections.length} apartado(s) por completar: ${missingSections
               .map((section) => section.title)
-              .join(", ")}. Complétalos antes de enviarla a revisión.`,
+              .join(", ")}. Complétalos antes de ${sendLabel}.`,
           }
         : {
             severity: "success" as const,
-            message:
-              "Todos los apartados tienen información. Pulsa «Enviar a revisión» para que se apruebe y publique.",
+            message: publishesDirectly
+              ? "Todos los apartados tienen información. Pulsa «Publicar» para publicarla."
+              : "Todos los apartados tienen información. Pulsa «Enviar a revisión» para que se apruebe y publique.",
           };
   const summaryRows = [
     ["Nombre", draft?.name ?? PENDING],
@@ -82,7 +86,7 @@ export function CenterSummaryStep({
           <SectionHeader
             icon={<FactCheckRounded />}
             title="Resumen de la ficha"
-            description="Revisa los datos principales y el avance de cada apartado antes de enviarla a revisión."
+            description={`Revisa los datos principales y el avance de cada apartado antes de ${sendLabel}.`}
           />
           <Grid container spacing={webTokens.spacing.control}>
             {summaryRows.map(([label, value]) => (

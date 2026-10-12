@@ -114,9 +114,11 @@ export function useCenterSave({
       onSaved(saved);
       if (!silent) {
         onNotice(
-          submitForReview
-            ? "La ficha fue enviada a revisión."
-            : "La ficha fue actualizada.",
+          !submitForReview
+            ? "La ficha fue actualizada."
+            : saved.status.code === "PUBLICADO"
+              ? "La ficha fue publicada."
+              : "La ficha fue enviada a revisión.",
         );
       }
       return saved;

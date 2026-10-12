@@ -2,7 +2,6 @@
 
 import ArrowBackRounded from "@mui/icons-material/ArrowBackRounded";
 import CloudUploadRounded from "@mui/icons-material/CloudUploadRounded";
-import DownloadRounded from "@mui/icons-material/DownloadRounded";
 import { Alert, Button, Stack, Typography } from "@mui/material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -35,6 +34,7 @@ import {
 } from "@/lib/center-form";
 import { editorDraftOf, toFormValues, withEditorDraft } from "@/lib/center-form-mappers";
 import { centerSectionDefinitions } from "@/lib/center-sections/definitions";
+import { isAdministrator, useAdminAuth } from "@/lib/auth";
 import { errorMessage } from "@/lib/errors";
 import { webTokens } from "@/theme/tokens";
 
@@ -54,6 +54,8 @@ export function CenterEditor({
   onSaved,
   onNotice,
   onError,
+  initialImport = null,
+  onInitialImportStarted,
 }: {
   token: string;
   code: string | null;
@@ -61,6 +63,9 @@ export function CenterEditor({
   onSaved: (detail: AdminCenterDetail) => void;
   onNotice: (message: string) => void;
   onError: (message: string | null) => void;
+  /** Excel elegido desde la lista; se importa en cuanto la ficha está cargada. */
+  initialImport?: File | null;
+  onInitialImportStarted?: () => void;
 }) {
   const queryClient = useQueryClient();
   const catalogsQuery = useQuery(catalogsQueryOptions(token));
@@ -89,8 +94,9 @@ export function CenterEditor({
   });
   const [activeStep, setActiveStep] = useState(0);
   const focusMissingRef = useRef(false);
-  const importInputRef = useRef<HTMLInputElement | null>(null);
   const submittingReviewRef = useRef(false);
+  // El administrador no revisa su propia propuesta: la API la publica directo.
+  const publishesDirectly = isAdministrator(useAdminAuth().user);
 
   const isNew = code === null;
   const state = detail?.status.code ?? "BORRADOR";
@@ -171,6 +177,18 @@ export function CenterEditor({
     saveImportedSections,
     uploadImportedPhotos,
   ]);
+  const importFile = fichaImport.importFile;
+  const formReady = Boolean(catalogsQuery.data) && (code === null || Boolean(detail));
+  // Una sola vez por archivo, aunque el editor se vuelva a renderizar.
+  const startedImportRef = useRef<File | null>(null);
+  useEffect(() => {
+    if (!initialImport || !formReady || startedImportRef.current === initialImport)
+      return;
+    startedImportRef.current = initialImport;
+    onInitialImportStarted?.();
+    if (canEdit) importFile(initialImport);
+    else onError("La ficha está en revisión; no se puede actualizar desde Excel.");
+  }, [canEdit, formReady, importFile, initialImport, onError, onInitialImportStarted]);
   const notifyCoordinatesPicked = useCallback(
     () => onNotice("Coordenadas seleccionadas en el mapa."),
     [onNotice],
@@ -274,34 +292,6 @@ export function CenterEditor({
           </Button>
         }
         actions={[
-          <Stack
-            key="ficha-import-actions"
-            direction="row"
-            spacing={webTokens.spacing.inline}
-            useFlexGap
-            flexWrap="wrap"
-          >
-            {canEdit ? (
-              <Button
-                type="button"
-                variant="outlined"
-                startIcon={<CloudUploadRounded />}
-                onClick={() => importInputRef.current?.click()}
-                disabled={fichaImport.importing || fichaImport.uploadingPhotos}
-              >
-                {fichaImport.importing ? "Importando…" : "Importar ficha (.xlsx / .xlsm)"}
-              </Button>
-            ) : null}
-            <Button
-              component="a"
-              href="/templates/ficha-mintur-vacia.xlsm"
-              download="Ficha_MINTUR_vacia.xlsm"
-              variant="outlined"
-              startIcon={<DownloadRounded />}
-            >
-              Descargar plantilla vacía
-            </Button>
-          </Stack>,
           canReview ? (
             <Button
               key="review"
@@ -311,21 +301,10 @@ export function CenterEditor({
               onClick={() => void submitForReview()}
               disabled={centerSave.working}
             >
-              {centerSave.reviewing ? "Enviando…" : "Enviar a revisión"}
+              {submitLabel(publishesDirectly, centerSave.reviewing)}
             </Button>
           ) : null,
         ]}
-      />
-      <input
-        ref={importInputRef}
-        type="file"
-        accept=".xlsx,.xlsm"
-        style={{ display: "none" }}
-        onChange={(event) => {
-          const file = event.target.files?.[0];
-          event.target.value = "";
-          if (file) fichaImport.importFile(file);
-        }}
       />
       {fichaImport.resumenValoracion ? (
         <FichaValuationReference summary={fichaImport.resumenValoracion} />
@@ -435,7 +414,11 @@ export function CenterEditor({
           </EditableContext>
         </FormProvider>
       ) : (
-        <CenterSummaryStep detail={detail} catalogs={catalogs} />
+        <CenterSummaryStep
+          detail={detail}
+          catalogs={catalogs}
+          publishesDirectly={publishesDirectly}
+        />
       )}
 
       <CenterWizardNavigation
@@ -462,11 +445,16 @@ export function CenterEditor({
               onClick={() => void submitForReview()}
               disabled={centerSave.working}
             >
-              {centerSave.reviewing ? "Enviando…" : "Enviar a revisión"}
+              {submitLabel(publishesDirectly, centerSave.reviewing)}
             </Button>
           ) : undefined
         }
       />
     </Stack>
   );
+}
+
+function submitLabel(publishesDirectly: boolean, working: boolean) {
+  if (publishesDirectly) return working ? "Publicando…" : "Publicar";
+  return working ? "Enviando…" : "Enviar a revisión";
 }
