@@ -19,3 +19,18 @@ SHALL conservar ambas respuestas sin advertirlo como contradicción.
 - **WHEN** el Excel marca que no existe plan y que el atractivo está incluido en él
 - **THEN** ambas respuestas se conservan
 - **AND** la importación no muestra un aviso por esa combinación
+
+## ADDED Requirements
+
+### Requirement: Meses recomendables y tiempo de desplazamiento importados
+
+El importador SHALL llevar los meses recomendables de visita a su selector de
+meses en Características y el tiempo de desplazamiento en auto a su campo en
+Accesibilidad, sin copiarlos en las observaciones. Si el texto de meses no
+contiene meses reconocibles, SHALL advertirlo para seleccionarlos a mano.
+
+#### Scenario: Meses y tiempo de la ficha
+
+- **WHEN** el Excel indica «Febrero, Marzo y Noviembre» y un tiempo de 00:02
+- **THEN** el editor muestra esos tres meses seleccionados y el tiempo 00:02
+- **AND** ninguna observación repite esos datos

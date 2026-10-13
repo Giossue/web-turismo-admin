@@ -78,7 +78,8 @@ describe("ficha Plaza 15 de mayo", () => {
     expect(datos.anexos.fuenteFotografias).toBe("Municipio de Guaranda");
     expect(datos.anexos.ubicacionGrafica).toStartWith("https://www.google.com/maps/");
     expect(datos.responsables.elaborado.fecha).toBe("2025-12-19");
-    for (const foto of imagenesAdjuntas) expect(foto.fuente).toBe("Municipio de Guaranda");
+    for (const foto of imagenesAdjuntas)
+      expect(foto.fuente).toBe("Municipio de Guaranda");
   });
 
   test("lleva los datos al formulario y a los apartados", async () => {
@@ -86,9 +87,8 @@ describe("ficha Plaza 15 de mayo", () => {
     const resueltos = resolverCatalogosFicha(datos, catalogos);
     const formulario = mapearFichaAFormulario(datos, resueltos);
     expect(formulario.admission?.attentionModeId).toBe("1");
-    expect(formulario.admission?.observation).toContain(
-      "Meses recomendables de visita: Febrero, Marzo y Noviembre",
-    );
+    // Los meses y el tiempo tienen campo propio; ya no van en observaciones.
+    expect(formulario.admission?.observation ?? "").not.toContain("Meses recomendables");
 
     const { secciones } = mapearSeccionesImportadas(datos, catalogos, resueltos);
     expect(secciones.caracteristicas).toMatchObject({
@@ -99,8 +99,10 @@ describe("ficha Plaza 15 de mayo", () => {
         minRainfall: 500,
         maxRainfall: 1500,
       },
+      recommendedMonths: [2, 3, 11],
     });
-    expect(String(secciones.accesibilidad?.observation)).toContain("00:02");
+    expect(secciones.accesibilidad?.travelTime).toBe("00:02");
+    expect(String(secciones.accesibilidad?.observation)).not.toContain("00:02");
     expect(String(secciones.accesibilidad?.observation)).toContain("rampas");
     expect(String(secciones.planta?.observation)).toContain("guianza");
 
@@ -129,7 +131,9 @@ describe("ficha Plaza 15 de mayo", () => {
       observation: string;
       annexes: { responsibles: Array<{ date: string | null }> };
     };
-    expect(anexos.observation).toContain("Fuente de las fotografías: Municipio de Guaranda");
+    expect(anexos.observation).toContain(
+      "Fuente de las fotografías: Municipio de Guaranda",
+    );
     expect(anexos.observation).toContain("https://www.google.com/maps/");
     expect(anexos.annexes.responsibles[0]?.date).toBe("2025-12-19");
 

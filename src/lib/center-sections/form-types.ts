@@ -311,6 +311,8 @@ export type SectionFormValues = {
   observation: string;
   localityId: string;
   distanceKm: string;
+  /** Tiempo estimado de desplazamiento en auto ("HH:MM", `""` = sin dato). */
+  travelTime: string;
   accessibilityRoads: AccessibilityRoadForm[];
   accessibilityAquatic: AccessibilityAquaticForm[];
   accessibilityAerial: AccessibilityAerialForm[];
@@ -326,6 +328,8 @@ export type SectionFormValues = {
   maxTemperature: string;
   minRainfall: string;
   maxRainfall: string;
+  /** Meses recomendables de visita (`"1"`…`"12"`) ordenados. */
+  recommendedMonths: string[];
   rows: SectionRowForm[];
   conservation: {
     attraction: ConservationComponentForm;

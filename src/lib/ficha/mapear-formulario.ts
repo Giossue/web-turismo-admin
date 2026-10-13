@@ -85,16 +85,7 @@ export function mapearFichaAFormulario(
         datos.caracteristicas.ingreso.precioHasta !== null
           ? String(datos.caracteristicas.ingreso.precioHasta)
           : "",
-      // El formulario no tiene campo para los meses recomendables (3.4.g):
-      // se conservan en la observación del ingreso.
-      observation: [
-        datos.caracteristicas.ingreso.observacion,
-        datos.caracteristicas.ingreso.mesesRecomendados
-          ? `Meses recomendables de visita: ${datos.caracteristicas.ingreso.mesesRecomendados}`
-          : null,
-      ]
-        .filter(Boolean)
-        .join("\n"),
+      observation: datos.caracteristicas.ingreso.observacion ?? "",
     },
     activityIds: catalogos.actividadIds.map(String),
     accessibilityIds: catalogos.accesibilidadTipoIds.map(String),

@@ -158,7 +158,11 @@ function meses(textoMeses: string | null | undefined): string[] {
   return [...new Set(encontrados.map((indice) => String(indice + 1)))];
 }
 
-function caracteristicas(ficha: Ficha, resueltos: CatalogosResueltos): SectionFormValues {
+function caracteristicas(
+  ficha: Ficha,
+  resueltos: CatalogosResueltos,
+  advertencias: string[],
+): SectionFormValues {
   const valores = base("caracteristicas");
   const clima = ficha.caracteristicas.clima;
   valores.climateId = resueltos.climaId?.id ? String(resueltos.climaId.id) : "";
@@ -166,6 +170,13 @@ function caracteristicas(ficha: Ficha, resueltos: CatalogosResueltos): SectionFo
   valores.maxTemperature = numero(clima.temperaturaMaxC);
   valores.minRainfall = numero(clima.precipitacionMinMm);
   valores.maxRainfall = numero(clima.precipitacionMaxMm);
+  const mesesTexto = ficha.caracteristicas.ingreso.mesesRecomendados;
+  valores.recommendedMonths = meses(mesesTexto);
+  if (mesesTexto && valores.recommendedMonths.length === 0) {
+    advertencias.push(
+      `Meses recomendables de visita: no se reconocieron meses en «${mesesTexto}». Selecciónalos a mano en Características.`,
+    );
+  }
   return valores;
 }
 
@@ -252,11 +263,8 @@ function accesibilidad(
         observation: texto(item.observacion).slice(0, 1_000),
       };
     });
-  // Sin campo propio para el tiempo de desplazamiento: queda en la observación.
+  valores.travelTime = acceso.tiempoAutoHoras ?? "";
   valores.observation = observacionGeneral(
-    acceso.tiempoAutoHoras
-      ? `Tiempo estimado de desplazamiento en auto: ${acceso.tiempoAutoHoras} (h:min)`
-      : null,
     acceso.observacionUbicacion,
     acceso.observacionAccesibilidad,
   );
@@ -948,7 +956,7 @@ export function mapearSeccionesImportadas(
 ): { secciones: SeccionesImportadas; advertencias: string[] } {
   const advertencias: string[] = [];
   const valores: Partial<Record<CenterSectionCode, SectionFormValues>> = {
-    caracteristicas: caracteristicas(ficha, resueltos),
+    caracteristicas: caracteristicas(ficha, resueltos, advertencias),
     accesibilidad: accesibilidad(ficha, catalogos, resueltos),
     planta: planta(ficha, catalogos, advertencias),
     conservacion: conservacion(ficha, catalogos),

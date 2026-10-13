@@ -28,6 +28,7 @@ export function parseMonths(months: readonly string[]): number[] {
 const writeAccessibility: SectionWriter = (values) => ({
   localityId: toNullableNumber(values.localityId),
   distanceKm: toNullableNumber(values.distanceKm),
+  travelTime: textOrNull(values.travelTime),
   accessibilityDetails: {
     roads: values.accessibilityRoads.map((road) => ({
       roadTypeId: toNullableNumber(road.roadTypeId),
@@ -94,6 +95,7 @@ const writeCharacteristics: SectionWriter = (values) => ({
     minRainfall: toNullableNumber(values.minRainfall),
     maxRainfall: toNullableNumber(values.maxRainfall),
   },
+  recommendedMonths: parseMonths(values.recommendedMonths),
 });
 
 const writePlant: SectionWriter = (values) => ({

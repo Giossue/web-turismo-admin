@@ -4,6 +4,7 @@ import type { SectionFormValues } from "@/lib/center-sections/form-types";
 import { toNullableNumber } from "@/lib/values";
 import { webTokens } from "@/theme/tokens";
 
+import { MonthMultiSelect } from "../shared/month-multi-select";
 import { SectionCatalogSelect, SectionNumberField } from "../shared/section-fields";
 import type { SectionFieldsProps } from "./types";
 
@@ -71,6 +72,13 @@ export function CharacteristicsFields({ catalogs }: SectionFieldsProps) {
                 "La precipitación máxima no puede ser menor que la mínima.",
               ),
             }}
+          />
+        </Grid>
+        <Grid size={12}>
+          <MonthMultiSelect
+            name="recommendedMonths"
+            label="Meses recomendables de visita"
+            months={catalogs?.months ?? []}
           />
         </Grid>
       </Grid>

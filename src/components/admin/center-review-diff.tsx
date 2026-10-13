@@ -133,6 +133,8 @@ const FIELD_LABELS: Record<string, string> = {
   quantity: "Cantidad",
   localityId: "Localidad cercana",
   distanceKm: "Distancia (km)",
+  travelTime: "Tiempo de desplazamiento en auto",
+  recommendedMonths: "Meses recomendables de visita",
   climateId: "Tipo de clima",
   minTemperature: "Temperatura mínima (°C)",
   maxTemperature: "Temperatura máxima (°C)",

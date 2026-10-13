@@ -8,6 +8,7 @@ import {
   readRecord,
   readResponse,
   readString,
+  readStrings,
 } from "./read-helpers";
 import {
   readAccessibilitySurvey,
@@ -68,6 +69,7 @@ export function createSectionValues(
     observation: readString(section, "observation"),
     localityId: readNumeric(section, "localityId"),
     distanceKm: readNumeric(section, "distanceKm"),
+    travelTime: readString(section, "travelTime"),
     accessibilityRoads: readArray(accessibility, "roads", readRoad),
     accessibilityAquatic: readArray(accessibility, "aquatic", readAquaticAccess),
     accessibilityAerial: readArray(accessibility, "aerial", readAerialAccess),
@@ -95,6 +97,7 @@ export function createSectionValues(
     maxTemperature: readNumeric(climate, "maxTemperature"),
     minRainfall: readNumeric(climate, "minRainfall"),
     maxRainfall: readNumeric(climate, "maxRainfall"),
+    recommendedMonths: readStrings(section, "recommendedMonths"),
     rows: Array.isArray(section.rows)
       ? readArray(section, "rows", readRow)
       : definition.suggestedRows.map((label) => emptyRow(label)),

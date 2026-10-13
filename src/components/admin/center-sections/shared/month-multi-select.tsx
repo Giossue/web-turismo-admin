@@ -12,14 +12,14 @@ import { useEditable } from "@/components/ui/form/editable-context";
 import type { CatalogOption } from "@/lib/admin-api";
 import type { SectionFormValues } from "@/lib/center-sections/form-types";
 
-type MonthsPath = `visitorSeasons.${number}.months`;
+type MonthsPath = `visitorSeasons.${number}.months` | "recommendedMonths";
 
 function sortMonths(months: readonly string[]): string[] {
   return [...new Set(months)].sort((a, b) => Number(a) - Number(b));
 }
 
 /**
- * Selector múltiple de meses de una temporada. Usa el catálogo de meses (su
+ * Selector múltiple de meses (temporadas o meses recomendables de visita). Usa el catálogo de meses (su
  * `code` es el número de mes que valida la API) y guarda los números como
  * texto ordenado.
  */

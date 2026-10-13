@@ -23,6 +23,7 @@ import { CatalogOrFreeText } from "../shared/catalog-or-free-text";
 import { RepeatableFieldArray } from "../shared/repeatable-field-array";
 import {
   SectionCatalogSelect,
+  SectionDateField,
   SectionNumberField,
   SectionResponseSelect,
   SectionSelect,
@@ -72,6 +73,13 @@ export function AccessibilityFields({ catalogs, sugerencias }: SectionFieldsProp
             label="Distancia aproximada (km)"
             min={0}
             step={0.1}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <SectionDateField
+            name="travelTime"
+            label="Tiempo de desplazamiento en auto (h:min)"
+            type="time"
           />
         </Grid>
       </Grid>
