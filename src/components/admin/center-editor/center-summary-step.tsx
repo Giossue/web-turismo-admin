@@ -9,6 +9,7 @@ import { CenterReviewDiff } from "@/components/admin/center-review-diff";
 import { FlatSurface } from "@/components/ui/flat-surface";
 import { SectionHeader } from "@/components/ui/section-header";
 import type { AdminCatalogs, AdminCenterDetail } from "@/lib/admin-api";
+import type { CenterFormValues } from "@/lib/center-form";
 import { centerStatusLabel } from "@/lib/admin-labels";
 import {
   centerSectionDefinitions,
@@ -26,9 +27,43 @@ function findCatalogName(
   return findCatalogOption(options, id)?.name ?? PENDING;
 }
 
-function formatCoordinates(latitude: number | undefined, longitude: number | undefined) {
-  if (latitude === undefined || longitude === undefined) return PENDING;
+function formatCoordinates(
+  latitude: number | string | undefined,
+  longitude: number | string | undefined,
+) {
+  if (
+    latitude === undefined ||
+    longitude === undefined ||
+    latitude === "" ||
+    longitude === ""
+  ) {
+    return PENDING;
+  }
   return `${latitude}, ${longitude}`;
+}
+
+const filled = (value: string | undefined) => Boolean(value?.trim());
+
+/**
+ * Apartados que viven en el formulario principal y se registran al guardar la
+ * ficha; se consideran completos en cuanto el formulario tiene su información.
+ */
+export function sectionsFilledInForm(
+  values: CenterFormValues | undefined,
+): ReadonlySet<CenterSectionCode> {
+  const done = new Set<CenterSectionCode>();
+  if (!values) return done;
+  if (filled(values.name) && filled(values.subtypeId) && filled(values.parishId)) {
+    done.add("identificacion");
+  }
+  const location = [
+    ...Object.values(values.address ?? {}),
+    ...Object.values(values.administration ?? {}),
+  ];
+  if (location.some((value) => filled(value))) done.add("ubicacion-admin");
+  if ((values.activityIds ?? []).length > 0) done.add("actividades");
+  if (filled(values.description)) done.add("descripcion");
+  return done;
 }
 
 /** Último paso del asistente: datos principales, avance por apartado y, en revisión, diferencias. */
@@ -37,6 +72,7 @@ export function CenterSummaryStep({
   catalogs,
   publishesDirectly = false,
   importingSections = [],
+  formValues,
 }: {
   detail: AdminCenterDetail | null;
   catalogs: AdminCatalogs | null;
@@ -44,12 +80,17 @@ export function CenterSummaryStep({
   publishesDirectly?: boolean;
   /** Apartados importados que se están guardando: ya cuentan como completos. */
   importingSections?: readonly CenterSectionCode[];
+  /** Valores actuales del formulario, aunque todavía no se hayan guardado. */
+  formValues?: CenterFormValues;
 }) {
   const sendLabel = publishesDirectly ? "publicarla" : "enviarla a revisión";
   const draft = detail?.draft ?? detail?.published ?? null;
   const sectionValues = draft?.sections ?? {};
+  const filledInForm = sectionsFilledInForm(formValues);
   const isRegistered = (code: CenterSectionCode) =>
-    sectionValues[code] !== undefined || importingSections.includes(code);
+    sectionValues[code] !== undefined ||
+    importingSections.includes(code) ||
+    filledInForm.has(code);
   const completedSections = centerSectionDefinitions.filter((section) =>
     isRegistered(section.code),
   ).length;
@@ -81,11 +122,28 @@ export function CenterSummaryStep({
               : "Todos los apartados tienen información. Pulsa «Enviar a revisión» para que se apruebe y publique.",
           };
   const summaryRows = [
-    ["Nombre", draft?.name ?? PENDING],
-    ["Subtipo", findCatalogName(catalogs?.subtypes, draft?.subtypeId)],
-    ["Parroquia", findCatalogName(catalogs?.parishes, draft?.parishId)],
-    ["Coordenadas", formatCoordinates(draft?.latitude, draft?.longitude)],
-    ["Estado", detail ? centerStatusLabel(detail.status) : PENDING],
+    ["Nombre", draft?.name || formValues?.name?.trim() || PENDING],
+    [
+      "Subtipo",
+      findCatalogName(
+        catalogs?.subtypes,
+        draft?.subtypeId ?? (Number(formValues?.subtypeId) || undefined),
+      ),
+    ],
+    [
+      "Parroquia",
+      findCatalogName(
+        catalogs?.parishes,
+        draft?.parishId ?? (Number(formValues?.parishId) || undefined),
+      ),
+    ],
+    [
+      "Coordenadas",
+      draft
+        ? formatCoordinates(draft.latitude, draft.longitude)
+        : formatCoordinates(formValues?.latitude, formValues?.longitude),
+    ],
+    ["Estado", detail ? centerStatusLabel(detail.status) : "Sin guardar"],
   ];
 
   return (

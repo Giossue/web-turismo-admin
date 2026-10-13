@@ -5,10 +5,13 @@ import CloudUploadRounded from "@mui/icons-material/CloudUploadRounded";
 import { Alert, Button, Stack, Typography } from "@mui/material";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FormProvider, useForm } from "react-hook-form";
+import { FormProvider, useForm, useWatch } from "react-hook-form";
 
 import { CenterFormPanel } from "@/components/admin/center-editor/center-form-panels";
-import { CenterSummaryStep } from "@/components/admin/center-editor/center-summary-step";
+import {
+  CenterSummaryStep,
+  sectionsFilledInForm,
+} from "@/components/admin/center-editor/center-summary-step";
 import { FichaImportDialog } from "@/components/admin/center-editor/ficha-import-dialog";
 import {
   CenterWizardNavigation,
@@ -156,17 +159,21 @@ export function CenterEditor({
     onNotice,
     onError,
   });
+  // Lo escrito o importado en el formulario aún sin guardar, para el resumen.
+  const liveValues = useWatch({ control: form.control }) as CenterFormValues;
+
   // Los apartados importados que aún se guardan ya cuentan como completos.
   const importingSections = fichaImport.pendingSectionCodes;
   const completedSectionCodes = useMemo(() => {
     const keys = new Set<string>(Object.keys(savedSections ?? {}));
     for (const sectionCode of importingSections) keys.add(sectionCode);
+    for (const sectionCode of sectionsFilledInForm(liveValues)) keys.add(sectionCode);
     // La verificación se completa cuando todos los apartados lo están.
     if (centerSectionDefinitions.every((section) => keys.has(section.code))) {
       keys.add(VERIFICATION_KEY);
     }
     return keys;
-  }, [savedSections, importingSections]);
+  }, [savedSections, importingSections, liveValues]);
   const uploadImportedPhotos = fichaImport.uploadImportedPhotos;
   const saveImportedSections = fichaImport.saveImportedSections;
 
@@ -424,6 +431,7 @@ export function CenterEditor({
           catalogs={catalogs}
           publishesDirectly={publishesDirectly}
           importingSections={fichaImport.pendingSectionCodes}
+          formValues={liveValues}
         />
       )}
 

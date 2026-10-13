@@ -139,8 +139,12 @@ function coordenadas(crudo: string | null | undefined): [string, string] {
   return lat.ok && lon.ok ? [String(lat.valor), String(lon.valor)] : ["", ""];
 }
 
-/** "Febrero a Octubre" o "enero, marzo" → ["2", …, "10"]. */
-function meses(textoMeses: string | null | undefined): string[] {
+/** "Febrero a Octubre", "enero, marzo" o "Todo el año" → ["2", …, "10"]. */
+export function meses(textoMeses: string | null | undefined): string[] {
+  // "Todo el año", "Todos los meses del año", "Todos los días del año".
+  if (/\btodo(s)?\b.*\b(ano|meses|dias)\b/i.test(normalizarTextoCatalogo(textoMeses))) {
+    return MESES.map((_, indice) => String(indice + 1));
+  }
   const encontrados = normalizarTextoCatalogo(textoMeses)
     .toLowerCase()
     .split(/[^a-z]+/)

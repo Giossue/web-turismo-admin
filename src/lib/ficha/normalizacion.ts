@@ -15,13 +15,17 @@ import { esTextoVacio } from "./xlsx-utils";
  */
 export function normalizarTextoCatalogo(valor: string | null | undefined): string {
   if (!valor) return "";
-  return valor
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/_/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toUpperCase();
+  return (
+    valor
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .replace(/_/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      // Un punto o coma sobrante al borde ("SALINAS.") no cambia el nombre.
+      .replace(/^[.,;:\s]+|[.,;:\s]+$/g, "")
+      .toUpperCase()
+  );
 }
 
 export type CoordenadaResultado =
@@ -37,7 +41,8 @@ export function parsearCoordenada(
   rango: { min: number; max: number },
   etiqueta: string,
 ): CoordenadaResultado {
-  const texto = crudo.trim();
+  // "lat, lon" deja una coma pegada a la latitud, y algunos escriben "°".
+  const texto = crudo.trim().replace(/[,;°º\s]+$/, "");
   if (texto === "") return { ok: false, advertencia: `${etiqueta}: vacío` };
 
   const limpio = texto.replace(/,/g, ".");
