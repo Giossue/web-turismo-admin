@@ -366,7 +366,9 @@ function planta(
         categoryId: idDe(categoria),
         typeId: idDe(tipo),
         typeLabel: tipo ? "" : facilidad.nombre,
-        quantity: (facilidad.cantidad ?? 0) > 0 ? numero(facilidad.cantidad) : "",
+        // La API exige un entero no negativo; una casilla marcada sin cantidad
+        // conserva el 0 del archivo en lugar de inventar un conteo.
+        quantity: (facilidad.cantidad ?? 0) > 0 ? numero(facilidad.cantidad) : "0",
         latitude,
         longitude,
         administrator: texto(facilidad.administrador),

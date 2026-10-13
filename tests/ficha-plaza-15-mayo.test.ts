@@ -108,12 +108,12 @@ describe("ficha Plaza 15 de mayo", () => {
 
     const facilidades = secciones.planta?.facilitiesDetails as Array<{
       typeId: number;
-      quantity: number | null;
+      quantity: number;
       latitude: number | null;
     }>;
     expect(facilidades.filter((f) => f.typeId === 40 || f.typeId === 41)).toEqual([
-      expect.objectContaining({ typeId: 40, quantity: null, latitude: -1.58905 }),
-      expect.objectContaining({ typeId: 41, quantity: null, latitude: -1.58905 }),
+      expect.objectContaining({ typeId: 40, quantity: 0, latitude: -1.58905 }),
+      expect.objectContaining({ typeId: 41, quantity: 0, latitude: -1.58905 }),
     ]);
 
     const higiene = secciones["higiene-seguridad"] as {

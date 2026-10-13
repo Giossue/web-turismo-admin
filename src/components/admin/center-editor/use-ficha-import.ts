@@ -156,7 +156,9 @@ export function useFichaImport({
       savingSectionsRef.current = true;
       setSavingSections(true);
       const saved: string[] = [];
+      // Apartados que ya tenían datos y se respetaron; no son un error.
       const skipped: string[] = [];
+      const failed: string[] = [];
       let firstError: unknown;
       const title = (sectionCode: CenterSectionCode) =>
         centerSectionDefinitions.find((item) => item.code === sectionCode)?.title ??
@@ -168,7 +170,7 @@ export function useFichaImport({
             (detail ? saved : skipped).push(title(sectionCode));
           } catch (cause) {
             firstError ??= cause;
-            skipped.push(title(sectionCode));
+            failed.push(title(sectionCode));
           }
         }
       } finally {
@@ -182,7 +184,7 @@ export function useFichaImport({
       }
       if (firstError) {
         onError(
-          `No se pudieron guardar algunos apartados importados (${skipped.join(", ")}). ${errorMessage(firstError, "")}`.trim(),
+          `No se pudieron guardar algunos apartados importados (${failed.join(", ")}). ${errorMessage(firstError, "")}`.trim(),
         );
       } else if (saved.length > 0) {
         onNotice(
