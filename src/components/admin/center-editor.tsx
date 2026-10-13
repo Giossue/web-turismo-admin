@@ -42,6 +42,12 @@ const centerWizardSteps = centerSectionDefinitions.map((section) => ({
   key: section.code,
   title: section.title,
 }));
+// La verificación (resumen final) es el paso 15 del asistente.
+const VERIFICATION_KEY = "verificacion";
+const wizardSteps = [
+  ...centerWizardSteps,
+  { key: VERIFICATION_KEY, title: "Verificación" },
+];
 const SUMMARY_STEP = centerSectionDefinitions.length;
 const EDITABLE_STATES = new Set(["BORRADOR", "PUBLICADO"]);
 const REQUIRED_FIELDS_MESSAGE =
@@ -106,10 +112,6 @@ export function CenterEditor({
   const canReview = !isNew && ownsCenter && state === "BORRADOR";
   // Misma fuente que el resumen final (`CenterSummaryStep`).
   const savedSections = (detail?.draft ?? detail?.published)?.sections;
-  const completedSectionCodes = useMemo(
-    () => new Set(Object.keys(savedSections ?? {})),
-    [savedSections],
-  );
   const activeSectionCode =
     activeStep < SUMMARY_STEP ? centerSectionDefinitions[activeStep].code : null;
 
@@ -154,6 +156,17 @@ export function CenterEditor({
     onNotice,
     onError,
   });
+  // Los apartados importados que aún se guardan ya cuentan como completos.
+  const importingSections = fichaImport.pendingSectionCodes;
+  const completedSectionCodes = useMemo(() => {
+    const keys = new Set<string>(Object.keys(savedSections ?? {}));
+    for (const sectionCode of importingSections) keys.add(sectionCode);
+    // La verificación se completa cuando todos los apartados lo están.
+    if (centerSectionDefinitions.every((section) => keys.has(section.code))) {
+      keys.add(VERIFICATION_KEY);
+    }
+    return keys;
+  }, [savedSections, importingSections]);
   const uploadImportedPhotos = fichaImport.uploadImportedPhotos;
   const saveImportedSections = fichaImport.saveImportedSections;
 
@@ -362,7 +375,7 @@ export function CenterEditor({
       ) : null}
 
       <CenterWizardStepper
-        steps={centerWizardSteps}
+        steps={wizardSteps}
         activeStep={activeStep}
         completedKeys={completedSectionCodes}
         onSelect={setActiveStep}
@@ -410,6 +423,7 @@ export function CenterEditor({
           detail={detail}
           catalogs={catalogs}
           publishesDirectly={publishesDirectly}
+          importingSections={fichaImport.pendingSectionCodes}
         />
       )}
 

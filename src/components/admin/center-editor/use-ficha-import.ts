@@ -68,6 +68,8 @@ export function useFichaImport({
   const savingSectionsRef = useRef(false);
   const [savingSections, setSavingSections] = useState(false);
   const [pendingSectionCount, setPendingSectionCount] = useState(0);
+  // Apartados importados que aún se están guardando; el resumen los cuenta ya.
+  const [pendingSectionCodes, setPendingSectionCodes] = useState<CenterSectionCode[]>([]);
   const uploadingPhotosRef = useRef(false);
   const { mutateAsync: saveSection } = useMutation({
     scope: centerSaveScope(code ?? "new"),
@@ -176,6 +178,7 @@ export function useFichaImport({
       } finally {
         pendingSectionsRef.current = {};
         setPendingSectionCount(0);
+        setPendingSectionCodes([]);
         savingSectionsRef.current = false;
         setSavingSections(false);
         await queryClient.invalidateQueries({
@@ -219,6 +222,9 @@ export function useFichaImport({
       replacePendingPhotos(imported.fotos ?? []);
       pendingSectionsRef.current = imported.secciones ?? {};
       setPendingSectionCount(Object.keys(pendingSectionsRef.current).length);
+      setPendingSectionCodes(
+        Object.keys(pendingSectionsRef.current) as CenterSectionCode[],
+      );
       // El resumen se muestra en el diálogo de importación, no en un aviso.
       setImportResult({
         sections: contarApartadosImportados(imported.formulario, imported.secciones),
@@ -244,6 +250,7 @@ export function useFichaImport({
     photoUploadError,
     uploadImportedPhotos,
     pendingSectionCount,
+    pendingSectionCodes,
     savingSections,
     saveImportedSections,
   };

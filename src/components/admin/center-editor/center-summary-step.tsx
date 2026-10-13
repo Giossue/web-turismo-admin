@@ -1,6 +1,8 @@
 "use client";
 
+import CheckCircleRounded from "@mui/icons-material/CheckCircleRounded";
 import FactCheckRounded from "@mui/icons-material/FactCheckRounded";
+import PanToolRounded from "@mui/icons-material/PanToolRounded";
 import { Alert, Box, Divider, Grid, Stack, Typography } from "@mui/material";
 
 import { CenterReviewDiff } from "@/components/admin/center-review-diff";
@@ -8,7 +10,10 @@ import { FlatSurface } from "@/components/ui/flat-surface";
 import { SectionHeader } from "@/components/ui/section-header";
 import type { AdminCatalogs, AdminCenterDetail } from "@/lib/admin-api";
 import { centerStatusLabel } from "@/lib/admin-labels";
-import { centerSectionDefinitions } from "@/lib/center-sections/definitions";
+import {
+  centerSectionDefinitions,
+  type CenterSectionCode,
+} from "@/lib/center-sections/definitions";
 import { findCatalogOption } from "@/lib/values";
 import { webTokens } from "@/theme/tokens";
 
@@ -26,25 +31,30 @@ function formatCoordinates(latitude: number | undefined, longitude: number | und
   return `${latitude}, ${longitude}`;
 }
 
-/** Último paso del asistente: datos principales, avance por apartado y diferencias. */
+/** Último paso del asistente: datos principales, avance por apartado y, en revisión, diferencias. */
 export function CenterSummaryStep({
   detail,
   catalogs,
   publishesDirectly = false,
+  importingSections = [],
 }: {
   detail: AdminCenterDetail | null;
   catalogs: AdminCatalogs | null;
   /** El administrador publica sin pasar por revisión. */
   publishesDirectly?: boolean;
+  /** Apartados importados que se están guardando: ya cuentan como completos. */
+  importingSections?: readonly CenterSectionCode[];
 }) {
   const sendLabel = publishesDirectly ? "publicarla" : "enviarla a revisión";
   const draft = detail?.draft ?? detail?.published ?? null;
   const sectionValues = draft?.sections ?? {};
-  const completedSections = centerSectionDefinitions.filter(
-    (section) => sectionValues[section.code] !== undefined,
+  const isRegistered = (code: CenterSectionCode) =>
+    sectionValues[code] !== undefined || importingSections.includes(code);
+  const completedSections = centerSectionDefinitions.filter((section) =>
+    isRegistered(section.code),
   ).length;
   const missingSections = centerSectionDefinitions.filter(
-    (section) => sectionValues[section.code] === undefined,
+    (section) => !isRegistered(section.code),
   );
   const state = detail?.status.code;
   const readiness = !detail
@@ -106,30 +116,52 @@ export function CenterSummaryStep({
             información registrada.
           </Typography>
           <Grid container spacing={webTokens.spacing.inline}>
-            {centerSectionDefinitions.map((section) => (
-              <Grid key={section.code} size={{ xs: 12, sm: 6, md: 4 }}>
-                <Box
-                  sx={{
-                    border: webTokens.border,
-                    borderRadius: `${webTokens.shape.radius}px`,
-                    p: webTokens.spacing.inline,
-                  }}
-                >
-                  <Typography variant="body2" fontWeight={600}>
-                    {section.title}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {sectionValues[section.code]
-                      ? "Información registrada"
-                      : "Pendiente de completar"}
-                  </Typography>
-                </Box>
-              </Grid>
-            ))}
+            {centerSectionDefinitions.map((section) => {
+              const registered = isRegistered(section.code);
+              return (
+                <Grid key={section.code} size={{ xs: 12, sm: 6, md: 4 }}>
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    justifyContent="space-between"
+                    spacing={webTokens.spacing.inline}
+                    sx={{
+                      border: webTokens.border,
+                      borderRadius: `${webTokens.shape.radius}px`,
+                      p: webTokens.spacing.inline,
+                    }}
+                  >
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography variant="body2" fontWeight={600}>
+                        {section.title}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {registered ? "Información registrada" : "Pendiente de completar"}
+                      </Typography>
+                    </Box>
+                    {registered ? (
+                      <CheckCircleRounded
+                        color="success"
+                        titleAccess="Completo"
+                        sx={{ flexShrink: 0 }}
+                      />
+                    ) : (
+                      <PanToolRounded
+                        color="error"
+                        titleAccess="Falta completar"
+                        sx={{ flexShrink: 0 }}
+                      />
+                    )}
+                  </Stack>
+                </Grid>
+              );
+            })}
           </Grid>
         </Stack>
       </FlatSurface>
-      <CenterReviewDiff detail={detail} catalogs={catalogs} />
+      {state === "EN_REVISION" ? (
+        <CenterReviewDiff detail={detail} catalogs={catalogs} />
+      ) : null}
     </Stack>
   );
 }

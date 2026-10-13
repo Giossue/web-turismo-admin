@@ -40,7 +40,6 @@ export function CenterWizardStepper({
   completedKeys: ReadonlySet<string>;
   onSelect: (step: number) => void;
 }) {
-  const isSummary = activeStep >= steps.length;
   const currentIndex = Math.min(activeStep, steps.length - 1);
   const completedCount = steps.filter((step) => completedKeys.has(step.key)).length;
   const progress = Math.round((completedCount / Math.max(steps.length, 1)) * 100);
@@ -56,7 +55,7 @@ export function CenterWizardStepper({
             gap={1}
           >
             <Typography variant="caption" color="text.secondary">
-              {isSummary ? "Revisión final" : `Paso ${activeStep + 1} de ${steps.length}`}
+              Paso {activeStep + 1} de {steps.length}
             </Typography>
             <Typography variant="caption" color="text.secondary">
               {progress}% completado
@@ -100,7 +99,7 @@ export function CenterWizardStepper({
         >
           {steps.map((step, index) => {
             const completed = completedKeys.has(step.key);
-            const selected = !isSummary && index === activeStep;
+            const selected = index === activeStep;
             const status = stepStatus(completed, selected);
             return (
               <Box component="li" key={step.key} sx={{ display: "flex", minWidth: 0 }}>
