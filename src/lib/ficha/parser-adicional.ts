@@ -118,7 +118,7 @@ const FORMACION_IDIOMA: Array<{
   { nombre: "Francés", refCantidad: "R296" },
   { nombre: "Italiano", refCantidad: "U296" },
   { nombre: "Chino", refCantidad: "R297" },
-  { nombre: "Otro", refCantidad: null, refTexto: "U297" },
+  { nombre: "Otro", refCantidad: "U297", refTexto: "T297" },
 ];
 
 function leerFormacion(
@@ -304,6 +304,27 @@ export function leerVisitantes(worksheet: ExcelJS.Worksheet): FichaVisitantes {
       nombre: leerTextoOpcional(worksheet, "F288"),
       contacto: leerTextoOpcional(worksheet, "P288"),
     },
+    demanda: {
+      entreSemana: leerNumeroOpcional(worksheet, "D290"),
+      finDeSemana: leerNumeroOpcional(worksheet, "G290"),
+      feriados: leerNumeroOpcional(worksheet, "J290"),
+      frecuencia: leerFrecuenciaDemanda(worksheet),
+    },
     observacion: leerTextoOpcional(worksheet, "E291"),
   };
+}
+
+const FRECUENCIAS_DEMANDA = [
+  ["PERMANENTE", "K290:L290"],
+  ["ESTACIONAL", "N290:O290"],
+  ["ESPORADICA", "Q290:R290"],
+  ["INEXISTENTE", "T290:U290"],
+] as const;
+
+/** Frecuencia de visita (11.2): una sola casilla; ninguna o varias → sin dato. */
+function leerFrecuenciaDemanda(worksheet: ExcelJS.Worksheet) {
+  const marcadas = FRECUENCIAS_DEMANDA.filter(
+    ([, ref]) => leerMarcaJuntoAEtiqueta(worksheet, ref) === true,
+  );
+  return marcadas.length === 1 ? marcadas[0][0] : null;
 }

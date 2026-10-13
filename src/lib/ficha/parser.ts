@@ -4,6 +4,7 @@ import { prepararExcelSeguro } from "./zip-seguro";
 import { prepararFotoAnexo } from "./preparar-foto";
 export { FichaInvalidaError, TAMANO_MAXIMO_BYTES, validarArchivoFicha } from "./archivo";
 
+import { alinearFilas } from "./alinear-filas";
 import { cargarCasillasFormulario } from "./controles-formulario";
 import {
   leerMarcaDirecta,
@@ -59,6 +60,33 @@ const HOJA_ACCESIBILIDAD = "ficha_Accesibilidad";
 const HOJA_RESUMEN = "RESUMEN DE RESULTADOS";
 const HOJA_VALIDACION_GAD = "Validación-GAD";
 
+/** Nombre de hoja sin acentos, mayúsculas ni signos: «ficha-Accesibilidad» = «ficha_Accesibilidad». */
+function claveHoja(nombre: string): string {
+  return nombre
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
+
+/**
+ * Busca una hoja por nombre aunque quien llenó la ficha lo haya escrito un
+ * poco distinto («ficha-Accesibilidad», «Validacio- Gad»).
+ */
+function buscarHoja(
+  workbook: ExcelJS.Workbook,
+  nombre: string,
+  coincide?: (clave: string) => boolean,
+): ExcelJS.Worksheet | undefined {
+  const exacta = workbook.getWorksheet(nombre);
+  if (exacta) return exacta;
+  const clave = claveHoja(nombre);
+  return workbook.worksheets.find((hoja) => {
+    const candidata = claveHoja(hoja.name);
+    return candidata === clave || (coincide?.(candidata) ?? false);
+  });
+}
+
 const CODIGOS_COLUMNAS = [
   "F",
   "G",
@@ -112,7 +140,8 @@ function validarPlantilla(workbook: ExcelJS.Workbook): ExcelJS.Worksheet {
         "versión distinta de la plantilla.",
     );
   }
-  return worksheet;
+  // Una fila añadida o borrada por quien llenó la ficha corre todo lo siguiente.
+  return alinearFilas(worksheet);
 }
 
 function leerCodigoAtractivo(worksheet: ExcelJS.Worksheet): string | null {
@@ -385,7 +414,7 @@ function leerTransporteDetalle(
 }
 
 const TIPOS_ACCESIBILIDAD_GENERAL: Array<{ nombre: string; refEtiqueta: string }> = [
-  { nombre: "General", refEtiqueta: "B68:C68" },
+  { nombre: "Accesibilidad general", refEtiqueta: "B68:C68" },
   { nombre: "Discapacidad física", refEtiqueta: "E68:F68" },
   { nombre: "Discapacidad visual", refEtiqueta: "H68:I68" },
   { nombre: "Discapacidad auditiva", refEtiqueta: "K68:L68" },
@@ -468,7 +497,11 @@ function leerFecha(worksheet: ExcelJS.Worksheet, ref: string): string | null {
 
 /** Datos de quien firmó la hoja "Validación-GAD" (vacía si el GAD levantó la ficha). */
 function leerValidacionGad(workbook: ExcelJS.Workbook): FichaResponsableFirma | null {
-  const worksheet = workbook.getWorksheet(HOJA_VALIDACION_GAD);
+  const worksheet = buscarHoja(
+    workbook,
+    HOJA_VALIDACION_GAD,
+    (clave) => clave.startsWith("validaci") && clave.endsWith("gad"),
+  );
   if (!worksheet) return null;
   const firma = leerResponsable(worksheet, {
     nombre: "B17",
@@ -482,7 +515,9 @@ function leerValidacionGad(workbook: ExcelJS.Workbook): FichaResponsableFirma | 
 }
 
 function leerResumenValoracion(workbook: ExcelJS.Workbook): FichaResumenValoracion {
-  const worksheet = workbook.getWorksheet(HOJA_RESUMEN);
+  const worksheet = buscarHoja(workbook, HOJA_RESUMEN, (clave) =>
+    clave.startsWith("resumen"),
+  );
   if (!worksheet) return { criterios: [], totalInformativo: null };
 
   const criterios = [];
@@ -509,7 +544,7 @@ function leerResumenValoracion(workbook: ExcelJS.Workbook): FichaResumenValoraci
 function leerAccesibilidadDetalle(
   workbook: ExcelJS.Workbook,
 ): FichaAccesibilidadDetalleItem[] {
-  const worksheet = workbook.getWorksheet(HOJA_ACCESIBILIDAD);
+  const worksheet = buscarHoja(workbook, HOJA_ACCESIBILIDAD);
   if (!worksheet) return [];
 
   const items: FichaAccesibilidadDetalleItem[] = [];
@@ -560,7 +595,7 @@ async function leerImagenesAnexos(
     const column = imagen.range.tl.nativeCol;
     // La hoja usa las filas 304–320 como espacio de fotografías de anexos.
     // Se ignoran logos y firmas colocados en otras hojas o secciones.
-    if (row < 303 || row > 319 || column < 1 || column > 21) continue;
+    if (row < 300 || row > 322 || column < 1 || column > 21) continue;
     if (metadata.length >= MAX_IMAGENES_ANEXOS) {
       advertencias.push("Solo se extraen las primeras 20 fotografías de los anexos.");
       break;

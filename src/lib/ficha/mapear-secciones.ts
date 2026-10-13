@@ -763,6 +763,15 @@ function visitantes(ficha: Ficha): SectionFormValues {
       },
     ];
   }
+  if (datos.demanda) {
+    valores.visitorInflux = {
+      weekday: numero(datos.demanda.entreSemana),
+      weekend: numero(datos.demanda.finDeSemana),
+      holidays: numero(datos.demanda.feriados),
+      frequency: datos.demanda.frecuencia ?? "",
+      observation: "",
+    };
+  }
   valores.observation = observacionGeneral(datos.observacionLlegadas, datos.observacion);
   return valores;
 }

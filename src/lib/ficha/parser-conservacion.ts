@@ -49,14 +49,21 @@ function leerComponente(
   filaOtro: number,
   filaObservacionEstado: number,
   filaObservacionFactores: number,
+  conAnclaElevada = false,
 ): FichaComponenteConservacion {
-  const estado = leerSeleccionUnica(
-    worksheet,
-    OPCIONES_ESTADO.map((o) => ({
-      valor: o.valor,
-      refEtiqueta: conRef(o.refEtiqueta, filaEstado),
-    })),
-  );
+  const opcionesEstado = OPCIONES_ESTADO.map((o) => ({
+    valor: o.valor,
+    refEtiqueta: conRef(o.refEtiqueta, filaEstado),
+  }));
+  // En la plantilla, la casilla «En proceso de deterioro» del atractivo está
+  // anclada en la fila del título (128), no en la de las demás opciones (129).
+  if (conAnclaElevada) {
+    opcionesEstado.push({
+      valor: "EN_PROCESO_DE_DETERIORO",
+      refEtiqueta: conRef("O{f}", filaEstado - 1),
+    });
+  }
+  const estado = leerSeleccionUnica(worksheet, opcionesEstado);
 
   const factores: FichaFactorAlteracion[] = [];
   FACTORES_NATURALES.forEach((nombre, i) => {
@@ -95,7 +102,7 @@ function leerComponente(
 }
 
 export function leerConservacion(worksheet: ExcelJS.Worksheet): FichaConservacion {
-  const atractivo = leerComponente(worksheet, 129, 133, 138, 130, 139);
+  const atractivo = leerComponente(worksheet, 129, 133, 138, 130, 139, true);
   const entorno = leerComponente(worksheet, 141, 145, 150, 142, 151);
 
   return {

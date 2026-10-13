@@ -1,6 +1,7 @@
 import type ExcelJS from "exceljs";
 import JSZip from "jszip";
 
+import { referenciaFisica } from "./alinear-filas";
 import { numeroAColumna } from "./xlsx-utils";
 
 /**
@@ -96,5 +97,6 @@ export function casillaFormularioMarcada(
   worksheet: ExcelJS.Worksheet,
   ref: string,
 ): boolean {
-  return casillasPorHoja.get(worksheet)?.get(ref) === true;
+  const real = referenciaFisica(worksheet, ref);
+  return casillasPorHoja.get(real.hoja)?.get(real.ref) === true;
 }

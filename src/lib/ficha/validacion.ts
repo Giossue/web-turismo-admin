@@ -222,6 +222,17 @@ export const fichaVisitantesSchema = z.object({
   ),
   observacionLlegadas: texto,
   informanteClave: z.object({ nombre: texto, contacto: texto }),
+  /** 11.2 Demanda según días de visita y frecuencia de visita. */
+  demanda: z
+    .object({
+      entreSemana: numero,
+      finDeSemana: numero,
+      feriados: numero,
+      frecuencia: z
+        .enum(["PERMANENTE", "ESTACIONAL", "ESPORADICA", "INEXISTENTE"])
+        .nullable(),
+    })
+    .optional(),
   observacion: texto,
 });
 

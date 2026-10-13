@@ -141,4 +141,18 @@ describe("ficha Plaza 15 de mayo", () => {
     expect(total).toBeGreaterThan(0);
     expect(total).toBeLessThanOrEqual(14);
   });
+
+  test("lee la accesibilidad general y la demanda de visita (11.2)", async () => {
+    const { datos } = await parsear();
+    // «General» se llama «Accesibilidad general» en el catálogo.
+    expect(Object.keys(datos.accesoConectividad.accesibilidadGeneral)).toContain(
+      "Accesibilidad general",
+    );
+    expect(datos.visitantes.demanda).toEqual({
+      entreSemana: 0,
+      finDeSemana: 0,
+      feriados: 0,
+      frecuencia: null,
+    });
+  });
 });
