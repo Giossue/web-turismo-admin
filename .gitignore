@@ -13,3 +13,4 @@ public/maplibre/
 .runtime/
 playwright-report/
 test-results/
+temp/

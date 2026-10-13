@@ -24,7 +24,6 @@ import type { CenterFormValues } from "@/lib/center-form";
 import { mergeImportedValues } from "@/lib/center-form-mappers";
 import { errorMessage } from "@/lib/errors";
 import type { SugerenciasSecciones } from "@/lib/ficha/sugerencias-secciones";
-import type { FichaResumenValoracion } from "@/lib/ficha/tipos";
 import type { FichaImportResult } from "./ficha-import-dialog";
 
 function toImportedPhotoFile(photo: FichaImportPhoto): File {
@@ -59,8 +58,6 @@ export function useFichaImport({
 }) {
   const queryClient = useQueryClient();
   const [warnings, setWarnings] = useState<string[]>([]);
-  const [resumenValoracion, setResumenValoracion] =
-    useState<FichaResumenValoracion | null>(null);
   const [sugerencias, setSugerencias] = useState<SugerenciasSecciones | null>(null);
   const [pendingPhotos, setPendingPhotos] = useState<FichaImportPhoto[]>([]);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
@@ -205,7 +202,6 @@ export function useFichaImport({
     onMutate: () => {
       setWarnings([]);
       setImportResult(null);
-      setResumenValoracion(null);
       onError(null);
       setPhotoUploadError(null);
       replacePendingPhotos([]);
@@ -217,7 +213,6 @@ export function useFichaImport({
         : { ...current, ...imported.formulario };
       reset(next, { keepDefaultValues: true, keepDirtyValues: false });
       setWarnings([...new Set(imported.advertencias)]);
-      setResumenValoracion(imported.resumenValoracion ?? null);
       setSugerencias(imported.sugerenciasSecciones ?? null);
       replacePendingPhotos(imported.fotos ?? []);
       pendingSectionsRef.current = imported.secciones ?? {};
@@ -239,7 +234,6 @@ export function useFichaImport({
     dismissImportResult: () => setImportResult(null),
     importFile: (file: File) => importMutation.mutate(file),
     warnings,
-    resumenValoracion,
     dismissWarnings: () => setWarnings([]),
     sugerencias,
     pendingPhotos,

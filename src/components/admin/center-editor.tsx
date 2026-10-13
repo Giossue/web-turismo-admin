@@ -10,7 +10,6 @@ import { FormProvider, useForm } from "react-hook-form";
 import { CenterFormPanel } from "@/components/admin/center-editor/center-form-panels";
 import { CenterSummaryStep } from "@/components/admin/center-editor/center-summary-step";
 import { FichaImportDialog } from "@/components/admin/center-editor/ficha-import-dialog";
-import { FichaValuationReference } from "@/components/admin/center-editor/ficha-valuation-reference";
 import {
   CenterWizardNavigation,
   CenterWizardStepper,
@@ -314,9 +313,6 @@ export function CenterEditor({
         result={fichaImport.importResult}
         onClose={fichaImport.dismissImportResult}
       />
-      {fichaImport.resumenValoracion ? (
-        <FichaValuationReference summary={fichaImport.resumenValoracion} />
-      ) : null}
       {fichaImport.warnings.length > 0 ? (
         <Alert severity="warning" onClose={fichaImport.dismissWarnings}>
           <Typography variant="subtitle2" component="p" sx={{ mb: 0.5 }}>
@@ -331,9 +327,9 @@ export function CenterEditor({
           </Stack>
         </Alert>
       ) : null}
-      {fichaImport.pendingPhotoCount > 0 ? (
+      {fichaImport.photoUploadError && fichaImport.pendingPhotoCount > 0 ? (
         <Alert
-          severity={fichaImport.photoUploadError ? "warning" : "info"}
+          severity="warning"
           action={
             code ? (
               <Button
@@ -344,24 +340,10 @@ export function CenterEditor({
               >
                 {fichaImport.uploadingPhotos ? "Subiendo…" : "Reintentar"}
               </Button>
-            ) : (
-              <Button
-                color="inherit"
-                size="small"
-                disabled={centerSave.working}
-                onClick={() => void createNow()}
-              >
-                {centerSave.working ? "Guardando…" : "Guardar ficha"}
-              </Button>
-            )
+            ) : null
           }
         >
-          {fichaImport.photoUploadError ??
-            (code
-              ? fichaImport.uploadingPhotos
-                ? `Subiendo ${fichaImport.pendingPhotoCount} foto(s) importada(s)…`
-                : `${fichaImport.pendingPhotoCount} foto(s) importada(s) pendientes de carga.`
-              : `${fichaImport.pendingPhotoCount} fotografía${fichaImport.pendingPhotoCount === 1 ? " preparada" : "s preparadas"}; se adjuntarán al guardar la ficha.`)}
+          {fichaImport.photoUploadError}
         </Alert>
       ) : null}
       {detail?.review?.observation ? (
