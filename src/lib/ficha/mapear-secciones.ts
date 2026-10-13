@@ -429,7 +429,8 @@ function conservacion(ficha: Ficha, catalogos: AdminCatalogs): SectionFormValues
     for (const factor of componente.factores.filter((item) => item.marcado)) {
       const tipo = buscar(
         catalogos.conservationFactors,
-        factor.nombre,
+        // El catálogo escribe «Huaquearía»; el Excel, «Huaquería».
+        factor.nombre === "Huaquería" ? "Huaquearía" : factor.nombre,
         (opcion) => opcion.origin === factor.origen,
       );
       valores.conservationFactors.push({
@@ -467,6 +468,14 @@ function conservacion(ficha: Ficha, catalogos: AdminCatalogs): SectionFormValues
   return valores;
 }
 
+/** Grupo del catálogo de señalética para cada ambiente de la ficha. */
+const GRUPO_SENALETICA: Record<string, string> = {
+  AREAS_URBANAS: "URBANA",
+  AREAS_NATURALES: "NATURAL",
+  LETREROS_INFORMATIVOS: "INFORMATIVA",
+  SENALETICA_SEGURIDAD: "SEGURIDAD",
+};
+
 const CATEGORIA_SERVICIO_BASICO: Record<string, string> = {
   AGUA: "AGUA",
   ENERGIA_ELECTRICA: "ENERGIA",
@@ -500,18 +509,24 @@ function higiene(ficha: Ficha, catalogos: AdminCatalogs): SectionFormValues {
       ["EN_POBLADO_CERCANO", servicio.valorCiudad, servicio.proveedorCiudad],
     ] as const) {
       if (!valor) continue;
-      const tipo = buscar(
-        catalogos.basicServiceTypes,
-        valor,
-        (opcion) => !categoria || opcion.categoryId === categoria.id,
-      );
+      const delCategoria = (opcion: CatalogOption) =>
+        !categoria || opcion.categoryId === categoria.id;
+      const tipo = buscar(catalogos.basicServiceTypes, valor, delCategoria);
+      // Un texto libre (p. ej. el nombre de la empresa de agua) va como «Otro»,
+      // con ese texto como proveedor, en lugar de perderse.
+      const otro = tipo
+        ? undefined
+        : buscar(catalogos.basicServiceTypes, "Otro", delCategoria);
       entradas.push({
         ...emptyHygieneEntry(),
         kind: "BASIC_SERVICE",
         scope,
-        typeId: idDe(tipo),
-        name: tipo ? "" : `${categoria?.name ?? servicio.tipo}: ${valor}`.slice(0, 180),
-        provider: texto(proveedor).slice(0, 180),
+        typeId: idDe(tipo ?? otro),
+        name:
+          tipo || otro
+            ? ""
+            : `${categoria?.name ?? servicio.tipo}: ${valor}`.slice(0, 180),
+        provider: texto(proveedor || (otro ? valor : "")).slice(0, 180),
         response: "SI",
       });
     }
@@ -526,7 +541,9 @@ function higiene(ficha: Ficha, catalogos: AdminCatalogs): SectionFormValues {
     const tipo = buscar(
       catalogos.signageTypes,
       senal.nombre,
-      (opcion) => !opcion.group || opcion.group === senal.ambiente,
+      (opcion) =>
+        !opcion.group ||
+        opcion.group === (GRUPO_SENALETICA[senal.ambiente] ?? senal.ambiente),
     );
     entradas.push({
       ...emptyHygieneEntry(),
