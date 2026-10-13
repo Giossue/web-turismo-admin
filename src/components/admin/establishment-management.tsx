@@ -30,6 +30,11 @@ import { AdminDataGrid } from "@/components/ui/admin-data-grid";
 import { ADMIN_TABLE_PAGE_SIZE } from "@/components/ui/admin-table";
 import { CoordinateFieldset } from "@/components/admin/coordinate-fieldset";
 import { MinturRegistryDetails } from "@/components/admin/mintur-registry-details";
+import {
+  emptyStagedPhotos,
+  StagedPhotosField,
+  type StagedPhotos,
+} from "@/components/admin/staged-photos-field";
 import { MediaManager } from "@/components/admin/media-manager";
 import { RecordActionsMenu } from "@/components/admin/record-actions-menu";
 import { pageAfterRemoval } from "@/components/admin/shell/pagination";
@@ -47,6 +52,7 @@ import { LoadingSpinner } from "@/components/ui/loading-state";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
   createAdminEstablishment,
+  uploadAdminEstablishmentMedia,
   deleteAdminEstablishment,
   saveAdminEstablishment,
   submitAdminEstablishmentReview,
@@ -69,6 +75,7 @@ import { localityOptions } from "@/lib/locality-options";
 import { withRetainedCatalogOption } from "@/lib/retained-catalog-options";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { findCatalogIdByName, findCatalogOption } from "@/lib/values";
+import { preparePhotoFile } from "@/lib/prepare-photo-file";
 import { webTokens } from "@/theme/tokens";
 
 type EstablishmentFormValues = {
@@ -135,6 +142,8 @@ export const EstablishmentManagement = forwardRef<
   const [page, setPage] = useState(0);
   const [editing, setEditing] = useState<AdminEstablishment | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  // Fotos elegidas en un registro nuevo; se suben cuando el registro se crea.
+  const [stagedPhotos, setStagedPhotos] = useState<StagedPhotos>(emptyStagedPhotos);
   // Solo el texto libre espera al debounce; los selectores consultan al cambiar.
   const debouncedQuery = useDebouncedValue(queryDraft.trim());
   const { control, reset, setValue, handleSubmit } = useForm<EstablishmentFormValues>({
@@ -173,22 +182,47 @@ export const EstablishmentManagement = forwardRef<
     }: {
       input: SaveEstablishmentInput;
       active: boolean;
-    }) =>
-      editing
-        ? saveAdminEstablishment(
+    }) => {
+      if (editing) {
+        await saveAdminEstablishment(
+          token,
+          editing.id,
+          input,
+          canManageStatus ? active : undefined,
+        );
+        return { failedPhotos: 0 };
+      }
+      const created = await createAdminEstablishment(token, input);
+      // El registro ya existe: una foto que falle no debe deshacerlo.
+      let failedPhotos = 0;
+      for (const file of stagedPhotos.files) {
+        try {
+          await uploadAdminEstablishmentMedia(
             token,
-            editing.id,
-            input,
-            canManageStatus ? active : undefined,
-          )
-        : createAdminEstablishment(token, input),
-    onSuccess: async () => {
+            created.id,
+            await preparePhotoFile(file),
+            {
+              description: stagedPhotos.description,
+              sourceAuthor: stagedPhotos.sourceAuthor,
+            },
+          );
+        } catch {
+          failedPhotos += 1;
+        }
+      }
+      return { failedPhotos };
+    },
+    onSuccess: async ({ failedPhotos }) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: adminKeys.allEstablishments() }),
         queryClient.invalidateQueries({ queryKey: adminKeys.allNavigationSummaries() }),
+        queryClient.invalidateQueries({
+          queryKey: [...adminKeys.all, "establishment-media"],
+        }),
       ]);
       setDialogOpen(false);
       setEditing(null);
+      setStagedPhotos(emptyStagedPhotos);
       onNotice(
         editing
           ? canManageStatus
@@ -198,6 +232,15 @@ export const EstablishmentManagement = forwardRef<
             ? "El establecimiento fue creado."
             : "El catastro fue creado como borrador.",
       );
+      if (failedPhotos > 0) {
+        onError(
+          `El establecimiento se creó, pero ${
+            failedPhotos === 1
+              ? "una fotografía no se pudo subir"
+              : `${failedPhotos} fotografías no se pudieron subir`
+          }. Ábrelo y súbelas de nuevo.`,
+        );
+      }
     },
     onError: async (cause) => {
       await Promise.all([
@@ -266,6 +309,7 @@ export const EstablishmentManagement = forwardRef<
   );
   const openCreate = useCallback(() => {
     setEditing(null);
+    setStagedPhotos(emptyStagedPhotos);
     reset(emptyValues);
     setDialogOpen(true);
   }, [reset]);
@@ -713,6 +757,15 @@ export const EstablishmentManagement = forwardRef<
               />
             ) : null}
           </Stack>
+          {!editing ? (
+            <Stack sx={{ mt: webTokens.spacing.control }}>
+              <StagedPhotosField
+                value={stagedPhotos}
+                onChange={setStagedPhotos}
+                disabled={saveMutation.isPending}
+              />
+            </Stack>
+          ) : null}
           {editing ? (
             <Stack sx={{ mt: webTokens.spacing.control }}>
               <MediaManager
