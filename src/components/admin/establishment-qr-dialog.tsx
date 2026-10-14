@@ -33,14 +33,16 @@ export function EstablishmentQrDialog({
   useEffect(() => {
     let current = true;
     if (!open || !url) return;
+    const name = establishment?.nombreComercial ?? "";
     QRCode.toDataURL(url, { width: QR_SIZE, margin: 2, errorCorrectionLevel: "M" })
+      .then((data) => withName(data, name))
       .then((data) => current && setImage(data))
       .catch(() => current && setImage(null));
     return () => {
       current = false;
       setImage(null);
     };
-  }, [open, url]);
+  }, [open, url, establishment?.nombreComercial]);
 
   const fileName = `qr-establecimiento-${establishment?.id ?? ""}.png`;
 
@@ -49,9 +51,6 @@ export function EstablishmentQrDialog({
       <DialogTitle>Código QR</DialogTitle>
       <DialogContent>
         <Stack spacing={2} alignItems="center" sx={{ pt: 1 }}>
-          <Typography variant="subtitle1" align="center">
-            {establishment?.nombreComercial}
-          </Typography>
           {!url ? (
             <Alert severity="warning">
               Falta configurar la dirección pública del sitio (
@@ -62,8 +61,7 @@ export function EstablishmentQrDialog({
             <img
               src={image}
               alt={`Código QR de ${establishment?.nombreComercial ?? "establecimiento"}`}
-              width={260}
-              height={260}
+              width={280}
             />
           ) : (
             <Typography color="text.secondary">Generando…</Typography>
@@ -99,16 +97,53 @@ export function EstablishmentQrDialog({
   );
 }
 
+/** Dibuja el nombre del establecimiento bajo el QR para que viaje en la imagen. */
+async function withName(qr: string, name: string): Promise<string> {
+  const img = new Image();
+  img.src = qr;
+  await img.decode();
+  const font = `600 ${Math.round(QR_SIZE / 16)}px sans-serif`;
+  const probe = document.createElement("canvas").getContext("2d");
+  if (!probe) return qr;
+  probe.font = font;
+  const maxWidth = QR_SIZE - 80;
+  const lines: string[] = [];
+  let line = "";
+  for (const word of name.split(/\s+/).filter(Boolean)) {
+    const next = line ? `${line} ${word}` : word;
+    if (line && probe.measureText(next).width > maxWidth) {
+      lines.push(line);
+      line = word;
+    } else line = next;
+  }
+  if (line) lines.push(line);
+  const lineHeight = Math.round(QR_SIZE / 14);
+  const canvas = document.createElement("canvas");
+  canvas.width = QR_SIZE;
+  canvas.height = QR_SIZE + lines.length * lineHeight + 40;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return qr;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(img, 0, 0);
+  ctx.fillStyle = "#17231d";
+  ctx.font = font;
+  ctx.textAlign = "center";
+  lines.forEach((text, index) =>
+    ctx.fillText(text, QR_SIZE / 2, QR_SIZE + lineHeight * (index + 1)),
+  );
+  return canvas.toDataURL("image/png");
+}
+
 function printQr(image: string, name: string) {
   const win = window.open("", "_blank", "width=480,height=640");
   if (!win) return;
-  const title = document.createElement("h2");
-  title.textContent = name;
+  win.document.title = name;
   const img = document.createElement("img");
   img.src = image;
   img.width = 360;
   img.onload = () => win.print();
   win.document.body.style.cssText =
     "font-family:sans-serif;text-align:center;padding:24px";
-  win.document.body.append(title, img);
+  win.document.body.append(img);
 }
