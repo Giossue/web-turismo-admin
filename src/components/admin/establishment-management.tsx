@@ -804,10 +804,7 @@ export const EstablishmentManagement = forwardRef<
               <MediaManager
                 token={token}
                 target={{ kind: "establishment", id: editing.id }}
-                canEdit={
-                  canManageStatus ||
-                  ["BORRADOR", "RECHAZADO"].includes(editing.reviewStatus)
-                }
+                canEdit={canEditItem(editing)}
                 onNotice={onNotice}
                 onError={onError}
               />

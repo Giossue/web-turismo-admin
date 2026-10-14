@@ -33,3 +33,12 @@ export const publicWebUrl = (process.env.NEXT_PUBLIC_TURISMO_WEB_URL ?? "").repl
 export function establishmentQrUrl(id: number): string | null {
   return publicWebUrl ? `${publicWebUrl}/e/${id}` : null;
 }
+
+/**
+ * Dirección absoluta de un recurso que la API devuelve como ruta absoluta
+ * (`/api/v1/media/…`). `publicApiUrl` ya termina en `/api/v1`, así que se parte
+ * del origen para no duplicar el prefijo.
+ */
+export function apiAssetUrl(path: string): string {
+  return `${new URL(publicApiUrl).origin}${path}`;
+}

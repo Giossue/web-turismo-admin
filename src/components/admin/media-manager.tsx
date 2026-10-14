@@ -40,7 +40,7 @@ import {
   centerMediaQueryOptions,
   establishmentMediaQueryOptions,
 } from "@/lib/admin-queries";
-import { publicApiUrl } from "@/lib/config";
+import { apiAssetUrl } from "@/lib/config";
 import { errorMessage } from "@/lib/errors";
 import { webTokens } from "@/theme/tokens";
 
@@ -277,7 +277,7 @@ export function MediaManager({
               {item.downloadUrl && (item.typeCode ?? "FOTOGRAFIA") === "FOTOGRAFIA" ? (
                 <Box
                   component="img"
-                  src={`${publicApiUrl}${item.downloadUrl}`}
+                  src={apiAssetUrl(item.downloadUrl)}
                   alt={item.description ?? item.originalName}
                   sx={{
                     width: 72,
@@ -302,7 +302,7 @@ export function MediaManager({
               {item.downloadUrl && (item.typeCode ?? "FOTOGRAFIA") !== "FOTOGRAFIA" ? (
                 <Button
                   component="a"
-                  href={`${publicApiUrl}${item.downloadUrl}`}
+                  href={apiAssetUrl(item.downloadUrl)}
                   target="_blank"
                   rel="noreferrer"
                   size="small"

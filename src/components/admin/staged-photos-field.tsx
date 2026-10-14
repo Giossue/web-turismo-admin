@@ -13,7 +13,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 
 import { FlatSurface } from "@/components/ui/flat-surface";
 import { SectionHeader } from "@/components/ui/section-header";
@@ -77,6 +77,13 @@ export function StagedPhotosField({
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [rejected, setRejected] = useState<string[]>([]);
+  const [dragging, setDragging] = useState(false);
+
+  function onDrop(event: DragEvent<HTMLElement>) {
+    event.preventDefault();
+    setDragging(false);
+    if (!disabled) addFiles(event.dataTransfer.files);
+  }
 
   function addFiles(list: FileList | null) {
     if (!list) return;
@@ -104,7 +111,22 @@ export function StagedPhotosField({
           title="Fotografías del establecimiento"
           description="Opcional. Se suben al guardar. JPEG o PNG; se recortan a 4:3 y se optimizan automáticamente."
         />
-        <Box>
+        <Box
+          onDragOver={(event) => {
+            event.preventDefault();
+            if (!disabled) setDragging(true);
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={onDrop}
+          sx={{
+            border: "1px dashed",
+            borderColor: dragging ? "primary.main" : "divider",
+            bgcolor: dragging ? "action.hover" : "transparent",
+            borderRadius: `${webTokens.shape.radius}px`,
+            p: 2,
+            textAlign: "center",
+          }}
+        >
           <Button
             type="button"
             variant="outlined"
@@ -114,6 +136,15 @@ export function StagedPhotosField({
           >
             Elegir fotografías
           </Button>
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            component="p"
+            sx={{ mt: 1 }}
+          >
+            Selecciona varias a la vez (Ctrl o Shift) o arrástralas aquí. Hasta{" "}
+            {MAX_STAGED_PHOTOS}.
+          </Typography>
           <input
             ref={input}
             hidden
