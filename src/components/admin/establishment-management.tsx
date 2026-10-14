@@ -256,6 +256,14 @@ export const EstablishmentManagement = forwardRef<
   });
 
   const publishesDirectly = usePlatformSettings(token).directPublishCatastros;
+  // Con el paso libre el agente también corrige lo suyo ya publicado.
+  const canEditItem = useCallback(
+    (item: AdminEstablishment) =>
+      canManageStatus ||
+      ["BORRADOR", "RECHAZADO"].includes(item.reviewStatus) ||
+      (publishesDirectly && item.reviewStatus === "PUBLICADO" && item.editable !== false),
+    [canManageStatus, publishesDirectly],
+  );
   const { mutate: submitReview, isPending: isSubmittingReview } = useMutation({
     mutationFn: (id: number) => submitAdminEstablishmentReview(token, id),
     onSuccess: async () => {
@@ -420,9 +428,7 @@ export const EstablishmentManagement = forwardRef<
                 label: "Editar",
                 icon: <EditRounded />,
                 onClick: () => openEdit(item),
-                disabled:
-                  !canManageStatus &&
-                  !["BORRADOR", "RECHAZADO"].includes(item.reviewStatus),
+                disabled: !canEditItem(item),
               },
               ...(!canManageStatus &&
               ["BORRADOR", "RECHAZADO"].includes(item.reviewStatus)
@@ -468,6 +474,7 @@ export const EstablishmentManagement = forwardRef<
       openEdit,
       isSubmittingReview,
       publishesDirectly,
+      canEditItem,
       submitReview,
       token,
       page,
@@ -584,9 +591,7 @@ export const EstablishmentManagement = forwardRef<
                   label: "Editar",
                   icon: <EditRounded />,
                   onClick: () => openEdit(item),
-                  disabled:
-                    !canManageStatus &&
-                    !["BORRADOR", "RECHAZADO"].includes(item.reviewStatus),
+                  disabled: !canEditItem(item),
                 },
                 ...(!canManageStatus &&
                 ["BORRADOR", "RECHAZADO"].includes(item.reviewStatus)

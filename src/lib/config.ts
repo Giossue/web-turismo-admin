@@ -23,7 +23,7 @@ export function getApiUrl(): string {
 
 /**
  * Dirección pública del sitio web donde abre el código QR de cada
- * establecimiento (`<sitio>/establecimientos/<id>`). Sin ella no se genera QR.
+ * establecimiento (`<sitio>/e/<id>`). Sin ella no se genera QR.
  */
 export const publicWebUrl = (process.env.NEXT_PUBLIC_TURISMO_WEB_URL ?? "").replace(
   /\/+$/,
@@ -31,5 +31,5 @@ export const publicWebUrl = (process.env.NEXT_PUBLIC_TURISMO_WEB_URL ?? "").repl
 );
 
 export function establishmentQrUrl(id: number): string | null {
-  return publicWebUrl ? `${publicWebUrl}/establecimientos/${id}` : null;
+  return publicWebUrl ? `${publicWebUrl}/e/${id}` : null;
 }

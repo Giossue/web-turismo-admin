@@ -257,7 +257,7 @@ puerto de contenedor `3000` y estos valores de build/runtime:
 ```text
 TURISMO_API_URL=https://api.maps.devs-ueb.tech/api/v1
 NEXT_PUBLIC_TURISMO_API_URL=https://api.maps.devs-ueb.tech/api/v1
-NEXT_PUBLIC_TURISMO_WEB_URL=https://<sitio-publico>
+NEXT_PUBLIC_TURISMO_WEB_URL=https://api.maps.devs-ueb.tech
 NEXT_PUBLIC_TILESERVER_STYLE_URL=https://maps.devs-ueb.tech/styles/basic-preview/style.json
 ```
 
