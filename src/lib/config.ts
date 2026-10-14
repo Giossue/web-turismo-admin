@@ -20,3 +20,16 @@ export function getApiUrl(): string {
   }
   return publicApiUrl;
 }
+
+/**
+ * Dirección pública del sitio web donde abre el código QR de cada
+ * establecimiento (`<sitio>/establecimientos/<id>`). Sin ella no se genera QR.
+ */
+export const publicWebUrl = (process.env.NEXT_PUBLIC_TURISMO_WEB_URL ?? "").replace(
+  /\/+$/,
+  "",
+);
+
+export function establishmentQrUrl(id: number): string | null {
+  return publicWebUrl ? `${publicWebUrl}/establecimientos/${id}` : null;
+}

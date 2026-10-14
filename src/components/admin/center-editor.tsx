@@ -291,7 +291,9 @@ export function CenterEditor({
         return;
       }
       autosave.discard();
-      await centerSave.save(form.getValues(), { submitForReview: true });
+      const saved = await centerSave.save(form.getValues(), { submitForReview: true });
+      // Publicada o enviada a revisión, la ficha ya no se edita: vuelve al inventario.
+      if (saved) onClose();
     } finally {
       submittingReviewRef.current = false;
     }

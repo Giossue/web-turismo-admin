@@ -1,6 +1,7 @@
 "use client";
 
 import EditRounded from "@mui/icons-material/EditRounded";
+import QrCode2Rounded from "@mui/icons-material/QrCode2Rounded";
 import SendRounded from "@mui/icons-material/SendRounded";
 import {
   Button,
@@ -29,6 +30,7 @@ import { Controller, useForm, useWatch } from "react-hook-form";
 import { AdminDataGrid } from "@/components/ui/admin-data-grid";
 import { ADMIN_TABLE_PAGE_SIZE } from "@/components/ui/admin-table";
 import { CoordinateFieldset } from "@/components/admin/coordinate-fieldset";
+import { EstablishmentQrDialog } from "@/components/admin/establishment-qr-dialog";
 import { MinturRegistryDetails } from "@/components/admin/mintur-registry-details";
 import {
   emptyStagedPhotos,
@@ -142,6 +144,7 @@ export const EstablishmentManagement = forwardRef<
   const [page, setPage] = useState(0);
   const [editing, setEditing] = useState<AdminEstablishment | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [qrTarget, setQrTarget] = useState<AdminEstablishment | null>(null);
   // Fotos elegidas en un registro nuevo; se suben cuando el registro se crea.
   const [stagedPhotos, setStagedPhotos] = useState<StagedPhotos>(emptyStagedPhotos);
   // Solo el texto libre espera al debounce; los selectores consultan al cambiar.
@@ -399,6 +402,11 @@ export const EstablishmentManagement = forwardRef<
             tabIndex={hasFocus ? 0 : -1}
             actions={[
               {
+                label: "Código QR",
+                icon: <QrCode2Rounded />,
+                onClick: () => setQrTarget(item),
+              },
+              {
                 label: "Editar",
                 icon: <EditRounded />,
                 onClick: () => openEdit(item),
@@ -552,6 +560,11 @@ export const EstablishmentManagement = forwardRef<
             <RecordActionsMenu
               subject={item.nombreComercial}
               actions={[
+                {
+                  label: "Código QR",
+                  icon: <QrCode2Rounded />,
+                  onClick: () => setQrTarget(item),
+                },
                 {
                   label: "Editar",
                   icon: <EditRounded />,
@@ -805,6 +818,11 @@ export const EstablishmentManagement = forwardRef<
           </Button>
         </DialogActions>
       </Dialog>
+      <EstablishmentQrDialog
+        establishment={qrTarget}
+        open={qrTarget !== null}
+        onClose={() => setQrTarget(null)}
+      />
     </Stack>
   );
 });

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Button,
   Dialog,
@@ -10,6 +11,7 @@ import {
   Typography,
 } from "@mui/material";
 
+import { EstablishmentQrDialog } from "@/components/admin/establishment-qr-dialog";
 import { MinturRegistryDetails } from "@/components/admin/mintur-registry-details";
 import { DetailList, type DetailListItem } from "@/components/ui/detail-list";
 import type { AdminEstablishment } from "@/lib/admin-api";
@@ -55,6 +57,7 @@ export function EstablishmentDetailDialog({
   open: boolean;
   onClose: () => void;
 }) {
+  const [qrOpen, setQrOpen] = useState(false);
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
       <DialogTitle>Detalle completo del catastro</DialogTitle>
@@ -72,8 +75,16 @@ export function EstablishmentDetailDialog({
         ) : null}
       </DialogContent>
       <DialogActions>
+        {establishment ? (
+          <Button onClick={() => setQrOpen(true)}>Código QR</Button>
+        ) : null}
         <Button onClick={onClose}>Cerrar</Button>
       </DialogActions>
+      <EstablishmentQrDialog
+        establishment={establishment}
+        open={qrOpen}
+        onClose={() => setQrOpen(false)}
+      />
     </Dialog>
   );
 }
