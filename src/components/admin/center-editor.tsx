@@ -38,6 +38,7 @@ import {
 import { editorDraftOf, toFormValues, withEditorDraft } from "@/lib/center-form-mappers";
 import { centerSectionDefinitions } from "@/lib/center-sections/definitions";
 import { isAdministrator, useAdminAuth } from "@/lib/auth";
+import { usePlatformSettings } from "@/lib/use-platform-settings";
 import { errorMessage } from "@/lib/errors";
 import { webTokens } from "@/theme/tokens";
 
@@ -105,7 +106,9 @@ export function CenterEditor({
   const focusMissingRef = useRef(false);
   const submittingReviewRef = useRef(false);
   // El administrador no revisa su propia propuesta: la API la publica directo.
-  const publishesDirectly = isAdministrator(useAdminAuth().user);
+  // Los agentes también publican directo si el administrador dejó el paso libre.
+  const directPublishFichas = usePlatformSettings(token).directPublishFichas;
+  const publishesDirectly = isAdministrator(useAdminAuth().user) || directPublishFichas;
 
   const isNew = code === null;
   const state = detail?.status.code ?? "BORRADOR";

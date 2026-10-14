@@ -44,6 +44,7 @@ export const adminKeys = {
   media: (code: string | null) => [...adminKeys.all, "media", code] as const,
   establishmentMedia: (id: number | null) =>
     [...adminKeys.all, "establishment-media", id] as const,
+  platformSettings: () => [...adminKeys.all, "platform-settings"] as const,
   allEstablishments: () => [...adminKeys.all, "establishments"] as const,
   establishments: (filters: AdminEstablishmentsOptions) =>
     [...adminKeys.allEstablishments(), filters] as const,

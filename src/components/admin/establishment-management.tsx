@@ -31,6 +31,7 @@ import { AdminDataGrid } from "@/components/ui/admin-data-grid";
 import { ADMIN_TABLE_PAGE_SIZE } from "@/components/ui/admin-table";
 import { CoordinateFieldset } from "@/components/admin/coordinate-fieldset";
 import { EstablishmentQrDialog } from "@/components/admin/establishment-qr-dialog";
+import { usePlatformSettings } from "@/lib/use-platform-settings";
 import { MinturRegistryDetails } from "@/components/admin/mintur-registry-details";
 import {
   emptyStagedPhotos,
@@ -254,6 +255,7 @@ export const EstablishmentManagement = forwardRef<
     },
   });
 
+  const publishesDirectly = usePlatformSettings(token).directPublishCatastros;
   const { mutate: submitReview, isPending: isSubmittingReview } = useMutation({
     mutationFn: (id: number) => submitAdminEstablishmentReview(token, id),
     onSuccess: async () => {
@@ -261,7 +263,11 @@ export const EstablishmentManagement = forwardRef<
         queryClient.invalidateQueries({ queryKey: adminKeys.allEstablishments() }),
         queryClient.invalidateQueries({ queryKey: adminKeys.allNavigationSummaries() }),
       ]);
-      onNotice("El catastro fue enviado a revisión.");
+      onNotice(
+        publishesDirectly
+          ? "El catastro fue publicado."
+          : "El catastro fue enviado a revisión.",
+      );
     },
     onError: (cause) =>
       onError(errorMessage(cause, "No se pudo enviar el catastro a revisión.")),
@@ -401,11 +407,15 @@ export const EstablishmentManagement = forwardRef<
             subject={item.nombreComercial}
             tabIndex={hasFocus ? 0 : -1}
             actions={[
-              {
-                label: "Código QR",
-                icon: <QrCode2Rounded />,
-                onClick: () => setQrTarget(item),
-              },
+              ...(item.reviewStatus === "PUBLICADO"
+                ? [
+                    {
+                      label: "Código QR",
+                      icon: <QrCode2Rounded />,
+                      onClick: () => setQrTarget(item),
+                    },
+                  ]
+                : []),
               {
                 label: "Editar",
                 icon: <EditRounded />,
@@ -418,7 +428,7 @@ export const EstablishmentManagement = forwardRef<
               ["BORRADOR", "RECHAZADO"].includes(item.reviewStatus)
                 ? [
                     {
-                      label: "Enviar a revisión",
+                      label: publishesDirectly ? "Publicar" : "Enviar a revisión",
                       icon: <SendRounded />,
                       onClick: () => submitReview(item.id),
                       disabled: isSubmittingReview,
@@ -457,6 +467,7 @@ export const EstablishmentManagement = forwardRef<
       canManageStatus,
       openEdit,
       isSubmittingReview,
+      publishesDirectly,
       submitReview,
       token,
       page,
@@ -560,11 +571,15 @@ export const EstablishmentManagement = forwardRef<
             <RecordActionsMenu
               subject={item.nombreComercial}
               actions={[
-                {
-                  label: "Código QR",
-                  icon: <QrCode2Rounded />,
-                  onClick: () => setQrTarget(item),
-                },
+                ...(item.reviewStatus === "PUBLICADO"
+                  ? [
+                      {
+                        label: "Código QR",
+                        icon: <QrCode2Rounded />,
+                        onClick: () => setQrTarget(item),
+                      },
+                    ]
+                  : []),
                 {
                   label: "Editar",
                   icon: <EditRounded />,
@@ -577,7 +592,7 @@ export const EstablishmentManagement = forwardRef<
                 ["BORRADOR", "RECHAZADO"].includes(item.reviewStatus)
                   ? [
                       {
-                        label: "Enviar a revisión",
+                        label: publishesDirectly ? "Publicar" : "Enviar a revisión",
                         icon: <SendRounded />,
                         onClick: () => submitReview(item.id),
                         disabled: isSubmittingReview,

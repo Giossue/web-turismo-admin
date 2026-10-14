@@ -329,7 +329,14 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
               onInitialImportStarted={clearPendingImport}
             />
           ) : null}
-          {section === "settings" ? <SettingsSection user={user} /> : null}
+          {section === "settings" ? (
+            <SettingsSection
+              user={user}
+              token={token}
+              onNotice={feedback.showNotice}
+              onError={feedback.showError}
+            />
+          ) : null}
           {section === "catalogs" ? (
             <CatalogManagement
               token={token}

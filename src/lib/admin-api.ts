@@ -831,6 +831,22 @@ export async function importMinturRegistry(token: string, file: File) {
   return post<MinturImportJob>("/admin/establishments/import", token, body);
 }
 
+export type PlatformSettings = {
+  directPublishCatastros: boolean;
+  directPublishFichas: boolean;
+};
+
+export async function getPlatformSettings(token: string, signal?: AbortSignal) {
+  return get<PlatformSettings>("/admin/settings", token, signal);
+}
+
+export async function updatePlatformSettings(
+  token: string,
+  input: Partial<PlatformSettings>,
+) {
+  return patch<PlatformSettings>("/admin/settings", token, input);
+}
+
 export async function getMinturRegistryImport(
   token: string,
   id: string,
