@@ -174,6 +174,15 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
       </>
     ) : section === "establishments" ? (
       <>
+        <Button
+          component="a"
+          href="/templates/catastro-mintur-plantilla.xlsx"
+          download="Plantilla_catastro_MINTUR.xlsx"
+          variant="outlined"
+          startIcon={<DownloadRounded />}
+        >
+          Descargar plantilla
+        </Button>
         {isAdmin ? (
           <Button
             variant="outlined"
