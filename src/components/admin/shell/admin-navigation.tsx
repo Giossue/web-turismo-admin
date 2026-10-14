@@ -167,7 +167,7 @@ function NavigationContent({
         </Box>
         <Box>
           <Typography variant="body2" fontWeight={600}>
-            Turismo Vinculación
+            Rumbo EC
           </Typography>
           <Typography variant="caption" color={webTokens.navigation.secondaryText}>
             Panel institucional

@@ -16,7 +16,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Turismo Vinculación | Gestión turística",
+  title: "Rumbo EC | Gestión turística",
   description:
     "Portal institucional para gestionar información turística publicada de Ecuador.",
 };

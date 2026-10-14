@@ -60,7 +60,7 @@ export function LandingPage({ centers, apiOnline }: LandingPageProps) {
             <Stack direction="row" spacing={webTokens.spacing.brand} alignItems="center">
               <ExploreRounded />
               <Typography variant="h6" fontWeight={700}>
-                Turismo Vinculación
+                Rumbo EC
               </Typography>
             </Stack>
             <Chip
@@ -94,7 +94,7 @@ export function LandingPage({ centers, apiOnline }: LandingPageProps) {
                 color="text.secondary"
                 sx={{ maxWidth: 640, lineHeight: 1.55 }}
               >
-                Turismo Vinculación conecta a turistas con atractivos, rutas y
+                Rumbo EC conecta a turistas con atractivos, rutas y
                 experiencias verificadas. Este portal acompaña la operación institucional
                 que alimenta la aplicación móvil.
               </Typography>
@@ -226,7 +226,7 @@ export function LandingPage({ centers, apiOnline }: LandingPageProps) {
       >
         <Container maxWidth="lg">
           <Typography variant="body2" color="text.secondary">
-            Turismo Vinculación · Plataforma institucional para promover el turismo en
+            Rumbo EC · Plataforma institucional para promover el turismo en
             Ecuador
           </Typography>
         </Container>

@@ -103,7 +103,6 @@ export function useFichaImport({
           try {
             await uploadAdminCenterMedia(token, code, toImportedPhotoFile(photo), {
               typeCode: "FOTOGRAFIA",
-              description: "Importada desde ficha MINTUR",
               sourceAuthor: photo.fuente ?? undefined,
             });
           } catch (cause) {
