@@ -116,7 +116,7 @@ export function CenterEditor({
   const [issueFocus, setIssueFocus] = useState<IssueFocus | null>(null);
   const [errorIssue, setErrorIssue] = useState<{
     message: string;
-    target: IssueTarget;
+    target: IssueTarget | null;
   } | null>(null);
   const submittingReviewRef = useRef(false);
   // El administrador no revisa su propia propuesta: la API la publica directo.
@@ -158,7 +158,8 @@ export function CenterEditor({
     (message: string | null) => {
       onError(message);
       const target = message ? ubicarAviso(message) : null;
-      setErrorIssue(message && target ? { message, target } : null);
+      // El aviso de la barra desaparece solo; aquí el error queda hasta el siguiente intento.
+      setErrorIssue(message ? { message, target } : null);
       if (message && target && submittingReviewRef.current) goToIssue(target, message);
     },
     [goToIssue, onError],
@@ -418,14 +419,16 @@ export function CenterEditor({
         <Alert
           severity="error"
           action={
-            <Button
-              type="button"
-              color="inherit"
-              size="small"
-              onClick={() => goToIssue(errorIssue.target, errorIssue.message)}
-            >
-              Ir al campo
-            </Button>
+            errorIssue.target ? (
+              <Button
+                type="button"
+                color="inherit"
+                size="small"
+                onClick={() => goToIssue(errorIssue.target!, errorIssue.message)}
+              >
+                Ir al campo
+              </Button>
+            ) : undefined
           }
         >
           {errorIssue.message}
