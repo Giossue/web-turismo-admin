@@ -7,6 +7,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 
+import {
+  scrollToFocusedField,
+  type IssueFocus,
+} from "@/components/admin/center-editor/issue-focus";
 import { CenterFormPanel } from "@/components/admin/center-editor/center-form-panels";
 import {
   CenterSummaryStep,
@@ -28,8 +32,10 @@ import { PageHeader } from "@/components/ui/page-header";
 import type { AdminCenterDetail } from "@/lib/admin-api";
 import { adminKeys, catalogsQueryOptions, centerQueryOptions } from "@/lib/admin-queries";
 import { centerEditorCatalogs } from "@/lib/center-editor-catalogs";
+import { ubicarAviso, type IssueTarget } from "@/lib/ficha/ubicar-aviso";
 import {
   CENTER_CREATE_FIELDS,
+  type CenterFormField,
   CENTER_STEP_FIELDS,
   emptyCenterFormValues,
   isReadyToCreate,
@@ -104,6 +110,14 @@ export function CenterEditor({
   });
   const [activeStep, setActiveStep] = useState(0);
   const focusMissingRef = useRef(false);
+  // Petición de enfoque ya atendida: volver al paso no la repite.
+  const handledIssueRef = useRef(0);
+  // Campo al que llevar a la persona y error de la API que se puede ubicar.
+  const [issueFocus, setIssueFocus] = useState<IssueFocus | null>(null);
+  const [errorIssue, setErrorIssue] = useState<{
+    message: string;
+    target: IssueTarget;
+  } | null>(null);
   const submittingReviewRef = useRef(false);
   // El administrador no revisa su propia propuesta: la API la publica directo.
   // Los agentes también publican directo si el administrador dejó el paso libre.
@@ -130,13 +144,32 @@ export function CenterEditor({
     if (savedCatalogs)
       form.reset(toFormValues(editorDraftOf(withEditorDraft(saved)), savedCatalogs));
   };
+  /** Abre el paso del campo y lo señala con el mensaje. */
+  const goToIssue = useCallback((target: IssueTarget, message: string) => {
+    const step = centerSectionDefinitions.findIndex(
+      (section) => section.code === target.sectionCode,
+    );
+    if (step < 0) return;
+    setActiveStep(step);
+    setIssueFocus({ ...target, message, nonce: Date.now() });
+  }, []);
+  // Un error de la API que apunta a un campo ofrece ir a él; al publicar, va solo.
+  const reportError = useCallback(
+    (message: string | null) => {
+      onError(message);
+      const target = message ? ubicarAviso(message) : null;
+      setErrorIssue(message && target ? { message, target } : null);
+      if (message && target && submittingReviewRef.current) goToIssue(target, message);
+    },
+    [goToIssue, onError],
+  );
   const centerSave = useCenterSave({
     token,
     code,
     catalogs,
     onSaved,
     onNotice,
-    onError,
+    onError: reportError,
     onConflictReload: adoptServerDetail,
   });
   const autosave = useCenterAutosave(form, {
@@ -229,6 +262,21 @@ export function CenterEditor({
     focusMissingRef.current = false;
     void form.trigger([...CENTER_CREATE_FIELDS], { shouldFocus: true });
   }, [activeStep, form]);
+
+  // Campo del formulario principal: se señala y enfoca cuando su paso está activo.
+  useEffect(() => {
+    if (!issueFocus || issueFocus.form !== "main") return;
+    if (activeSectionCode !== issueFocus.sectionCode) return;
+    if (handledIssueRef.current === issueFocus.nonce) return;
+    handledIssueRef.current = issueFocus.nonce;
+    const timer = setTimeout(() => {
+      const field = issueFocus.field as CenterFormField;
+      form.setError(field, { type: "manual", message: issueFocus.message });
+      form.setFocus(field);
+      scrollToFocusedField(issueFocus.sectionCode);
+    }, 80);
+    return () => clearTimeout(timer);
+  }, [activeSectionCode, form, issueFocus]);
 
   async function goNext() {
     if (activeSectionCode === null) return;
@@ -344,12 +392,43 @@ export function CenterEditor({
             La ficha se precargó con advertencias — revísalas antes de guardar:
           </Typography>
           <Stack component="ul" sx={{ m: 0, pl: 2.5 }}>
-            {fichaImport.warnings.map((warning) => (
-              <Typography key={warning} component="li" variant="body2">
-                {warning}
-              </Typography>
-            ))}
+            {fichaImport.warnings.map((warning) => {
+              const target = ubicarAviso(warning);
+              return (
+                <Typography key={warning} component="li" variant="body2">
+                  {warning}
+                  {target ? (
+                    <Button
+                      type="button"
+                      size="small"
+                      color="inherit"
+                      sx={{ ml: 1, textDecoration: "underline" }}
+                      onClick={() => goToIssue(target, warning)}
+                    >
+                      Ir al campo
+                    </Button>
+                  ) : null}
+                </Typography>
+              );
+            })}
           </Stack>
+        </Alert>
+      ) : null}
+      {errorIssue ? (
+        <Alert
+          severity="error"
+          action={
+            <Button
+              type="button"
+              color="inherit"
+              size="small"
+              onClick={() => goToIssue(errorIssue.target, errorIssue.message)}
+            >
+              Ir al campo
+            </Button>
+          }
+        >
+          {errorIssue.message}
         </Alert>
       ) : null}
       {fichaImport.photoUploadError && fichaImport.pendingPhotoCount > 0 ? (
@@ -413,8 +492,9 @@ export function CenterEditor({
         activeSectionCode={activeSectionCode}
         visible={activeSectionCode !== null}
         onDetailChanged={handleDetailChanged}
-        onError={onError}
+        onError={reportError}
         sugerenciasImportadas={fichaImport.sugerencias}
+        focusRequest={issueFocus}
       />
 
       {activeSectionCode ? (

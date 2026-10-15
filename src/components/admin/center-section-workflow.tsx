@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
 import { SectionCard } from "@/components/admin/center-sections/section-card";
+import type { IssueFocus } from "@/components/admin/center-editor/issue-focus";
 import { ContentState } from "@/components/ui/content-state";
 import type { AdminCatalogs, AdminCenterDetail, AdminMediaItem } from "@/lib/admin-api";
 import { centerMediaQueryOptions, centerSectionsQueryOptions } from "@/lib/admin-queries";
@@ -35,6 +36,7 @@ export function ContinuousCenterSectionWorkflow({
   onDetailChanged,
   onError,
   sugerenciasImportadas,
+  focusRequest,
 }: {
   token: string;
   code: string | null;
@@ -47,6 +49,8 @@ export function ContinuousCenterSectionWorkflow({
   onError: (message: string | null) => void;
   /** Ver src/lib/ficha/sugerencias-secciones.ts. */
   sugerenciasImportadas?: SugerenciasSecciones | null;
+  /** Lleva a la persona a un campo de un apartado y lo señala. */
+  focusRequest?: IssueFocus | null;
 }) {
   const sectionsQuery = useQuery(centerSectionsQueryOptions(token, code));
   const mediaQuery = useQuery(centerMediaQueryOptions(token, code));
@@ -117,6 +121,12 @@ export function ContinuousCenterSectionWorkflow({
           catalogs={catalogs}
           mediaItems={mediaItems}
           sugerencias={sugerenciasImportadas}
+          focusRequest={
+            focusRequest?.form === "section" &&
+            focusRequest.sectionCode === definition.code
+              ? focusRequest
+              : null
+          }
           onDetailChanged={onDetailChanged}
           onError={onError}
         />

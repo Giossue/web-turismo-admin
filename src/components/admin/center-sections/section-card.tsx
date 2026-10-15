@@ -1,7 +1,12 @@
 import FactCheckRounded from "@mui/icons-material/FactCheckRounded";
 import { Divider, Stack } from "@mui/material";
-import { memo, useState } from "react";
-import { FormProvider, useForm, useWatch } from "react-hook-form";
+import { memo, useEffect, useRef, useState } from "react";
+import { FormProvider, useForm, useWatch, type FieldPath } from "react-hook-form";
+
+import {
+  scrollToFocusedField,
+  type IssueFocus,
+} from "@/components/admin/center-editor/issue-focus";
 
 import { FlatSurface } from "@/components/ui/flat-surface";
 import { EditableContext } from "@/components/ui/form/editable-context";
@@ -30,6 +35,8 @@ type SectionCardProps = {
   catalogs: AdminCatalogs | null;
   mediaItems: readonly AdminMediaItem[];
   sugerencias?: SugerenciasSecciones | null;
+  /** Campo de este apartado al que llevar a la persona (aviso o error). */
+  focusRequest?: IssueFocus | null;
   onDetailChanged: (detail: AdminCenterDetail) => void;
   onError: (message: string | null) => void;
 };
@@ -49,6 +56,7 @@ export const SectionCard = memo(function SectionCard({
   catalogs,
   mediaItems,
   sugerencias,
+  focusRequest,
   onDetailChanged,
   onError,
 }: SectionCardProps) {
@@ -70,6 +78,25 @@ export const SectionCard = memo(function SectionCard({
     onDetailChanged,
     onError,
   });
+
+  const { setError, setFocus } = form;
+  const focusNonce = focusRequest?.nonce;
+  const handledFocusRef = useRef(0);
+  useEffect(() => {
+    if (!focusRequest || !active || handledFocusRef.current === focusRequest.nonce)
+      return;
+    handledFocusRef.current = focusRequest.nonce;
+    // Espera a que el apartado deje de estar oculto para poder enfocar el campo.
+    const timer = setTimeout(() => {
+      const field = focusRequest.field as FieldPath<SectionFormValues>;
+      setError(field, { type: "manual", message: focusRequest.message });
+      setFocus(field);
+      scrollToFocusedField(definition.code);
+    }, 80);
+    return () => clearTimeout(timer);
+    // Solo cuando llega una petición nueva o el apartado pasa a ser el activo.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusNonce, active]);
 
   const response = useWatch({ control: form.control, name: "response" });
   // Con "No" o "No aplica" el detalle no se muestra. Los campos ocultos se
