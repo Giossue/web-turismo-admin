@@ -92,7 +92,7 @@ function CenterInventoryActions({
               subject: center.name,
               title: "Eliminar centro turístico",
               description:
-                "Se retirará del panel y de la aplicación. La ficha, sus archivos y el historial se conservan.",
+                "Se borrará definitivamente la ficha con sus archivos, revisiones e historial. No se puede deshacer.",
               onDelete: () => deleteAdminCenter(token, center.code),
               queryKeys: [
                 adminKeys.allCenters(),
@@ -289,7 +289,7 @@ export function CentersSection({
               canDelete={canDelete}
               onGoToReview={onGoToReview}
               onOpen={onOpen}
-                onPageChange={onPageChange}
+              onPageChange={onPageChange}
               page={page}
               itemsOnPage={itemsOnPage}
             />
