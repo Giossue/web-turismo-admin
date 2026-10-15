@@ -330,8 +330,17 @@ export function CenterEditor({
     setActiveStep(0);
   }
 
+  // Lo importado (apartados y fotos) aún se guarda: publicar ahora dejaría fuera
+  // lo que llegue después de la publicación.
+  const importBusy =
+    fichaImport.savingSections ||
+    fichaImport.pendingSectionCount > 0 ||
+    fichaImport.uploadingPhotos ||
+    (fichaImport.pendingPhotoCount > 0 && !fichaImport.photoUploadError);
+
   async function submitForReview() {
-    if (submittingReviewRef.current || centerSave.working || !canReview) return;
+    if (submittingReviewRef.current || centerSave.working || importBusy || !canReview)
+      return;
     submittingReviewRef.current = true;
     try {
       if (!isReadyToCreate(form.getValues())) {
@@ -375,9 +384,9 @@ export function CenterEditor({
               variant="contained"
               startIcon={<CloudUploadRounded />}
               onClick={() => void submitForReview()}
-              disabled={centerSave.working}
+              disabled={centerSave.working || importBusy}
             >
-              {submitLabel(publishesDirectly, centerSave.reviewing)}
+              {submitLabel(publishesDirectly, centerSave.reviewing, importBusy)}
             </Button>
           ) : null,
         ]}
@@ -545,9 +554,9 @@ export function CenterEditor({
               variant="contained"
               startIcon={<CloudUploadRounded />}
               onClick={() => void submitForReview()}
-              disabled={centerSave.working}
+              disabled={centerSave.working || importBusy}
             >
-              {submitLabel(publishesDirectly, centerSave.reviewing)}
+              {submitLabel(publishesDirectly, centerSave.reviewing, importBusy)}
             </Button>
           ) : undefined
         }
@@ -556,7 +565,8 @@ export function CenterEditor({
   );
 }
 
-function submitLabel(publishesDirectly: boolean, working: boolean) {
+function submitLabel(publishesDirectly: boolean, working: boolean, importing: boolean) {
+  if (importing) return "Guardando lo importado…";
   if (publishesDirectly) return working ? "Publicando…" : "Publicar";
   return working ? "Enviando…" : "Enviar a revisión";
 }
