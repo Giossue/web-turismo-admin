@@ -32,6 +32,24 @@ function resolverPorNombre(
   return { id: coincidencias[0].id, advertencia: null };
 }
 
+/**
+ * El clima es texto libre en la plantilla («Frio Ecuatorial Húmedo»): si no hay
+ * coincidencia exacta, vale el único clima del catálogo cuyo nombre aparece como
+ * palabra en el texto.
+ */
+function resolverClima(
+  opciones: CatalogOption[],
+  texto: string | null,
+): ResolucionCatalogo {
+  const exacta = resolverPorNombre(opciones, texto, "Clima");
+  if (exacta.id !== null || !texto) return exacta;
+  const palabras = new Set(normalizarTextoCatalogo(texto).split(" "));
+  const contenidas = opciones.filter((opcion) =>
+    palabras.has(normalizarTextoCatalogo(opcion.name)),
+  );
+  return contenidas.length === 1 ? { id: contenidas[0].id, advertencia: null } : exacta;
+}
+
 export type CatalogosResueltos = {
   provinciaId: ResolucionCatalogo;
   cantonId: ResolucionCatalogo;
@@ -168,11 +186,7 @@ export function resolverCatalogosFicha(
     : null;
   const escenarioId = resolverPorNombre(catalogos.scenarios, escenarioTexto, "Escenario");
 
-  const climaId = resolverPorNombre(
-    catalogos.climates,
-    datos.caracteristicas.clima.texto,
-    "Clima",
-  );
+  const climaId = resolverClima(catalogos.climates, datos.caracteristicas.clima.texto);
 
   const tipoIngresoTexto = datos.caracteristicas.ingreso.tipoSeleccionado.valor
     ? NOMBRES_TIPO_INGRESO[datos.caracteristicas.ingreso.tipoSeleccionado.valor]

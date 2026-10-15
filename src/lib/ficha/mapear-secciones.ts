@@ -13,6 +13,7 @@ import {
   emptyHygieneEntry,
   emptyPlant,
   emptyPromotionMedia,
+  emptyAquaticAccess,
   emptyRoad,
   emptyTraining,
   emptyTransportDetail,
@@ -106,6 +107,12 @@ function unir(...partes: Array<string | null | undefined>): string {
     .map((parte) => parte?.trim())
     .filter(Boolean)
     .join("\n");
+}
+
+/** «Etiqueta: texto», o nada si no hay texto. */
+function prefijar(etiqueta: string, valor: string | null | undefined): string | null {
+  const limpio = texto(valor);
+  return limpio ? `${etiqueta}: ${limpio}` : null;
 }
 
 /** Observación general del apartado (la API admite hasta 2000 caracteres). */
@@ -223,6 +230,25 @@ function accesibilidad(
       };
     });
 
+  valores.accessibilityAquatic = acceso.viasAcuaticas.map((via) => {
+    const modalidad = buscar(catalogos.aquaticAccessModes, via.modalidad);
+    const partida = buscar(catalogos.conditionStates, via.estadoPartida);
+    const llegada = buscar(catalogos.conditionStates, via.estadoLlegada);
+    return {
+      ...emptyAquaticAccess(),
+      modalityId: idDe(modalidad),
+      modalityLabel: modalidad ? "" : via.modalidad,
+      departure: texto(via.puertoPartida).slice(0, 180),
+      departureConditionId: idDe(partida),
+      arrival: texto(via.puertoLlegada).slice(0, 180),
+      arrivalConditionId: idDe(llegada),
+      observation: unir(
+        !partida && via.estadoPartida ? `Estado de partida: ${via.estadoPartida}` : null,
+        !llegada && via.estadoLlegada ? `Estado de llegada: ${via.estadoLlegada}` : null,
+      ),
+    };
+  });
+
   valores.accessibilityTransportTypes = acceso.transporteTipos.map((nombre) => ({
     ...emptyTransportType(),
     typeId: idDe(buscar(catalogos.transportTypes, nombre)),
@@ -271,6 +297,11 @@ function accesibilidad(
   valores.observation = observacionGeneral(
     acceso.observacionUbicacion,
     acceso.observacionAccesibilidad,
+    prefijar("Acceso terrestre", acceso.observacionTerrestre),
+    prefijar("Acceso acuático", acceso.observacionAcuatica),
+    prefijar("Acceso aéreo", acceso.observacionAerea),
+    prefijar("Transporte", ficha.observacionesApartados.transporte),
+    prefijar("Señalización de aproximación", ficha.observacionesApartados.senalizacion),
   );
   return valores;
 }
@@ -405,6 +436,10 @@ function planta(
     datos.observacionAgenciasAtractivo,
     datos.observacionAgenciasCiudad,
     datos.observacionGuiasAtractivo,
+    prefijar(
+      "Servicios complementarios (ciudad cercana)",
+      ficha.observacionesApartados.complementariosCiudad,
+    ),
     datos.observacionGuiasCiudad,
     observacionEnPrimero(valores.facilityDetails, datos.observacionFacilidades),
     observacionEnPrimero(valores.complementaryServices, datos.observacionComplementarios),
@@ -664,6 +699,22 @@ function politicas(ficha: Ficha): SectionFormValues {
         }
       : politica;
   });
+  valores.observation = observacionGeneral(ficha.observacionesApartados.politicas);
+  return valores;
+}
+
+/** Las actividades van en el formulario principal; aquí solo sus observaciones. */
+function actividades(ficha: Ficha): SectionFormValues | null {
+  const o = ficha.observacionesApartados;
+  const observacion = observacionGeneral(
+    prefijar("Acuáticas", o.actividadesAcuaticas),
+    prefijar("Aéreas", o.actividadesAereas),
+    prefijar("Terrestres", o.actividadesTerrestres),
+    prefijar("Culturales", o.actividadesCulturales),
+  );
+  if (!observacion) return null;
+  const valores = base("actividades");
+  valores.observation = observacion;
   return valores;
 }
 
@@ -999,6 +1050,8 @@ export function mapearSeccionesImportadas(
     "recurso-humano": recursoHumano(ficha, catalogos),
     anexos: anexos(ficha, catalogos),
   };
+  const seccionActividades = actividades(ficha);
+  if (seccionActividades) valores.actividades = seccionActividades;
   depurarParaPublicar(valores, advertencias);
   const secciones: SeccionesImportadas = Object.fromEntries(
     Object.entries(valores)

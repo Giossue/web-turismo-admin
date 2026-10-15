@@ -38,6 +38,7 @@ describe("mapearSeccionesImportadas", () => {
     expect(Object.keys(secciones).sort()).toEqual(
       [
         "accesibilidad",
+        "actividades",
         "anexos",
         "caracteristicas",
         "conservacion",

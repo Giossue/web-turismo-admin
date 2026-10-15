@@ -49,6 +49,7 @@ import type {
   FichaResponsableFirma,
   FichaResumenValoracion,
   FichaUbicacion,
+  FichaViaAcuatica,
   FichaViaTerrestre,
   ResultadoParseoFicha,
 } from "./tipos";
@@ -283,7 +284,10 @@ function leerIngreso(worksheet: ExcelJS.Worksheet): FichaIngreso {
     precioDesde: leerPositivoOpcional(worksheet, "E35"),
     precioHasta: leerPositivoOpcional(worksheet, "G35"),
     mesesRecomendados: leerTextoOpcional(worksheet, "H36"),
-    observacion: leerTextoOpcional(worksheet, "E37"),
+    observacion: unirTextos(
+      leerTextoOpcional(worksheet, "E37"),
+      leerTextoOpcional(worksheet, "T33"),
+    ),
   };
 }
 
@@ -341,16 +345,50 @@ const ORDENES_VIA = [
   { orden: "TERCER_ORDEN" as const, fila: 46 },
 ];
 
+function unirTextos(...partes: Array<string | null>): string | null {
+  const texto = partes.filter(Boolean).join("\n");
+  return texto || null;
+}
+
+function numeroSolo(texto: string): number | null {
+  return /^-?\d+([.,]\d+)?$/.test(texto.trim()) ? Number(texto.replace(",", ".")) : null;
+}
+
+function latitudSola(texto: string): boolean {
+  const n = numeroSolo(texto);
+  return n !== null && n >= RANGO_LATITUD_ECUADOR.min && n <= RANGO_LATITUD_ECUADOR.max;
+}
+
+function longitudSola(texto: string): boolean {
+  const n = numeroSolo(texto);
+  return n !== null && n >= RANGO_LONGITUD_ECUADOR.min && n <= RANGO_LONGITUD_ECUADOR.max;
+}
+
 function leerViasTerrestres(
   worksheet: ExcelJS.Worksheet,
   advertencias: string[],
 ): FichaViaTerrestre[] {
   const vias: FichaViaTerrestre[] = [];
   for (const { orden, fila } of ORDENES_VIA) {
-    const inicioCrudo = leerTexto(worksheet, `J${fila}`);
-    const finCrudo = leerTexto(worksheet, `M${fila}`);
-    if (inicioCrudo === "" && finCrudo === "") continue;
-    if (inicioCrudo === "0" && finCrudo === "0") continue;
+    let inicioCrudo = leerTexto(worksheet, `J${fila}`);
+    let finCrudo = leerTexto(worksheet, `M${fila}`);
+    // Algunas fichas escriben la latitud en la celda de inicio y la longitud en la
+    // de fin: es una sola coordenada (la de inicio), no dos.
+    if (latitudSola(inicioCrudo) && longitudSola(finCrudo)) {
+      advertencias.push(
+        `Vía ${orden}: la latitud y la longitud estaban en celdas separadas; se tomaron como la coordenada de inicio.`,
+      );
+      inicioCrudo = `${inicioCrudo} ${finCrudo}`;
+      finCrudo = "";
+    }
+    const sinCoordenadas =
+      (inicioCrudo === "" || inicioCrudo === "0") &&
+      (finCrudo === "" || finCrudo === "0");
+    const distanciaKm = leerPositivoOpcional(worksheet, `P${fila}`);
+    const tipoMaterial = leerTextoOpcional(worksheet, `R${fila}`);
+    const estado = leerTextoOpcional(worksheet, `U${fila}`);
+    // Una vía sin coordenadas pero con distancia, material o estado sigue contando.
+    if (sinCoordenadas && distanciaKm === null && !tipoMaterial && !estado) continue;
 
     const inicio = parsearCoordenadaPar(
       inicioCrudo,
@@ -364,12 +402,32 @@ function leerViasTerrestres(
       orden,
       coordenadaInicio: { crudo: inicioCrudo, advertencia: inicio.advertencia },
       coordenadaFin: { crudo: finCrudo, advertencia: fin.advertencia },
-      distanciaKm: leerPositivoOpcional(worksheet, `P${fila}`),
-      tipoMaterial: leerTextoOpcional(worksheet, `R${fila}`),
-      estado: leerTextoOpcional(worksheet, `U${fila}`),
+      distanciaKm,
+      tipoMaterial,
+      estado,
     });
   }
   return vias;
+}
+
+/** 2.2.b Acceso acuático: una fila por modalidad (puerto y estado de partida y de llegada). */
+const MODALIDADES_ACUATICAS = [
+  { modalidad: "Marítimo" as const, fila: 48 },
+  { modalidad: "Lacustre" as const, fila: 49 },
+  { modalidad: "Fluvial" as const, fila: 50 },
+];
+
+function leerViasAcuaticas(worksheet: ExcelJS.Worksheet): FichaViaAcuatica[] {
+  return MODALIDADES_ACUATICAS.map(({ modalidad, fila }) => ({
+    modalidad,
+    puertoPartida: leerTextoOpcional(worksheet, `J${fila}`),
+    estadoPartida: leerTextoOpcional(worksheet, `M${fila}`),
+    puertoLlegada: leerTextoOpcional(worksheet, `R${fila}`),
+    estadoLlegada: leerTextoOpcional(worksheet, `U${fila}`),
+  })).filter(
+    (via) =>
+      via.puertoPartida || via.estadoPartida || via.puertoLlegada || via.estadoLlegada,
+  );
 }
 
 const TIPOS_TRANSPORTE: Array<{ nombre: string; refEtiqueta: string }> = [
@@ -456,6 +514,10 @@ function leerAccesoConectividad(
     observacionAccesibilidad: leerTextoOpcional(worksheet, "E69"),
     coordenadas,
     viasTerrestres: leerViasTerrestres(worksheet, advertencias),
+    viasAcuaticas: leerViasAcuaticas(worksheet),
+    observacionTerrestre: leerTextoOpcional(worksheet, "E47"),
+    observacionAcuatica: leerTextoOpcional(worksheet, "E51"),
+    observacionAerea: leerTextoOpcional(worksheet, "E53"),
     transporteTipos: TIPOS_TRANSPORTE.filter(
       (t) => leerMarcaJuntoAEtiqueta(worksheet, t.refEtiqueta) === true,
     ).map((t) => t.nombre),
@@ -741,6 +803,16 @@ export async function parsearFicha(
     accesibilidadDetalle: leerAccesibilidadDetalle(workbook),
     imagenes: imagenesAnexos.metadata,
     politicas: leerPoliticas(worksheet),
+    observacionesApartados: {
+      transporte: leerTextoOpcional(worksheet, "E58"),
+      senalizacion: leerTextoOpcional(worksheet, "E72"),
+      complementariosCiudad: leerTextoOpcional(worksheet, "O125"),
+      politicas: leerTextoOpcional(worksheet, "E232"),
+      actividadesAcuaticas: leerTextoOpcional(worksheet, "E240"),
+      actividadesAereas: leerTextoOpcional(worksheet, "E243"),
+      actividadesTerrestres: leerTextoOpcional(worksheet, "E248"),
+      actividadesCulturales: leerTextoOpcional(worksheet, "E257"),
+    },
     actividades: leerActividades(worksheet),
     promocion: leerPromocion(worksheet),
     visitantes: leerVisitantes(worksheet),

@@ -18,6 +18,7 @@ import type {
   fichaResponsableFirmaSchema,
   fichaResumenValoracionSchema,
   fichaUbicacionSchema,
+  fichaViaAcuaticaSchema,
   fichaViaTerrestreSchema,
   fichaVisitantesSchema,
   resultadoParseoFichaSchema,
@@ -32,6 +33,7 @@ export type FichaIngreso = z.infer<typeof fichaIngresoSchema>;
 export type FichaCaracteristicas = z.infer<typeof fichaCaracteristicasSchema>;
 export type FichaCooperativaTransporte = z.infer<typeof fichaCooperativaTransporteSchema>;
 export type FichaViaTerrestre = z.infer<typeof fichaViaTerrestreSchema>;
+export type FichaViaAcuatica = z.infer<typeof fichaViaAcuaticaSchema>;
 export type FichaAccesoConectividad = z.infer<typeof fichaAccesoConectividadSchema>;
 export type FichaResponsableFirma = z.infer<typeof fichaResponsableFirmaSchema>;
 export type FichaResumenValoracion = z.infer<typeof fichaResumenValoracionSchema>;

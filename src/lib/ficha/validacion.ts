@@ -118,6 +118,14 @@ export const fichaViaTerrestreSchema = z.object({
   estado: texto,
 });
 
+export const fichaViaAcuaticaSchema = z.object({
+  modalidad: z.enum(["Marítimo", "Lacustre", "Fluvial"]),
+  puertoPartida: texto,
+  estadoPartida: texto,
+  puertoLlegada: texto,
+  estadoLlegada: texto,
+});
+
 export const fichaAccesoConectividadSchema = z.object({
   ciudadPobladoCercano: texto,
   distanciaKm: numero,
@@ -126,6 +134,10 @@ export const fichaAccesoConectividadSchema = z.object({
   observacionAccesibilidad: texto,
   coordenadas: coordenadaCruda.nullable(),
   viasTerrestres: z.array(fichaViaTerrestreSchema),
+  viasAcuaticas: z.array(fichaViaAcuaticaSchema),
+  observacionTerrestre: texto,
+  observacionAcuatica: texto,
+  observacionAerea: texto,
   transporteTipos: z.array(z.string()),
   transporteDetalle: z.array(fichaCooperativaTransporteSchema),
   accesibilidadGeneral: z.record(z.string(), respuestaSeccionSchema.nullable()),
@@ -444,6 +456,17 @@ export const fichaExtraidaSchema = z.object({
   accesibilidadDetalle: z.array(fichaAccesibilidadDetalleItemSchema),
   imagenes: z.array(fichaImagenAnexoSchema),
   politicas: z.array(fichaPoliticaSchema),
+  /** Observaciones de la plantilla que no tienen campo propio en el formulario. */
+  observacionesApartados: z.object({
+    transporte: texto,
+    senalizacion: texto,
+    complementariosCiudad: texto,
+    politicas: texto,
+    actividadesAcuaticas: texto,
+    actividadesAereas: texto,
+    actividadesTerrestres: texto,
+    actividadesCulturales: texto,
+  }),
   actividades: z.array(fichaActividadSchema),
   promocion: fichaPromocionSchema,
   visitantes: fichaVisitantesSchema,
