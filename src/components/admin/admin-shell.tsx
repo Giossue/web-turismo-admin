@@ -300,7 +300,6 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
               onStatusChange={nav.setCenterStatus}
               onPageChange={nav.setCentersPage}
               onOpen={openEditor}
-              onImport={chooseImport}
               onGoToReview={isAdmin ? goToReview : undefined}
             />
           ) : null}

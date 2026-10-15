@@ -1,6 +1,5 @@
 "use client";
 
-import CloudUploadRounded from "@mui/icons-material/CloudUploadRounded";
 import EditRounded from "@mui/icons-material/EditRounded";
 import FactCheckRounded from "@mui/icons-material/FactCheckRounded";
 import CheckRounded from "@mui/icons-material/CheckRounded";
@@ -38,7 +37,6 @@ function CenterInventoryActions({
   tabIndex,
   onGoToReview,
   onOpen,
-  onImport,
   onPageChange,
   page,
   itemsOnPage,
@@ -49,7 +47,6 @@ function CenterInventoryActions({
   tabIndex?: number;
   onGoToReview?: () => void;
   onOpen: (code: string) => void;
-  onImport: (code: string) => void;
   onPageChange: (page: number) => void;
   page: number;
   itemsOnPage: number;
@@ -87,11 +84,6 @@ function CenterInventoryActions({
                   icon: <EditRounded fontSize="small" />,
                   onClick: () => onOpen(center.code),
                 },
-                {
-                  label: "Actualizar desde Excel",
-                  icon: <CloudUploadRounded fontSize="small" />,
-                  onClick: () => onImport(center.code),
-                },
               ]
       }
       deletion={
@@ -127,7 +119,6 @@ export function CentersSection({
   onStatusChange,
   onPageChange,
   onOpen,
-  onImport,
   onGoToReview,
   canDelete,
 }: {
@@ -143,7 +134,6 @@ export function CentersSection({
   onPageChange: (page: number) => void;
   onOpen: (code: string) => void;
   /** Elige un Excel para importarlo sobre la ficha indicada. */
-  onImport: (code: string) => void;
   /** Disponible sólo para cuentas que pueden entrar a la cola de revisión. */
   onGoToReview?: () => void;
   canDelete: boolean;
@@ -219,7 +209,6 @@ export function CentersSection({
             tabIndex={hasFocus ? 0 : -1}
             onGoToReview={onGoToReview}
             onOpen={onOpen}
-            onImport={onImport}
             onPageChange={onPageChange}
             page={page}
             itemsOnPage={itemsOnPage}
@@ -227,7 +216,7 @@ export function CentersSection({
         ),
       },
     ],
-    [onOpen, onImport, onGoToReview, canDelete, token, page, onPageChange, itemsOnPage],
+    [onOpen, onGoToReview, canDelete, token, page, onPageChange, itemsOnPage],
   );
   const filterCount = Number(status !== "ALL");
   const error = centersQuery.error
@@ -300,8 +289,7 @@ export function CentersSection({
               canDelete={canDelete}
               onGoToReview={onGoToReview}
               onOpen={onOpen}
-              onImport={onImport}
-              onPageChange={onPageChange}
+                onPageChange={onPageChange}
               page={page}
               itemsOnPage={itemsOnPage}
             />

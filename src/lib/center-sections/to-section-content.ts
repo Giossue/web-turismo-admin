@@ -290,6 +290,10 @@ const writeHumanResources: SectionWriter = (values) => ({
   },
 });
 
+function hasGadValidation(gad: SectionFormValues["gadValidation"]): boolean {
+  return Object.values(gad).some((value) => String(value ?? "").trim() !== "");
+}
+
 const writeAnnexes: SectionWriter = (values) => ({
   annexes: {
     documents: values.annexDocuments.map((document) => ({
@@ -317,16 +321,22 @@ const writeAnnexes: SectionWriter = (values) => ({
       scope: values.accessibilitySurvey.scope.trim(),
       observation: values.accessibilitySurvey.observation.trim(),
     },
-    gadValidation: {
-      acceptance: values.gadValidation.acceptance,
-      name: values.gadValidation.name.trim(),
-      institution: values.gadValidation.institution.trim(),
-      position: values.gadValidation.position.trim(),
-      phone: values.gadValidation.phone.trim(),
-      email: values.gadValidation.email.trim(),
-      date: textOrNull(values.gadValidation.date),
-      observation: values.gadValidation.observation.trim(),
-    },
+    // Solo la completa quien valida cuando el GAD no levantó la ficha; en blanco
+    // no se envía, porque la API exige aceptación, nombre e institución si existe.
+    ...(hasGadValidation(values.gadValidation)
+      ? {
+          gadValidation: {
+            acceptance: values.gadValidation.acceptance,
+            name: values.gadValidation.name.trim(),
+            institution: values.gadValidation.institution.trim(),
+            position: values.gadValidation.position.trim(),
+            phone: values.gadValidation.phone.trim(),
+            email: values.gadValidation.email.trim(),
+            date: textOrNull(values.gadValidation.date),
+            observation: values.gadValidation.observation.trim(),
+          },
+        }
+      : {}),
   },
 });
 
