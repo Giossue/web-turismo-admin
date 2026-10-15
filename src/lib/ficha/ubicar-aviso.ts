@@ -57,6 +57,10 @@ const RULES: Rule[] = [
     pattern: /^Vía \w+/,
     target: section("accesibilidad", "accessibilityRoads.0.startLatitude"),
   },
+  {
+    pattern: /^Años de registro de visitantes/,
+    target: section("visitantes", "visitorRegistry.years"),
+  },
   { pattern: /^Facilidad\b/, target: main("planta", "facilityIds") },
   {
     pattern: /validación del GAD requiere una aceptación/i,

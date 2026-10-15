@@ -670,7 +670,7 @@ function higiene(ficha: Ficha, catalogos: AdminCatalogs): SectionFormValues {
     exists: respuesta(contingencia.existe),
     institution: texto(contingencia.institucion),
     document: texto(contingencia.nombreDocumento).slice(0, 250),
-    year: numero(contingencia.anioElaboracion),
+    year: numero(contingencia.anioElaboracion || null),
     observation: texto(datos.observacionMultiamenazas).slice(0, 1_000),
   };
 
@@ -694,7 +694,7 @@ function politicas(ficha: Ficha): SectionFormValues {
       ? {
           ...politica,
           response: respuesta(dato.respuesta),
-          year: numero(dato.anioElaboracion),
+          year: numero(dato.anioElaboracion || null),
           specification: texto(dato.especifique),
         }
       : politica;
@@ -758,13 +758,35 @@ function promocion(ficha: Ficha, catalogos: AdminCatalogs): SectionFormValues {
   return valores;
 }
 
-function visitantes(ficha: Ficha): SectionFormValues {
+/**
+ * «Años de registro» es una cantidad (0 a 200), pero algunas fichas escriben el
+ * año en que empezó el registro («2024»): se convierte a cantidad de años. Un
+ * valor que no sirve en ninguno de los dos sentidos se descarta con aviso.
+ */
+function aniosDeRegistro(valor: number | null, advertencias: string[]): number | null {
+  if (valor === null) return null;
+  const anioActual = new Date().getFullYear();
+  if (Number.isInteger(valor) && valor >= 0 && valor <= 200) return valor;
+  if (Number.isInteger(valor) && valor >= 1900 && valor <= anioActual) {
+    const anios = anioActual - valor;
+    advertencias.push(
+      `Años de registro de visitantes: "${valor}" parece un año; se registraron ${anios} año(s). Verifícalo.`,
+    );
+    return anios;
+  }
+  advertencias.push(
+    `Años de registro de visitantes: "${valor}" no es una cantidad de años válida (0 a 200); se dejó vacío.`,
+  );
+  return null;
+}
+
+function visitantes(ficha: Ficha, advertencias: string[]): SectionFormValues {
   const valores = base("visitantes");
   const datos = ficha.visitantes;
   valores.visitorRegistry = {
     exists: respuesta(datos.poseeRegistro),
     type: datos.tipoRegistro ?? "",
-    years: numero(datos.aniosRegistro),
+    years: numero(aniosDeRegistro(datos.aniosRegistro, advertencias)),
     reports: respuesta(datos.generaReportes),
     frequency: texto(datos.frecuenciaReportes).slice(0, 80),
     observation: "",
@@ -1046,7 +1068,7 @@ export function mapearSeccionesImportadas(
     "higiene-seguridad": higiene(ficha, catalogos),
     politicas: politicas(ficha),
     promocion: promocion(ficha, catalogos),
-    visitantes: visitantes(ficha),
+    visitantes: visitantes(ficha, advertencias),
     "recurso-humano": recursoHumano(ficha, catalogos),
     anexos: anexos(ficha, catalogos),
   };
