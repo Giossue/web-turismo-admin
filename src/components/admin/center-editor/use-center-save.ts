@@ -21,6 +21,9 @@ import { ApiError } from "@/lib/http";
 const CONFLICT_MESSAGE =
   "La ficha cambió mientras la editabas. Se cargó la versión vigente.";
 
+/** Texto con el que la API distingue el choque de versión de otros 409. */
+const VERSION_CONFLICT_MARKER = "cambió mientras la editabas";
+
 type SaveVariables = { values: CenterFormValues; submitForReview: boolean };
 
 type SaveOptions = { submitForReview?: boolean; silent?: boolean };
@@ -82,7 +85,11 @@ export function useCenterSave({
   });
 
   async function reportSaveError(cause: unknown) {
-    if (cause instanceof ApiError && cause.status === 409) {
+    if (
+      cause instanceof ApiError &&
+      cause.status === 409 &&
+      cause.message.includes(VERSION_CONFLICT_MARKER)
+    ) {
       // Otra edición ganó: se recarga la ficha y el formulario la adopta, en
       // lugar de sobrescribirla con los cambios locales en el siguiente guardado.
       const targetCode = code ?? createdCodeRef.current;
