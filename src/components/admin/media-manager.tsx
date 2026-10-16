@@ -2,6 +2,7 @@
 
 import DeleteOutlineRounded from "@mui/icons-material/DeleteOutlineRounded";
 import PhotoLibraryRounded from "@mui/icons-material/PhotoLibraryRounded";
+import StarBorderRounded from "@mui/icons-material/StarBorderRounded";
 import UploadFileRounded from "@mui/icons-material/UploadFileRounded";
 import {
   Box,
@@ -28,6 +29,8 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import {
   deleteAdminCenterMedia,
   deleteAdminEstablishmentMedia,
+  setAdminCenterCover,
+  setAdminEstablishmentCover,
   uploadAdminCenterMedia,
   uploadAdminEstablishmentMedia,
   type AdminEstablishmentMediaItem,
@@ -93,6 +96,10 @@ const MEDIA_TYPE_OPTIONS: readonly MediaTypeOption[] = [
     removeError: "No se pudo eliminar el anexo.",
   },
 ];
+
+function isPhoto(item: MediaListItem): boolean {
+  return (item.typeCode ?? "FOTOGRAFIA") === "FOTOGRAFIA";
+}
 
 function mediaTypeOption(typeCode: MediaTypeCode): MediaTypeOption {
   return (
@@ -175,6 +182,25 @@ export function MediaManager({
     );
   }
 
+  async function makeCover(item: MediaListItem) {
+    if (!ownerId) return;
+    setWorking(true);
+    onError(null);
+    try {
+      if (target.kind === "center" && target.code) {
+        await setAdminCenterCover(token, target.code, item.id);
+      } else if (target.kind === "establishment" && target.id) {
+        await setAdminEstablishmentCover(token, target.id, item.id);
+      }
+      await queryClient.invalidateQueries({ queryKey: mediaKey });
+      onNotice("Portada actualizada.");
+    } catch (cause) {
+      onError(errorMessage(cause, "No se pudo cambiar la portada."));
+    } finally {
+      setWorking(false);
+    }
+  }
+
   async function remove(item: MediaListItem) {
     if (!ownerId) return;
     const messages = mediaTypeOption(item.typeCode ?? "FOTOGRAFIA");
@@ -200,6 +226,7 @@ export function MediaManager({
   }
 
   const items = mediaQuery.data?.items ?? [];
+  const coverId = items.find((item) => isPhoto(item))?.id;
   return (
     <FlatSurface padding="default">
       <Stack spacing={webTokens.spacing.control}>
@@ -295,6 +322,7 @@ export function MediaManager({
                   {item.sourceAuthor ? ` · ${item.sourceAuthor}` : ""}
                 </Typography>
               </Box>
+              {item.id === coverId ? <StatusBadge label="Portada" tone="info" /> : null}
               <StatusBadge
                 label={mediaStateLabel(item.state)}
                 tone={mediaStateTone(item.state)}
@@ -309,6 +337,19 @@ export function MediaManager({
                 >
                   Abrir
                 </Button>
+              ) : null}
+              {isPhoto(item) && item.id !== coverId ? (
+                <Tooltip title="Usar como portada">
+                  <span>
+                    <IconButton
+                      aria-label={`Usar ${item.originalName} como portada`}
+                      onClick={() => void makeCover(item)}
+                      disabled={!canEdit || working}
+                    >
+                      <StarBorderRounded />
+                    </IconButton>
+                  </span>
+                </Tooltip>
               ) : null}
               <Tooltip title="Eliminar">
                 <span>

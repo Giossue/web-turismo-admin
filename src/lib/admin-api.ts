@@ -978,6 +978,14 @@ export async function deleteAdminCenterMedia(token: string, code: string, id: nu
   return del<{ id: number; state: "ELIMINADO" }>(centerPath(code, `media/${id}`), token);
 }
 
+export async function setAdminCenterCover(token: string, code: string, id: number) {
+  return patch<{ id: number; order: number }>(
+    centerPath(code, `media/${id}/cover`),
+    token,
+    {},
+  );
+}
+
 function mediaFormData(
   file: File,
   metadata: { typeCode?: string; description?: string; sourceAuthor?: string },
@@ -1025,6 +1033,18 @@ export async function deleteAdminEstablishmentMedia(
   return del<{ id: number; state: "ELIMINADO" }>(
     `/admin/establishments/${id}/media/${mediaId}`,
     token,
+  );
+}
+
+export async function setAdminEstablishmentCover(
+  token: string,
+  id: number,
+  mediaId: number,
+) {
+  return patch<{ id: number; order: number }>(
+    `/admin/establishments/${id}/media/${mediaId}/cover`,
+    token,
+    {},
   );
 }
 
