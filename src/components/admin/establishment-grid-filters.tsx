@@ -49,6 +49,7 @@ export function EstablishmentGridFilters({
             : "Todas"
         }
         disabled={!isEstablishmentFilterAvailable(field, values)}
+        searchable
         onChange={(value) => onChange(field, value)}
       />
     );

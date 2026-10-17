@@ -694,6 +694,7 @@ export const EstablishmentManagement = forwardRef<
                   name="activityId"
                   label="Actividad"
                   options={establishmentActivities}
+                  searchable
                   required
                   rules={{ required: required("Selecciona una actividad.") }}
                   onValueChange={(value) => {
@@ -715,6 +716,7 @@ export const EstablishmentManagement = forwardRef<
                   name="classificationId"
                   label="Tipo de establecimiento"
                   options={establishmentClassifications}
+                  searchable
                   disabled={!formActivityId}
                   onValueChange={(value) => {
                     setValue("categoryId", "");
@@ -733,6 +735,7 @@ export const EstablishmentManagement = forwardRef<
                   name="categoryId"
                   label="Categoría"
                   options={establishmentCategories}
+                  searchable
                   disabled={!formClassificationId}
                   onValueChange={(value) =>
                     setValue(
