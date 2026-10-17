@@ -4,6 +4,7 @@ import CloseRounded from "@mui/icons-material/CloseRounded";
 import MyLocationRounded from "@mui/icons-material/MyLocationRounded";
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   Dialog,
@@ -12,14 +13,18 @@ import {
   DialogTitle,
   IconButton,
   Stack,
+  TextField,
   Typography,
   useTheme,
 } from "@mui/material";
 import * as maplibregl from "maplibre-gl";
 import { useEffect, useRef, useState } from "react";
 
+import { SearchInputAdornment } from "@/components/ui/search-field";
 import { LoadingSpinner } from "@/components/ui/loading-state";
 import { requestPreciseDeviceLocation } from "@/lib/device-location";
+import { searchPlaces, type PlaceResult } from "@/lib/place-search";
+import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { readMapCoordinate, type MapCoordinate } from "@/lib/map-coordinates";
 import { DEFAULT_MAP_STYLE_URL } from "@/lib/security-headers";
 
@@ -59,6 +64,17 @@ export function CoordinatePickerDialog({
   const [mapError, setMapError] = useState<string | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
+  const [placeText, setPlaceText] = useState("");
+  const [placeSearch, setPlaceSearch] = useState<{
+    query: string;
+    places: PlaceResult[];
+    error: string | null;
+  } | null>(null);
+  const placeQuery = useDebouncedValue(placeText.trim(), 400);
+  const searchCurrent = placeQuery.length >= 2 && placeSearch?.query === placeQuery;
+  const places = searchCurrent ? placeSearch.places : [];
+  const placeError = searchCurrent ? placeSearch.error : null;
+  const searchingPlaces = placeQuery.length >= 2 && !searchCurrent;
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);
   const cancelLocationRef = useRef<(() => void) | null>(null);
@@ -79,6 +95,27 @@ export function CoordinatePickerDialog({
       stopRequest();
     };
   }, []);
+
+  useEffect(() => {
+    if (placeQuery.length < 2) return;
+    const controller = new AbortController();
+    searchPlaces(placeQuery, controller.signal)
+      .then((results) =>
+        setPlaceSearch({ query: placeQuery, places: results, error: null }),
+      )
+      .catch((cause: unknown) => {
+        if (controller.signal.aborted) return;
+        setPlaceSearch({
+          query: placeQuery,
+          places: [],
+          error:
+            cause instanceof Error
+              ? cause.message
+              : "No se pudo buscar el lugar. Selecciona el punto en el mapa.",
+        });
+      });
+    return () => controller.abort();
+  }, [placeQuery]);
 
   useEffect(() => {
     if (!container) return;
@@ -133,6 +170,16 @@ export function CoordinatePickerDialog({
     cancelLocationRef.current?.();
     cancelLocationRef.current = null;
     onClose();
+  }
+
+  function choosePlace(place: PlaceResult | null) {
+    if (!place) return;
+    cancelLocationRef.current?.();
+    cancelLocationRef.current = null;
+    setLocating(false);
+    setLocationError(null);
+    setCoordinate({ latitude: place.latitude, longitude: place.longitude });
+    mapRef.current?.jumpTo({ center: [place.longitude, place.latitude], zoom: 16 });
   }
 
   function locateDevice() {
@@ -200,8 +247,8 @@ export function CoordinatePickerDialog({
             gap={2}
           >
             <Typography color="text.secondary" variant="body2" sx={{ flex: 1 }}>
-              Marca un punto en el mapa o solicita la ubicación actual del dispositivo.
-              Solo se guardarán la latitud y la longitud al confirmar.
+              Busca un lugar, marca un punto en el mapa o solicita la ubicación actual del
+              dispositivo. Solo se guardarán la latitud y la longitud al confirmar.
             </Typography>
             <Button
               type="button"
@@ -221,6 +268,65 @@ export function CoordinatePickerDialog({
               {locating ? "Buscando ubicación…" : "Ubicación del dispositivo"}
             </Button>
           </Stack>
+          <Autocomplete
+            fullWidth
+            options={places}
+            value={null}
+            inputValue={placeText}
+            loading={searchingPlaces}
+            filterOptions={(options) => options}
+            getOptionLabel={(option) => option.title}
+            getOptionKey={(option) =>
+              `${option.title}:${option.latitude}:${option.longitude}`
+            }
+            onInputChange={(_, value, reason) => {
+              if (reason !== "reset") setPlaceText(value);
+            }}
+            onChange={(_, place) => choosePlace(place)}
+            clearText="Limpiar búsqueda"
+            loadingText="Buscando lugares…"
+            noOptionsText={
+              placeText.trim().length < 2
+                ? "Escribe al menos dos letras"
+                : "No se encontraron lugares"
+            }
+            renderOption={({ key, ...props }, option) => (
+              <li key={key} {...props}>
+                <Stack>
+                  <Typography variant="body2">{option.title}</Typography>
+                  {option.subtitle ? (
+                    <Typography variant="caption" color="text.secondary">
+                      {option.subtitle}
+                    </Typography>
+                  ) : null}
+                </Stack>
+              </li>
+            )}
+            renderInput={(params) => (
+              <TextField
+                id={params.id}
+                disabled={params.disabled}
+                fullWidth={params.fullWidth}
+                size={params.size}
+                label="Buscar lugar en Ecuador"
+                placeholder="Ciudad, calle o referencia"
+                slotProps={{
+                  inputLabel: params.InputLabelProps,
+                  htmlInput: params.inputProps,
+                  input: {
+                    ...params.InputProps,
+                    startAdornment: (
+                      <>
+                        <SearchInputAdornment />
+                        {params.InputProps.startAdornment}
+                      </>
+                    ),
+                  },
+                }}
+              />
+            )}
+          />
+          {placeError ? <Alert severity="warning">{placeError}</Alert> : null}
           {locationError ? <Alert severity="warning">{locationError}</Alert> : null}
           <Box
             role="region"
