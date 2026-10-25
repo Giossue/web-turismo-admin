@@ -72,8 +72,9 @@ export function AdminProfilePopover({
             width: 32,
             height: 32,
             fontSize: "0.875rem",
-            bgcolor: webTokens.navigation.selected,
-            color: webTokens.navigation.text,
+            fontWeight: 600,
+            bgcolor: webTokens.brand.teal,
+            color: webTokens.brand.navy,
           }}
         >
           {user.name.trim().charAt(0).toLocaleUpperCase("es")}

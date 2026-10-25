@@ -25,6 +25,10 @@ const ADMIN_SECTIONS = [
 
 export type AdminSection = (typeof ADMIN_SECTIONS)[number];
 
+/** Grupos del menú lateral, en el orden en que se muestran. */
+export const NAVIGATION_GROUPS = ["Gestión", "Inventario", "Administración"] as const;
+export type NavigationGroup = (typeof NAVIGATION_GROUPS)[number];
+
 type AdminSectionConfig = {
   title: string;
   description: string;
@@ -36,6 +40,8 @@ type AdminSectionConfig = {
   /** Solo administradores; un agente turístico es redirigido a "centers". */
   adminOnly: boolean;
   inNavigation: boolean;
+  /** Grupo del menú lateral; Configuración vive en el perfil del pie. */
+  navGroup?: NavigationGroup;
 };
 
 /** Configuración única de los apartados del panel (encabezado, menú y permisos). */
@@ -47,6 +53,7 @@ export const adminSectionConfig: Record<AdminSection, AdminSectionConfig> = {
     icon: AssessmentRounded,
     adminOnly: true,
     inNavigation: true,
+    navGroup: "Gestión",
   },
   review: {
     title: "Revisión de fichas",
@@ -56,6 +63,7 @@ export const adminSectionConfig: Record<AdminSection, AdminSectionConfig> = {
     icon: FactCheckRounded,
     adminOnly: true,
     inNavigation: true,
+    navGroup: "Gestión",
   },
   opinions: {
     title: "Opiniones",
@@ -65,6 +73,7 @@ export const adminSectionConfig: Record<AdminSection, AdminSectionConfig> = {
     icon: RateReviewRounded,
     adminOnly: true,
     inNavigation: true,
+    navGroup: "Gestión",
   },
   activity: {
     title: "Actividad reciente",
@@ -73,6 +82,7 @@ export const adminSectionConfig: Record<AdminSection, AdminSectionConfig> = {
     icon: HistoryRounded,
     adminOnly: true,
     inNavigation: true,
+    navGroup: "Gestión",
   },
   centers: {
     title: "Centros turísticos",
@@ -82,6 +92,7 @@ export const adminSectionConfig: Record<AdminSection, AdminSectionConfig> = {
     icon: PlaceRounded,
     adminOnly: false,
     inNavigation: true,
+    navGroup: "Inventario",
   },
   establishments: {
     title: "Catastro por localidad",
@@ -92,6 +103,7 @@ export const adminSectionConfig: Record<AdminSection, AdminSectionConfig> = {
     icon: StorefrontRounded,
     adminOnly: false,
     inNavigation: true,
+    navGroup: "Inventario",
   },
   catalogs: {
     title: "Catálogos",
@@ -100,6 +112,7 @@ export const adminSectionConfig: Record<AdminSection, AdminSectionConfig> = {
     icon: CategoryRounded,
     adminOnly: true,
     inNavigation: true,
+    navGroup: "Administración",
   },
   users: {
     title: "Usuarios",
@@ -108,6 +121,7 @@ export const adminSectionConfig: Record<AdminSection, AdminSectionConfig> = {
     icon: PeopleAltRounded,
     adminOnly: true,
     inNavigation: true,
+    navGroup: "Administración",
   },
   editor: {
     title: "Ficha turística",
@@ -140,6 +154,7 @@ export type AdminNavigationItem = {
   key: AdminSection;
   label: string;
   icon: SvgIconComponent;
+  group?: NavigationGroup;
 };
 
 /** Entradas del menú lateral según el rol, en el orden de `ADMIN_SECTIONS`. */
@@ -153,6 +168,7 @@ export function navigationItems(isAdmin: boolean): AdminNavigationItem[] {
       key,
       label: isAdmin ? config.navLabel : (config.agentNavLabel ?? config.navLabel),
       icon: config.icon,
+      group: config.navGroup,
     };
   });
 }
