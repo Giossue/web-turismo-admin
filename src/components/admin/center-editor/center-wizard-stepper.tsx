@@ -2,6 +2,7 @@
 
 import ArrowBackRounded from "@mui/icons-material/ArrowBackRounded";
 import ArrowForwardRounded from "@mui/icons-material/ArrowForwardRounded";
+import CheckRounded from "@mui/icons-material/CheckRounded";
 import {
   Box,
   Button,
@@ -44,7 +45,7 @@ export function CenterWizardStepper({
   const completedCount = steps.filter((step) => completedKeys.has(step.key)).length;
   const progress = Math.round((completedCount / Math.max(steps.length, 1)) * 100);
   return (
-    <FlatSurface padding="compact">
+    <FlatSurface padding="default">
       <Box component="nav" aria-label="Secciones de la ficha turística">
         {/* Móvil: cabecera compacta con progreso y selector, sin la cuadrícula. */}
         <Stack gap={1.25} sx={{ display: { xs: "flex", sm: "none" } }}>
@@ -82,112 +83,147 @@ export function CenterWizardStepper({
             ))}
           </TextField>
         </Stack>
-        <Box
-          component="ol"
-          sx={{
-            display: { xs: "none", sm: "grid" },
-            gridTemplateColumns: {
-              xs: "repeat(2, minmax(0, 1fr))",
-              sm: "repeat(4, minmax(0, 1fr))",
-              md: "repeat(7, minmax(0, 1fr))",
-            },
-            gap: { xs: 1, sm: 1.25 },
-            listStyle: "none",
-            m: 0,
-            p: 0,
-          }}
-        >
-          {steps.map((step, index) => {
-            const completed = completedKeys.has(step.key);
-            const selected = index === activeStep;
-            const status = stepStatus(completed, selected);
-            return (
-              <Box component="li" key={step.key} sx={{ display: "flex", minWidth: 0 }}>
-                <ButtonBase
-                  type="button"
-                  aria-label={`Sección ${index + 1}: ${step.title} (${status.toLocaleLowerCase()})`}
-                  aria-current={selected ? "step" : undefined}
-
-                  onClick={() => onSelect(index)}
-                  title={step.title}
-                  sx={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "stretch",
-                    justifyContent: "flex-start",
-                    width: "100%",
-                    minWidth: 0,
-                    minHeight: { xs: 64, sm: 78 },
-                    p: { xs: 1, sm: 1.25 },
-                    border: 1,
-                    borderColor: selected ? "primary.main" : "divider",
-                    borderRadius: `${webTokens.shape.radius}px`,
-                    bgcolor: selected ? "action.selected" : "transparent",
-                    textAlign: "left",
-                    transition: "border-color 120ms ease, background-color 120ms ease",
-                    "&:hover": {
-                      borderColor: selected ? "primary.main" : "text.secondary",
-                      bgcolor: selected ? "action.selected" : "action.hover",
-                    },
-                    "&.Mui-disabled": {
-                      opacity: 0.55,
-                    },
-                  }}
-                >
-                  <Stack direction="row" alignItems="center" gap={1} minWidth={0}>
+        {/* Escritorio: cabecera de progreso y lista de apartados sin recuadros. */}
+        <Stack gap={2} sx={{ display: { xs: "none", sm: "flex" } }}>
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="space-between"
+            gap={2}
+          >
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                Paso {currentIndex + 1} de {steps.length}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {completedCount} de {steps.length} secciones con información
+              </Typography>
+            </Box>
+            <Stack direction="row" alignItems="center" gap={1.5} sx={{ flexShrink: 0 }}>
+              <LinearProgress
+                variant="determinate"
+                value={progress}
+                aria-label="Avance de la ficha"
+                sx={{ width: { sm: 120, md: 200 }, height: 6, borderRadius: 999 }}
+              />
+              <Typography
+                variant="body2"
+                sx={{ fontWeight: 600, minWidth: 40, textAlign: "right" }}
+              >
+                {progress}%
+              </Typography>
+            </Stack>
+          </Stack>
+          <Box
+            component="ol"
+            sx={{
+              display: "grid",
+              gridTemplateColumns: {
+                sm: "repeat(2, minmax(0, 1fr))",
+                md: "repeat(3, minmax(0, 1fr))",
+                lg: "repeat(5, minmax(0, 1fr))",
+              },
+              columnGap: 1,
+              rowGap: 0.5,
+              listStyle: "none",
+              m: 0,
+              pt: 1.5,
+              px: 0,
+              pb: 0,
+              borderTop: webTokens.border,
+            }}
+          >
+            {steps.map((step, index) => {
+              const completed = completedKeys.has(step.key);
+              const selected = index === currentIndex;
+              const status = stepStatus(completed, selected);
+              return (
+                <Box component="li" key={step.key} sx={{ display: "flex", minWidth: 0 }}>
+                  <ButtonBase
+                    type="button"
+                    aria-label={`Sección ${index + 1}: ${step.title} (${status.toLocaleLowerCase()})`}
+                    aria-current={selected ? "step" : undefined}
+                    onClick={() => onSelect(index)}
+                    title={step.title}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "flex-start",
+                      gap: 1.25,
+                      width: "100%",
+                      minWidth: 0,
+                      minHeight: 48,
+                      px: 1,
+                      py: 0.75,
+                      borderRadius: 1,
+                      textAlign: "left",
+                      bgcolor: selected
+                        ? "rgba(var(--mui-palette-primary-mainChannel) / 0.08)"
+                        : "transparent",
+                      transition: "background-color 120ms ease",
+                      "&:hover": {
+                        bgcolor: selected
+                          ? "rgba(var(--mui-palette-primary-mainChannel) / 0.12)"
+                          : "action.hover",
+                      },
+                    }}
+                  >
                     <Box
                       component="span"
+                      aria-hidden="true"
                       sx={{
                         display: "grid",
                         placeItems: "center",
                         flex: "0 0 auto",
-                        width: { xs: 24, sm: 28 },
-                        height: { xs: 24, sm: 28 },
+                        width: 26,
+                        height: 26,
                         borderRadius: "50%",
-                        bgcolor:
-                          selected || completed
-                            ? "primary.main"
-                            : "action.disabledBackground",
+                        border: "1.5px solid",
+                        borderColor: selected || completed ? "primary.main" : "divider",
+                        bgcolor: completed || selected ? "primary.main" : "transparent",
                         color:
-                          selected || completed
+                          completed || selected
                             ? "primary.contrastText"
                             : "text.secondary",
-                        fontSize: { xs: "0.72rem", sm: "0.78rem" },
+                        boxShadow: selected
+                          ? "0 0 0 3px rgba(var(--mui-palette-primary-mainChannel) / 0.18)"
+                          : "none",
+                        fontSize: "0.75rem",
                         fontWeight: 700,
                       }}
                     >
-                      {index + 1}
+                      {completed && !selected ? (
+                        <CheckRounded sx={{ fontSize: 16 }} />
+                      ) : (
+                        index + 1
+                      )}
                     </Box>
                     <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      noWrap
-                      sx={{ minWidth: 0, textOverflow: "ellipsis", overflow: "hidden" }}
+                      variant="body2"
+                      component="span"
+                      sx={{
+                        minWidth: 0,
+                        fontWeight: selected ? 600 : 500,
+                        color: selected
+                          ? "primary.main"
+                          : completed
+                            ? "text.primary"
+                            : "text.secondary",
+                        lineHeight: 1.25,
+                        display: "-webkit-box",
+                        overflow: "hidden",
+                        WebkitBoxOrient: "vertical",
+                        WebkitLineClamp: 2,
+                      }}
                     >
-                      {status}
+                      {step.title}
                     </Typography>
-                  </Stack>
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      mt: 0.75,
-                      minWidth: 0,
-                      fontWeight: selected ? 700 : 500,
-                      lineHeight: 1.2,
-                      display: "-webkit-box",
-                      overflow: "hidden",
-                      overflowWrap: "anywhere",
-                      WebkitBoxOrient: "vertical",
-                      WebkitLineClamp: 2,
-                    }}
-                  >
-                    {step.title}
-                  </Typography>
-                </ButtonBase>
-              </Box>
-            );
-          })}
-        </Box>
+                  </ButtonBase>
+                </Box>
+              );
+            })}
+          </Box>
+        </Stack>
       </Box>
     </FlatSurface>
   );
