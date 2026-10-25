@@ -16,9 +16,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Rumbo EC | Gestión turística",
+  title: "Wasi Travel | Panel administrativo",
   description:
-    "Portal institucional para gestionar información turística publicada de Ecuador.",
+    "Panel administrativo de Wasi Travel para gestionar la información turística publicada de Ecuador.",
 };
 
 export default async function RootLayout({

@@ -9,21 +9,28 @@ export const webTokens = {
   colors: {
     light: {
       primary: {
-        main: "#166534",
-        dark: "#14532d",
-        light: "#22c55e",
+        main: "#212a53",
+        dark: "#161c3a",
+        light: "#3a4680",
         contrastText: "#ffffff",
       },
       secondary: {
-        main: "#4b5563",
+        main: "#2f8f93",
+        dark: "#23706f",
+        light: "#52b4b8",
         contrastText: "#ffffff",
       },
       background: {
-        default: "#f5f8f7",
+        default: "#f5f7fb",
         paper: "#ffffff",
-        subtle: "#e8f0ee",
-        sidebar: "#123b2a",
+        subtle: "#eceff6",
+        sidebar: "#1a2147",
       },
+      text: {
+        primary: "#161b33",
+        secondary: "#5a6180",
+      },
+      divider: "rgba(33, 42, 83, 0.12)",
       status: {
         error: {
           main: "#b91c1c",
@@ -53,26 +60,28 @@ export const webTokens = {
     },
     dark: {
       primary: {
-        main: "#22c55e",
-        dark: "#15803d",
-        light: "#4ade80",
-        contrastText: "#06130a",
+        main: "#6fc6c9",
+        dark: "#52b4b8",
+        light: "#9adadc",
+        contrastText: "#0b1230",
       },
       secondary: {
-        main: "#b8b8b8",
-        contrastText: "#0b0b0b",
+        main: "#efc400",
+        dark: "#c6aa3d",
+        light: "#f5d84d",
+        contrastText: "#1a1a00",
       },
       background: {
-        default: "#080808",
-        paper: "#151515",
-        subtle: "#202020",
-        sidebar: "#0c2218",
+        default: "#0b0e1c",
+        paper: "#131830",
+        subtle: "#1b2140",
+        sidebar: "#0e1229",
       },
       text: {
-        primary: "#f5f5f5",
-        secondary: "#b3b3b3",
+        primary: "#eef0f8",
+        secondary: "#a9afc9",
       },
-      divider: "rgba(245, 245, 245, 0.12)",
+      divider: "rgba(238, 240, 248, 0.12)",
       status: {
         error: {
           main: "#f44336",
@@ -101,12 +110,21 @@ export const webTokens = {
       },
     },
   },
+  /** Colores de marca Wasi Travel tomados del logotipo. */
+  brand: {
+    navy: "#212a53",
+    teal: "#52b4b8",
+    sun: "#efc400",
+    ochre: "#c6aa3d",
+  },
   navigation: {
-    text: "#f8faf9",
-    secondaryText: "#c2d7cb",
-    divider: "rgba(255, 255, 255, 0.14)",
-    hover: "rgba(255, 255, 255, 0.08)",
-    selected: "rgba(255, 255, 255, 0.12)",
+    text: "#f5f7fc",
+    secondaryText: "#a9b1d3",
+    groupLabel: "#7f88b3",
+    divider: "rgba(255, 255, 255, 0.1)",
+    hover: "rgba(255, 255, 255, 0.06)",
+    selected: "rgba(82, 180, 184, 0.16)",
+    indicator: "#52b4b8",
     notification: "#f87171",
   },
   spacing: {
@@ -139,7 +157,7 @@ export const webTokens = {
     pill: 9999,
   },
   layout: {
-    drawerWidth: 240,
+    drawerWidth: 264,
     contentMaxWidth: "lg",
   },
   form: {

@@ -5,7 +5,7 @@ import { AdminProviders } from "@/components/admin/admin-providers";
 import { AdminAuthProvider } from "@/lib/auth";
 
 export const metadata = {
-  title: "Panel institucional | Turismo Vinculación",
+  title: "Panel administrativo | Wasi Travel",
   robots: { index: false, follow: false },
 };
 
