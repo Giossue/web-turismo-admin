@@ -85,7 +85,8 @@ describe("parsearFicha — casos de la sección 8 del plan", () => {
     const { datos, advertencias } = await parsearFixture();
     expect(datos.resumenValoracion.totalInformativo).toBe(56.2);
     expect(datos.resumenValoracion.criterios).toHaveLength(9);
-    expect(advertencias.some((a) => a.includes("56.2"))).toBe(true);
+    // El puntaje es una referencia del Excel, separada de las advertencias.
+    expect(advertencias.some((a) => a.includes("56.2"))).toBe(false);
   });
 
   test("ficha_Accesibilidad: primera fila SI, segunda NO", async () => {
