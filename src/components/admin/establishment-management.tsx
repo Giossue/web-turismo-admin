@@ -79,6 +79,7 @@ import { withRetainedCatalogOption } from "@/lib/retained-catalog-options";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { findCatalogIdByName, findCatalogOption } from "@/lib/values";
 import { preparePhotoFile } from "@/lib/prepare-photo-file";
+import { canDeleteEstablishment } from "@/lib/establishment-permissions";
 import { webTokens } from "@/theme/tokens";
 
 type EstablishmentFormValues = {
@@ -264,6 +265,10 @@ export const EstablishmentManagement = forwardRef<
       (publishesDirectly && item.reviewStatus === "PUBLICADO" && item.editable !== false),
     [canManageStatus, publishesDirectly],
   );
+  const canDeleteItem = useCallback(
+    (item: AdminEstablishment) => canDeleteEstablishment(item, canManageStatus),
+    [canManageStatus],
+  );
   const { mutate: submitReview, isPending: isSubmittingReview } = useMutation({
     mutationFn: (id: number) => submitAdminEstablishmentReview(token, id),
     onSuccess: async () => {
@@ -443,7 +448,7 @@ export const EstablishmentManagement = forwardRef<
                 : []),
             ]}
             deletion={
-              canManageStatus
+              canDeleteItem(item)
                 ? {
                     subject: item.nombreComercial,
                     title: "Eliminar establecimiento",
@@ -475,6 +480,7 @@ export const EstablishmentManagement = forwardRef<
       isSubmittingReview,
       publishesDirectly,
       canEditItem,
+      canDeleteItem,
       submitReview,
       token,
       page,
@@ -606,7 +612,7 @@ export const EstablishmentManagement = forwardRef<
                   : []),
               ]}
               deletion={
-                canManageStatus
+                canDeleteItem(item)
                   ? {
                       subject: item.nombreComercial,
                       title: "Eliminar establecimiento",

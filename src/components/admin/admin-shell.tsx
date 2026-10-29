@@ -291,7 +291,7 @@ function AdminWorkspace({ user }: { user: AdminUser }) {
           {section === "centers" ? (
             <CentersSection
               token={token}
-              canDelete={isAdmin}
+              canDelete
               status={state.centerStatus}
               query={state.queryDraft}
               appliedQuery={nav.centerQuery}
