@@ -9,7 +9,16 @@ import { ApiError, apiEndpoint, sendApiRequest, toApiError, toQueryString } from
 /** Página de resultados de un listado administrativo. */
 export type Page<T> = { items: T[]; total: number; limit: number; offset: number };
 
+export type AdminLegalDocumentAcceptance = { version: string; acceptedAt: string };
+
+export type AdminLegalAcceptance = {
+  upToDate: boolean;
+  terms: AdminLegalDocumentAcceptance | null;
+  privacy: AdminLegalDocumentAcceptance | null;
+};
+
 export type AdminAccount = {
+  legalAcceptance?: AdminLegalAcceptance | null;
   id: string;
   name: string;
   email: string;

@@ -20,6 +20,44 @@ const roleLabels: Record<string, string> = {
 
 const getUserRowId = (user: AdminAccount) => user.id;
 
+/** Estado legible de la aceptación; las cuentas institucionales no aceptan. */
+export function describeLegalAcceptance(user: AdminAccount) {
+  const acceptance = user.legalAcceptance;
+  if (!acceptance) return null;
+  const documents = [acceptance.terms, acceptance.privacy].filter(
+    (document) => document !== null,
+  );
+  const versions = [...new Set(documents.map((document) => document.version))];
+  const latest = documents.map((document) => document.acceptedAt).sort().at(-1);
+  const detail = latest
+    ? `Versión ${versions.join(" / ")} · ${formatDate(latest)}`
+    : "Sin aceptación registrada";
+  return acceptance.upToDate
+    ? { detail, label: "Aceptados", tone: "success" as const }
+    : { detail, label: "Pendiente", tone: "warning" as const };
+}
+
+function LegalAcceptanceBadge({ user }: { user: AdminAccount }) {
+  const status = describeLegalAcceptance(user);
+  if (!status) {
+    return (
+      <Typography variant="body2" color="text.secondary">
+        No aplica
+      </Typography>
+    );
+  }
+  return (
+    <Stack justifyContent="center" spacing={0.25} sx={{ height: "100%", minWidth: 0 }}>
+      <span>
+        <StatusBadge label={status.label} tone={status.tone} />
+      </span>
+      <Typography variant="caption" color="text.secondary" noWrap title={status.detail}>
+        {status.detail}
+      </Typography>
+    </Stack>
+  );
+}
+
 export function UsersSection({
   token,
   query,
@@ -102,6 +140,14 @@ export function UsersSection({
         ),
       },
       {
+        field: "legalAcceptance",
+        headerName: "Términos",
+        width: 200,
+        filterable: false,
+        sortable: false,
+        renderCell: ({ row }) => <LegalAcceptanceBadge user={row} />,
+      },
+      {
         field: "createdAt",
         headerName: "Registrado",
         width: 145,
@@ -155,6 +201,12 @@ export function UsersSection({
             ) : (
               "Sin rol asignado"
             ),
+          },
+          {
+            label: "Términos",
+            value: describeLegalAcceptance(user)
+              ? `${describeLegalAcceptance(user)?.label} · ${describeLegalAcceptance(user)?.detail}`
+              : "No aplica",
           },
           { label: "Registrado", value: formatDate(user.createdAt) },
         ],
