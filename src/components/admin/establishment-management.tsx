@@ -79,7 +79,10 @@ import { withRetainedCatalogOption } from "@/lib/retained-catalog-options";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { findCatalogIdByName, findCatalogOption } from "@/lib/values";
 import { preparePhotoFile } from "@/lib/prepare-photo-file";
-import { canDeleteEstablishment } from "@/lib/establishment-permissions";
+import {
+  canDeleteEstablishment,
+  establishmentPublishLabel,
+} from "@/lib/establishment-permissions";
 import { webTokens } from "@/theme/tokens";
 
 type EstablishmentFormValues = {
@@ -257,6 +260,12 @@ export const EstablishmentManagement = forwardRef<
   });
 
   const publishesDirectly = usePlatformSettings(token).directPublishCatastros;
+  const publishesNow = canManageStatus || publishesDirectly;
+  const publishLabel = useCallback(
+    (item: AdminEstablishment) =>
+      establishmentPublishLabel(item, canManageStatus, publishesDirectly),
+    [canManageStatus, publishesDirectly],
+  );
   // Con el paso libre el agente también corrige lo suyo ya publicado.
   const canEditItem = useCallback(
     (item: AdminEstablishment) =>
@@ -277,7 +286,7 @@ export const EstablishmentManagement = forwardRef<
         queryClient.invalidateQueries({ queryKey: adminKeys.allNavigationSummaries() }),
       ]);
       onNotice(
-        publishesDirectly
+        publishesNow
           ? "El catastro fue publicado."
           : "El catastro fue enviado a revisión.",
       );
@@ -435,11 +444,10 @@ export const EstablishmentManagement = forwardRef<
                 onClick: () => openEdit(item),
                 disabled: !canEditItem(item),
               },
-              ...(!canManageStatus &&
-              ["BORRADOR", "RECHAZADO"].includes(item.reviewStatus)
+              ...(publishLabel(item)
                 ? [
                     {
-                      label: publishesDirectly ? "Publicar" : "Enviar a revisión",
+                      label: publishLabel(item)!,
                       icon: <SendRounded />,
                       onClick: () => submitReview(item.id),
                       disabled: isSubmittingReview,
@@ -475,10 +483,9 @@ export const EstablishmentManagement = forwardRef<
       },
     ],
     [
-      canManageStatus,
       openEdit,
       isSubmittingReview,
-      publishesDirectly,
+      publishLabel,
       canEditItem,
       canDeleteItem,
       submitReview,
@@ -599,11 +606,10 @@ export const EstablishmentManagement = forwardRef<
                   onClick: () => openEdit(item),
                   disabled: !canEditItem(item),
                 },
-                ...(!canManageStatus &&
-                ["BORRADOR", "RECHAZADO"].includes(item.reviewStatus)
+                ...(publishLabel(item)
                   ? [
                       {
-                        label: publishesDirectly ? "Publicar" : "Enviar a revisión",
+                        label: publishLabel(item)!,
                         icon: <SendRounded />,
                         onClick: () => submitReview(item.id),
                         disabled: isSubmittingReview,

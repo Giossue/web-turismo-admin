@@ -1,6 +1,9 @@
 import { describe, expect, it } from "bun:test";
 
-import { canDeleteEstablishment } from "../src/lib/establishment-permissions";
+import {
+  canDeleteEstablishment,
+  establishmentPublishLabel,
+} from "../src/lib/establishment-permissions";
 
 describe("canDeleteEstablishment", () => {
   it("lets the administrator delete any catastro in any state", () => {
@@ -31,4 +34,29 @@ describe("canDeleteEstablishment", () => {
       canDeleteEstablishment({ editable: true, reviewStatus: "EN_REVISION" }, false),
     ).toBe(false);
   });
+});
+
+describe("establishmentPublishLabel", () => {
+  it.each(["BORRADOR", "RECHAZADO"])(
+    "lets the administrator publish a %s catastro",
+    (reviewStatus) => {
+      expect(establishmentPublishLabel({ reviewStatus }, true, false)).toBe("Publicar");
+    },
+  );
+
+  it("sends an agent's draft to review unless direct publication is on", () => {
+    expect(establishmentPublishLabel({ reviewStatus: "BORRADOR" }, false, false)).toBe(
+      "Enviar a revisión",
+    );
+    expect(establishmentPublishLabel({ reviewStatus: "BORRADOR" }, false, true)).toBe(
+      "Publicar",
+    );
+  });
+
+  it.each(["EN_REVISION", "PUBLICADO"])(
+    "offers nothing for a %s catastro",
+    (reviewStatus) => {
+      expect(establishmentPublishLabel({ reviewStatus }, true, true)).toBeNull();
+    },
+  );
 });

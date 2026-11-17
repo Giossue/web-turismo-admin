@@ -15,3 +15,17 @@ export function canDeleteEstablishment(
     isAdministrator || (item.editable !== false && item.reviewStatus !== "EN_REVISION")
   );
 }
+
+/**
+ * Acción para sacar un catastro de borrador o rechazado. Lo que envía el
+ * administrador queda publicado (él es quien aprueba), igual que lo de un
+ * agente cuando el paso libre está activo; si no, pasa a revisión.
+ */
+export function establishmentPublishLabel(
+  item: Pick<DeletableEstablishment, "reviewStatus">,
+  isAdministrator: boolean,
+  publishesDirectly: boolean,
+): "Publicar" | "Enviar a revisión" | null {
+  if (!["BORRADOR", "RECHAZADO"].includes(item.reviewStatus)) return null;
+  return isAdministrator || publishesDirectly ? "Publicar" : "Enviar a revisión";
+}
